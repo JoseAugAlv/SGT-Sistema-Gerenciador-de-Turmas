@@ -1,0 +1,259 @@
+/* public/css/notificacoes.css */
+
+.notificacoes-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.notificacoes-hero h1 {
+    font-family: 'Montserrat', sans-serif;
+    color: var(--color-forest-deep);
+    font-size: 1.8rem;
+}
+
+.notificacoes-subtitle {
+    color: var(--color-text);
+    margin-top: 0.3rem;
+}
+
+.badge-nao-lidas {
+    background: #dc2626;
+    color: white;
+    padding: 0.1rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    margin-left: 0.3rem;
+}
+
+.notificacoes-filtros {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.filtros-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-filtro {
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    text-decoration: none;
+    background: #e9ecef;
+    color: var(--color-text);
+    transition: background 0.3s ease;
+}
+
+.btn-filtro.active {
+    background: #10b981;
+    color: white;
+}
+
+.btn-filtro:hover {
+    background: #d1d5db;
+}
+
+.btn-filtro.active:hover {
+    background: #059669;
+}
+
+.badge-filtro {
+    background: white;
+    color: #10b981;
+    padding: 0.1rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    margin-left: 0.3rem;
+}
+
+.btn-filtro.active .badge-filtro {
+    color: #10b981;
+}
+
+.btn-marcar-todas {
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.btn-marcar-todas:hover {
+    background: #1d4ed8;
+}
+
+.lista-notificacoes {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.notificacao-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.notificacao-item:last-child {
+    border-bottom: none;
+}
+
+.notificacao-item.nao-lida {
+    background: #f0fdf4;
+    border-left: 4px solid #10b981;
+}
+
+.notificacao-item.lida {
+    background: white;
+}
+
+.notificacao-conteudo {
+    flex: 1;
+}
+
+.notificacao-titulo {
+    font-weight: 400;
+}
+
+.notificacao-item.nao-lida .notificacao-titulo {
+    font-weight: 700;
+}
+
+.notificacao-mensagem {
+    color: var(--color-text);
+    margin: 0.3rem 0;
+}
+
+.notificacao-data {
+    color: #95a5a6;
+    font-size: 0.8rem;
+}
+
+.badge-nao-lida {
+    background: #10b981;
+    color: white;
+    padding: 0.1rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    margin-left: 0.5rem;
+}
+
+.btn-marcar-lida {
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.3s ease;
+}
+
+.btn-marcar-lida:hover {
+    background: #1d4ed8;
+}
+
+.info-historico {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--color-text);
+}
+
+.notificacoes-voltar {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid #f0f0f0;
+    text-align: center;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: #d1d5db;
+    margin-bottom: 1.5rem;
+}
+
+.empty-state h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.3rem;
+    color: var(--color-forest-deep);
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    color: var(--color-text);
+    margin-bottom: 1.5rem;
+}
+
+.empty-actions {
+    display: flex;
+    gap: 0.8rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.btn-sm {
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: #e9ecef;
+    color: var(--color-text);
+    transition: background 0.3s ease;
+}
+
+.btn-sm:hover {
+    background: #d1d5db;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .notificacoes-filtros {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filtros-group {
+        justify-content: center;
+    }
+    
+    .notificacao-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+    
+    .btn-marcar-lida {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .btn-marcar-todas {
+        width: 100%;
+        text-align: center;
+    }
+}

@@ -1,0 +1,132 @@
+/* public/css/crud.css */
+
+.crud-section {
+    padding: 2rem 0;
+    min-height: calc(100vh - 300px);
+}
+
+.crud-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.crud-hero h1 {
+    font-size: 1.8rem;
+    font-family: 'Montserrat', sans-serif;
+    color: var(--color-forest-deep);
+    margin: 0;
+}
+
+.crud-subtitle {
+    color: var(--color-text);
+    margin: 0.3rem 0 0;
+}
+
+.crud-actions {
+    margin-bottom: 1.5rem;
+}
+
+.crud-search {
+    margin-bottom: 1.5rem;
+}
+
+.search-group {
+    display: flex;
+    gap: 0.5rem;
+    max-width: 500px;
+}
+
+.search-group .form-control {
+    flex: 1;
+}
+
+.crud-table-wrapper {
+    overflow-x: auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    margin-bottom: 1.5rem;
+}
+
+.crud-table-wrapper table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.crud-table-wrapper thead {
+    background: #f8f9fa;
+}
+
+.crud-table-wrapper th {
+    padding: 0.8rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--color-forest-deep);
+    border-bottom: 2px solid #e9ecef;
+}
+
+.crud-table-wrapper td {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.crud-table-wrapper tr:hover {
+    background: #fafafa;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.3rem;
+}
+
+.btn-sm {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+}
+
+.btn-edit {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #2563eb;
+}
+
+.crud-form .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.form-group-full {
+    grid-column: 1 / -1;
+}
+
+.crud-voltar {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid #f0f0f0;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .crud-form .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .crud-hero {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .search-group {
+        max-width: 100%;
+    }
+}

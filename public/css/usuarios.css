@@ -1,0 +1,453 @@
+/* public/css/usuarios.css */
+
+/* Hero */
+.usuarios-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.usuarios-hero h1 {
+    font-family: 'Montserrat', sans-serif;
+    color: var(--color-forest-deep);
+    font-size: 1.8rem;
+}
+
+.usuarios-subtitle {
+    color: var(--color-text);
+    margin-top: 0.3rem;
+}
+
+.usuarios-subtitle .perfil-badge {
+    background: #f8f9fa;
+    padding: 0.2rem 0.8rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    color: var(--color-text);
+}
+
+.badge-count {
+    background: #f8f9fa;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: var(--color-text);
+}
+
+/* Ações */
+.usuarios-actions {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+}
+
+.btn-new {
+    background: #10b981;
+    color: white;
+    padding: 0.6rem 1.5rem;
+    border-radius: 6px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.3s ease;
+}
+
+.btn-new:hover {
+    background: #059669;
+    color: white;
+}
+
+/* Tabela */
+.usuarios-table-wrapper {
+    overflow-x: auto;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.usuarios-table-wrapper table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.usuarios-table-wrapper thead {
+    background: var(--color-forest-deep);
+}
+
+.usuarios-table-wrapper thead th {
+    color: white;
+    padding: 0.8rem 1rem;
+    text-align: left;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.usuarios-table-wrapper tbody td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid #e9ecef;
+    color: var(--color-text);
+}
+
+.usuarios-table-wrapper tbody tr:hover {
+    background: #f8f9fa;
+}
+
+/* Badges de Perfil */
+.perfil-1 { background: #f59e0b; color: white; }
+.perfil-2 { background: #3b82f6; color: white; }
+.perfil-3 { background: #10b981; color: white; }
+.perfil-4 { background: #6b7280; color: white; }
+
+/* Status Badge */
+.status-badge {
+    display: inline-block;
+    padding: 0.2rem 0.8rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-badge.ativo { background: #d1fae5; color: #065f46; }
+.status-badge.inativo { background: #fee2e2; color: #991b1b; }
+.status-badge.verificado { background: #dbeafe; color: #1e40af; }
+.status-badge.pendente { background: #fef3c7; color: #92400e; }
+
+/* Ações */
+.action-buttons {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+}
+
+.btn-sm {
+    padding: 0.3rem 0.8rem;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.btn-edit {
+    background: #2563eb;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #1d4ed8;
+    color: white;
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+    color: white;
+}
+
+/* Formulário */
+.usuarios-form {
+    background: #f8f9fa;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.form-group-full {
+    grid-column: span 2;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.form-group label {
+    font-weight: 700;
+    color: var(--color-forest-deep);
+    font-size: 0.85rem;
+}
+
+.form-group .required {
+    color: #ef4444;
+}
+
+.form-group .form-control {
+    padding: 0.8rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    background: var(--color-white);
+    transition: border-color 0.3s ease;
+}
+
+.form-group .form-control:focus {
+    border-color: var(--color-impact-green);
+    outline: none;
+}
+
+.form-help {
+    font-size: 0.75rem;
+    color: #95a5a6;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 1.1rem;
+    height: 1.1rem;
+    cursor: pointer;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid #e9ecef;
+    grid-column: span 2;
+}
+
+.form-actions .btn {
+    padding: 0.8rem 2rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-actions .btn-new {
+    background: #10b981;
+    color: white;
+}
+
+.form-actions .btn-new:hover {
+    background: #059669;
+}
+
+.form-actions .btn {
+    background: #e9ecef;
+    color: var(--color-text);
+}
+
+.form-actions .btn:hover {
+    background: #d1d5db;
+}
+
+/* Form Box */
+.form-box {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.form-box h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1rem;
+    color: var(--color-forest-deep);
+    margin-bottom: 1rem;
+}
+
+.form-inline {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.form-inline .form-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.form-inline .checkbox-group {
+    flex: 0 0 auto;
+    padding-bottom: 0.3rem;
+}
+
+/* Paginação */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 1.5rem 0;
+    flex-wrap: wrap;
+}
+
+.pagination-container a,
+.pagination-container span {
+    padding: 0.4rem 0.8rem;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--color-text);
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.pagination-container a:hover {
+    background: var(--color-impact-green);
+    color: white;
+    border-color: var(--color-impact-green);
+}
+
+.pagination-container .active {
+    background: var(--color-forest-deep);
+    color: white;
+    border-color: var(--color-forest-deep);
+}
+
+/* Voltar */
+.usuarios-voltar {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid #f0f0f0;
+    text-align: center;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: #d1d5db;
+    margin-bottom: 1.5rem;
+}
+
+.empty-state h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.3rem;
+    color: var(--color-forest-deep);
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    color: var(--color-text);
+    margin-bottom: 1.5rem;
+}
+
+.empty-state.small {
+    padding: 1.5rem;
+}
+
+.empty-state.small i {
+    font-size: 2rem;
+}
+
+/* Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-box {
+    background: var(--color-white);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-box h2 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.2rem;
+    color: var(--color-forest-deep);
+    margin-bottom: 1rem;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.modal-actions .btn {
+    flex: 1;
+    justify-content: center;
+    padding: 0.6rem 1.5rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-group-full {
+        grid-column: span 1;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .usuarios-hero {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .form-inline {
+        flex-direction: column;
+    }
+    
+    .form-inline .form-group {
+        width: 100%;
+    }
+}

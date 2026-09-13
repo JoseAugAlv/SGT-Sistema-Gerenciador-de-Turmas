@@ -1,0 +1,114 @@
+/* ============================================================
+   LOGIN - Página de Login
+   ============================================================ */
+
+.login-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 200px);
+    padding: var(--spacing-xl) var(--spacing-md);
+}
+
+.login-container {
+    width: 100%;
+    max-width: 420px;
+}
+
+.login-card {
+    background: var(--color-white);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-2xl);
+    box-shadow: var(--shadow-lg);
+    border: 2px solid var(--color-gray-200);
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.login-header h2 {
+    font-size: 1.8rem;
+    margin-bottom: var(--spacing-xs);
+}
+
+.login-header p {
+    color: var(--color-text-light);
+    margin: 0;
+}
+
+.login-form .form-group {
+    margin-bottom: var(--spacing-md);
+}
+
+.login-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: var(--spacing-md) 0;
+}
+
+.login-options .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.login-link {
+    font-size: 0.9rem;
+    color: var(--color-primary);
+}
+
+.login-link:hover {
+    color: var(--color-primary-dark);
+}
+
+.login-footer {
+    text-align: center;
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-lg);
+    border-top: 2px solid var(--color-gray-200);
+}
+
+.login-footer p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.login-dev {
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-md);
+    border-top: 2px solid var(--color-gray-200);
+}
+
+.login-dev h4 {
+    margin-bottom: var(--spacing-sm);
+    color: var(--color-text-light);
+}
+
+.login-dev .dev-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.login-dev .dev-buttons .btn {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.8rem;
+}
+
+/* Responsivo */
+@media (max-width: 480px) {
+    .login-card {
+        padding: var(--spacing-lg);
+    }
+    
+    .login-options {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+        align-items: flex-start;
+    }
+}

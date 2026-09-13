@@ -1,0 +1,1468 @@
+/* ============================================================ */
+/* ARQUIVO: public/css/tutorial.css                           */
+/* ============================================================ */
+/* ESTE ARQUIVO CONTÉM TODO O ESTILO PARA O TUTORIAL          */
+/* CADA SEÇÃO É COMENTADA PARA FACILITAR O ENTENDIMENTO        */
+/* ============================================================ */
+
+/* ============================================================ */
+/* 1. IMPORTAÇÃO DE FONTES                                     */
+/* ============================================================ */
+/* 
+    Importa as fontes do Google Fonts:
+    - Montserrat: para títulos (cabeçalhos)
+    - Inter: para texto do corpo (corpo da página)
+    - JetBrains Mono: para blocos de código (monoespaçada)
+*/
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* ============================================================ */
+/* 2. VARIÁVEIS CSS (CUSTOM PROPERTIES)                        */
+/* ============================================================ */
+/* 
+    Define cores e valores reutilizáveis em todo o CSS.
+    Facilita a manutenção e personalização do tema.
+*/
+:root {
+    /* Cores principais da marca */
+    --color-forest-deep: #062c21;      /* Verde escuro para títulos */
+    --color-forest-mid: #0f4c3a;       /* Verde médio para elementos */
+    --color-impact-green: #10b981;     /* Verde destaque (botões, ícones) */
+    
+    /* Cores de fundo e texto */
+    --color-bg-light: #f0fdf4;         /* Fundo claro com tom verde */
+    --color-bg-card: #ffffff;          /* Fundo de cards e seções */
+    --color-text: #1f2937;             /* Cor principal do texto */
+    --color-text-light: #6b7280;       /* Texto mais claro */
+    
+    /* Sombras e bordas */
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 20px rgba(0,0,0,0.06);
+    --shadow-lg: 0 20px 40px rgba(0,0,0,0.08);
+    --border-radius: 16px;
+}
+
+/* ============================================================ */
+/* 3. ESTILOS GERAIS DA SEÇÃO DO TUTORIAL                     */
+/* ============================================================ */
+
+.tutorial-section {
+    /* 
+        padding: 4rem 0 2rem 0; 
+        Define o espaçamento interno:
+        - 4rem em cima (espaço do topo)
+        - 0 nas laterais (o container controla)
+        - 2rem embaixo (espaço para a próxima seção)
+    */
+    padding: 4rem 0 2rem 0;
+}
+
+/* ============================================================ */
+/* 4. HEADER DA SEÇÃO                                          */
+/* ============================================================ */
+
+.section-header {
+    /* 
+        margin-bottom: 2.5rem;
+        Espaço entre o cabeçalho da seção e o conteúdo
+    */
+    margin-bottom: 2.5rem;
+}
+
+.section-header h2 {
+    /* 
+        Fontes e tamanho do título da seção
+        - Montserrat: fonte mais moderna para títulos
+        - font-weight: 800 (Extra Bold)
+    */
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--color-forest-deep);
+    
+    /* 
+        display: flex; align-items: center; gap: 0.75rem;
+        Alinha o ícone e o texto horizontalmente
+    */
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.section-header h2 i {
+    /* 
+        Ícone do título com cor verde de destaque
+    */
+    color: var(--color-impact-green);
+}
+
+.section-header p {
+    /* 
+        Subtítulo com cor mais suave
+    */
+    color: var(--color-text-light);
+    font-size: 1.1rem;
+    margin-top: 0.25rem;
+}
+
+/* ============================================================ */
+/* 5. CONTEÚDO DA SEÇÃO                                        */
+/* ============================================================ */
+
+.section-content {
+    /* 
+        max-width: 1000px; 
+        Limita a largura para melhor legibilidade
+    */
+    max-width: 1000px;
+}
+
+.content-block {
+    /* 
+        Cada bloco de conteúdo tem espaçamento entre si
+    */
+    margin-bottom: 2.5rem;
+}
+
+.content-block h3 {
+    /* 
+        Títulos dos blocos (ex: "O que é o ProjetoBase?")
+        - Fonte Montserrat
+        - Tamanho 1.3rem
+        - Cor verde escuro
+    */
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--color-forest-deep);
+    margin-bottom: 1rem;
+}
+
+.content-block h4 {
+    /* 
+        Subtítulos dos blocos (ex: "Passo 1: Criar o Controller")
+        - Fonte Inter com peso 600
+        - Cor verde escuro
+    */
+    font-family: 'Inter', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--color-forest-deep);
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.content-block p {
+    /* 
+        Parágrafos com boa legibilidade
+        - line-height: 1.8: espaçamento entre linhas
+        - color: var(--color-text): cor principal do texto
+    */
+    font-size: 1rem;
+    line-height: 1.8;
+    color: var(--color-text);
+    margin-bottom: 1rem;
+}
+
+/* ============================================================ */
+/* 6. BANNER / CABEÇALHO PRINCIPAL                            */
+/* ============================================================ */
+
+.tutorial-banner {
+    /* 
+        Background com degrade sutil
+        O primeiro valor é a cor, o segundo é 0% de opacidade
+        Isso cria um efeito de "desaparecimento" suave
+    */
+    background: linear-gradient(to bottom, #f0fdf4, transparent);
+    padding: 4rem 0 3rem 0;
+    text-align: center;
+}
+
+.banner-content {
+    /* 
+        max-width: 800px: limita a largura do conteúdo
+        margin: 0 auto: centraliza horizontalmente
+    */
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.banner-icon {
+    /* 
+        Ícone grande no topo do banner
+        - font-size: 4rem (grande)
+        - color: var(--color-impact-green) (verde destaque)
+        - margin-bottom: 1rem (espaço para o título)
+    */
+    font-size: 4rem;
+    color: var(--color-impact-green);
+    margin-bottom: 1rem;
+}
+
+.banner-title {
+    /* 
+        Título principal do tutorial
+        - Fonte Montserrat
+        - weight: 800 (Extra Bold)
+        - tamanho: 2.5rem em desktop
+        - color: var(--color-forest-deep)
+    */
+    font-family: 'Montserrat', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--color-forest-deep);
+    margin-bottom: 0.5rem;
+}
+
+.banner-title span {
+    /* 
+        A palavra "COMPLETO" em destaque
+        - gradient text com verde
+    */
+    background: linear-gradient(135deg, var(--color-impact-green), #059669);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.banner-subtitle {
+    /* 
+        Subtítulo com nome do sistema
+        - Font Inter
+        - weight: 600 (Semi Bold)
+        - tamanho: 1.1rem
+        - letras espaçadas (0.05em)
+    */
+    font-family: 'Inter', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-text-light);
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.banner-description {
+    /* 
+        Descrição do tutorial
+        - tamanho: 1.2rem
+        - weight: 500 (Medium)
+        - color: var(--color-text)
+    */
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--color-text);
+    margin-bottom: 2rem;
+}
+
+/* ============================================================ */
+/* 7. BOTÃO DE CRÉDITOS                                        */
+/* ============================================================ */
+/* 
+    Este é o botão estilizado que leva ao portfólio do desenvolvedor.
+    Ele aparece no banner e no rodapé da página.
+*/
+
+.btn-credits {
+    /* 
+        Estilo base do botão
+        - display: inline-flex: alinha ícone e texto
+        - align-items: center: centraliza verticalmente
+        - gap: 0.75rem: espaço entre elementos
+        - background: #ffffff: fundo branco
+        - padding: 0.75rem 1.5rem: espaçamento interno
+        - border-radius: 50px: bordas arredondadas (pill)
+        - box-shadow: sombra suave
+        - transition: 0.3s ease: animação suave
+    */
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #ffffff;
+    padding: 0.75rem 1.5rem;
+    border-radius: 50px;
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: var(--color-text);
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    border: 1px solid #e5e7eb;
+}
+
+.btn-credits:hover {
+    /* 
+        Efeito hover (quando o mouse passa por cima)
+        - transform: translateY(-2px): levanta o botão
+        - box-shadow: sombra mais pronunciada
+    */
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--color-impact-green);
+}
+
+/* Estilo do botão grande no rodapé */
+.btn-credits.large {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+}
+
+/* Texto "Criado e pensado por" */
+.credit-text {
+    color: var(--color-text-light);
+    font-size: 0.85rem;
+}
+
+/* Nome do desenvolvedor */
+.credit-name {
+    font-weight: 700;
+    color: var(--color-forest-deep);
+}
+
+/* Tag HTML estilizada no nome */
+.code-tag {
+    /* 
+        A tag </> em verde
+        - font-family: JetBrains Mono (monoespaçada)
+    */
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--color-impact-green);
+}
+
+/* Seta no botão */
+.credit-arrow {
+    color: var(--color-impact-green);
+    transition: transform 0.3s ease;
+}
+
+.btn-credits:hover .credit-arrow {
+    /* 
+        A seta se move para a direita no hover
+    */
+    transform: translateX(4px);
+}
+
+/* ============================================================ */
+/* 8. ÍNDICE / NAVEGAÇÃO                                      */
+/* ============================================================ */
+
+.index-grid {
+    /* 
+        Grid com 2 colunas para os itens do índice
+        - repeat(2, 1fr): duas colunas de tamanho igual
+        - gap: 1rem: espaço entre os itens
+    */
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.index-item {
+    /* 
+        Cada item do índice
+        - display: flex: alinha número e título
+        - align-items: center: centraliza verticalmente
+        - gap: 1rem: espaço entre elementos
+        - background: var(--color-bg-card): fundo branco
+        - padding: 1rem 1.5rem: espaçamento interno
+        - border-radius: 12px: bordas arredondadas
+        - border: 1px solid #e5e7eb: borda suave
+        - text-decoration: none: remove sublinhado
+        - transition: 0.2s ease: animação suave
+    */
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--color-bg-card);
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    text-decoration: none;
+    color: var(--color-text);
+    transition: all 0.2s ease;
+}
+
+.index-item:hover {
+    /* 
+        Efeito hover do índice
+        - border-color: var(--color-impact-green)
+        - transform: translateY(-2px)
+        - box-shadow: mais sombra
+    */
+    border-color: var(--color-impact-green);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Número do item (01, 02, 03...) */
+.index-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 1.2rem;
+    color: var(--color-impact-green);
+    min-width: 2.5rem;
+}
+
+/* Título do item */
+.index-title {
+    font-weight: 500;
+}
+
+/* ============================================================ */
+/* 9. TABELAS DE FUNCIONALIDADES                              */
+/* ============================================================ */
+
+.table-wrapper {
+    /* 
+        overflow-x: auto: permite scroll horizontal em telas pequenas
+    */
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    border-radius: var(--border-radius);
+    border: 1px solid #e5e7eb;
+}
+
+.feature-table {
+    /* 
+        Tabela com largura total e bordas colapsadas
+    */
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.feature-table thead {
+    /* 
+        Cabeçalho da tabela com fundo cinza claro
+    */
+    background: #f8fafc;
+}
+
+.feature-table th {
+    /* 
+        Células do cabeçalho
+        - text-align: left: alinhamento à esquerda
+        - padding: 0.8rem 1rem
+        - font-weight: 600
+        - border-bottom: 2px solid #e5e7eb
+    */
+    text-align: left;
+    padding: 0.8rem 1rem;
+    font-weight: 600;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.feature-table td {
+    /* 
+        Células do corpo
+        - padding: 0.8rem 1rem
+        - border-bottom: 1px solid #f0f0f0
+    */
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.feature-table tbody tr:hover {
+    /* 
+        Destaque ao passar o mouse na linha
+    */
+    background: #f8fafc;
+}
+
+/* ============================================================ */
+/* 10. PILARES DA POO                                         */
+/* ============================================================ */
+
+.pilar-card {
+    /* 
+        Card para cada pilar da POO
+        - background: fundo branco
+        - border-radius: 16px
+        - padding: 1.5rem
+        - border: 1px solid #e5e7eb
+        - margin-bottom: 1.5rem
+        - transition: animação suave
+    */
+    background: var(--color-bg-card);
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.pilar-card:hover {
+    /* 
+        Efeito hover do card
+        - box-shadow: sombra
+        - transform: levanta um pouco
+    */
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.pilar-header {
+    /* 
+        Cabeçalho do card com número e título
+        - display: flex: alinha horizontalmente
+        - align-items: center: centraliza verticalmente
+        - gap: 1rem: espaço entre elementos
+    */
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.pilar-number {
+    /* 
+        Número do pilar (01, 02, 03, 04)
+        - font-family: JetBrains Mono
+        - font-size: 1.5rem
+        - font-weight: 700
+        - color: var(--color-impact-green)
+    */
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-impact-green);
+    min-width: 3rem;
+}
+
+.pilar-header h3 {
+    /* 
+        Título do pilar
+        - font-family: Montserrat
+        - font-size: 1.3rem
+        - font-weight: 700
+        - color: var(--color-forest-deep)
+    */
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--color-forest-deep);
+}
+
+.pilar-body p {
+    /* 
+        Parágrafos dentro do card
+        - line-height: 1.8
+        - color: var(--color-text)
+    */
+    line-height: 1.8;
+    color: var(--color-text);
+}
+
+.pilar-analogy {
+    /* 
+        Caixa de analogia
+        - background: #f0fdf4 (verde claro)
+        - padding: 1rem
+        - border-radius: 8px
+        - border-left: 4px solid var(--color-impact-green)
+        - margin: 1rem 0
+        - font-size: 0.95rem
+    */
+    background: #f0fdf4;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--color-impact-green);
+    margin: 1rem 0;
+    font-size: 0.95rem;
+}
+
+/* ============================================================ */
+/* 11. CONCEITOS DA POO (CARDS)                               */
+/* ============================================================ */
+
+.concept-card {
+    /* 
+        Card para cada conceito da POO
+        - display: flex: alinha ícone e conteúdo
+        - gap: 1.2rem
+        - background: var(--color-bg-card)
+        - padding: 1.2rem
+        - border-radius: 12px
+        - border: 1px solid #e5e7eb
+        - margin-bottom: 1rem
+    */
+    display: flex;
+    gap: 1.2rem;
+    background: var(--color-bg-card);
+    padding: 1.2rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 1rem;
+}
+
+.concept-icon {
+    /* 
+        Ícone do conceito
+        - font-size: 1.8rem
+        - min-width: 2.5rem
+        - color: var(--color-impact-green)
+    */
+    font-size: 1.8rem;
+    min-width: 2.5rem;
+    color: var(--color-impact-green);
+}
+
+.concept-content h4 {
+    /* 
+        Título do conceito
+        - font-family: Montserrat
+        - font-size: 1.05rem
+        - font-weight: 700
+        - margin: 0 0 0.3rem 0
+    */
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0 0 0.3rem 0;
+}
+
+.concept-content p {
+    /* 
+        Texto do conceito
+        - margin: 0 0 0.3rem 0
+        - line-height: 1.6
+        - color: var(--color-text)
+    */
+    margin: 0 0 0.3rem 0;
+    line-height: 1.6;
+    color: var(--color-text);
+}
+
+.concept-example {
+    /* 
+        Exemplo do dia a dia
+        - font-size: 0.9rem
+        - color: var(--color-text-light)
+        - background: #f8fafc
+        - padding: 0.5rem 0.8rem
+        - border-radius: 6px
+    */
+    font-size: 0.9rem;
+    color: var(--color-text-light);
+    background: #f8fafc;
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+}
+
+/* ============================================================ */
+/* 12. BLOCO DE CÓDIGO                                        */
+/* ============================================================ */
+
+.code-block {
+    /* 
+        Bloco de código com fundo escuro e fonte monoespaçada
+        - background: #0a0e17 (azul muito escuro)
+        - border-radius: 12px
+        - padding: 1.5rem
+        - overflow-x: auto (rolagem horizontal)
+        - margin: 1.5rem 0
+        - border: 1px solid #1e293b
+    */
+    background: #0a0e17;
+    border-radius: 12px;
+    padding: 1.5rem;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    border: 1px solid #1e293b;
+}
+
+.code-block pre {
+    /* 
+        Pré-formatação do código
+        - font-family: JetBrains Mono
+        - font-size: 0.85rem
+        - line-height: 1.7
+        - color: #e2e8f0 (cinza claro)
+        - margin: 0
+    */
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    line-height: 1.7;
+    color: #e2e8f0;
+    margin: 0;
+}
+
+/* Versão menor do bloco de código */
+.code-block.mini {
+    padding: 1rem;
+}
+
+.code-block.mini pre {
+    font-size: 0.78rem;
+}
+
+/* ============================================================ */
+/* 13. CORES PARA SINTAXE DE CÓDIGO                           */
+/* ============================================================ */
+
+.code-keyword {
+    /* 
+        Palavras-chave do PHP (class, public, function, etc)
+        - color: #c084fc (roxo)
+    */
+    color: #c084fc;
+}
+
+.code-class {
+    /* 
+        Nomes de classes
+        - color: #fcd34d (amarelo)
+    */
+    color: #fcd34d;
+}
+
+.code-method {
+    /* 
+        Nomes de métodos
+        - color: #60a5fa (azul)
+    */
+    color: #60a5fa;
+}
+
+.code-variable {
+    /* 
+        Variáveis ($this, $carro, etc)
+        - color: #f472b6 (rosa)
+    */
+    color: #f472b6;
+}
+
+.code-string {
+    /* 
+        Strings ("texto", 'texto')
+        - color: #34d399 (verde)
+    */
+    color: #34d399;
+}
+
+.code-number {
+    /* 
+        Números (10, 0, etc)
+        - color: #fbbf24 (amarelo)
+    */
+    color: #fbbf24;
+}
+
+.code-function {
+    /* 
+        Funções nativas (echo, date, etc)
+        - color: #60a5fa (azul)
+    */
+    color: #60a5fa;
+}
+
+.code-comment {
+    /* 
+        Comentários // e /*
+        - color: #94a3b8 (cinza)
+        - font-style: italic (itálico)
+    */
+    color: #94a3b8;
+    font-style: italic;
+}
+
+/* ============================================================ */
+/* 14. DIAGRAMA MVC                                            */
+/* ============================================================ */
+
+.mvc-diagram {
+    /* 
+        Container do diagrama MVC
+        - display: flex: alinha horizontalmente
+        - justify-content: center: centraliza
+        - align-items: center: centraliza verticalmente
+        - gap: 1rem
+        - padding: 2rem
+        - background: #f8fafc
+        - border-radius: 16px
+        - margin: 1.5rem 0
+        - flex-wrap: wrap (quebra em telas pequenas)
+    */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    padding: 2rem;
+    background: #f8fafc;
+    border-radius: 16px;
+    margin: 1.5rem 0;
+    flex-wrap: wrap;
+}
+
+.mvc-layer {
+    /* 
+        Cada camada do MVC
+        - background: var(--color-bg-card)
+        - padding: 1.5rem
+        - border-radius: 12px
+        - text-align: center
+        - min-width: 150px
+        - border: 1px solid #e5e7eb
+        - flex: 1 (cresce igualmente)
+    */
+    background: var(--color-bg-card);
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    min-width: 150px;
+    border: 1px solid #e5e7eb;
+    flex: 1;
+}
+
+.mvc-layer h4 {
+    /* 
+        Título da camada
+        - font-family: Montserrat
+        - font-weight: 700
+        - margin: 0.5rem 0
+    */
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    margin: 0.5rem 0;
+}
+
+.mvc-layer p {
+    /* 
+        Texto da camada
+        - font-size: 0.9rem
+        - color: var(--color-text-light)
+        - margin: 0
+    */
+    font-size: 0.9rem;
+    color: var(--color-text-light);
+    margin: 0;
+}
+
+.mvc-detail {
+    /* 
+        Detalhe em negrito
+        - font-weight: 600
+        - font-size: 0.8rem
+    */
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+/* Cores específicas para cada camada */
+.mvc-model h4 { color: #10b981; }
+.mvc-view h4 { color: #3b82f6; }
+.mvc-controller h4 { color: #8b5cf6; }
+
+/* Seta entre as camadas */
+.mvc-arrow {
+    font-size: 1.8rem;
+    color: var(--color-text-light);
+}
+
+/* ============================================================ */
+/* 15. FLUXO DE REQUISIÇÃO (PASSOS)                           */
+/* ============================================================ */
+
+.flow-steps {
+    /* 
+        Container dos passos do fluxo
+        - display: flex: alinha verticalmente
+        - flex-direction: column
+        - gap: 0.5rem
+    */
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 600px;
+    margin: 1.5rem 0;
+}
+
+.flow-step {
+    /* 
+        Cada passo do fluxo
+        - display: flex: alinha número e texto
+        - align-items: center
+        - gap: 1rem
+        - background: var(--color-bg-card)
+        - padding: 0.8rem 1.2rem
+        - border-radius: 10px
+        - border: 1px solid #e5e7eb
+    */
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--color-bg-card);
+    padding: 0.8rem 1.2rem;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+}
+
+.step-number {
+    /* 
+        Número do passo
+        - font-family: JetBrains Mono
+        - font-weight: 700
+        - color: var(--color-impact-green)
+        - min-width: 2rem
+    */
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: var(--color-impact-green);
+    min-width: 2rem;
+}
+
+.step-text {
+    /* 
+        Texto do passo
+        - color: var(--color-text)
+    */
+    color: var(--color-text);
+}
+
+.flow-arrow {
+    /* 
+        Seta entre os passos
+        - text-align: center
+        - color: var(--color-text-light)
+        - font-size: 0.8rem
+    */
+    text-align: center;
+    color: var(--color-text-light);
+    font-size: 0.8rem;
+}
+
+/* ============================================================ */
+/* 16. MVC PARTS (EXPLICAÇÃO DAS CAMADAS)                    */
+/* ============================================================ */
+
+.mvc-parts {
+    /* 
+        Container das 3 partes do MVC
+        - display: grid: 3 colunas
+        - gap: 1.5rem
+    */
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+.mvc-part {
+    /* 
+        Cada parte do MVC
+        - background: var(--color-bg-card)
+        - padding: 1.5rem
+        - border-radius: 12px
+        - border: 1px solid #e5e7eb
+    */
+    background: var(--color-bg-card);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+}
+
+.mvc-part h4 {
+    /* 
+        Título da parte
+        - font-family: Montserrat
+        - font-weight: 700
+        - color: var(--color-forest-deep)
+        - margin-bottom: 0.75rem
+    */
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    color: var(--color-forest-deep);
+    margin-bottom: 0.75rem;
+}
+
+.mvc-part p {
+    /* 
+        Parágrafos da parte
+        - font-size: 0.95rem
+        - line-height: 1.7
+        - color: var(--color-text)
+    */
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--color-text);
+}
+
+.mvc-part ul {
+    /* 
+        Lista da parte
+        - padding-left: 1.2rem
+        - margin: 0.5rem 0
+        - color: var(--color-text)
+    */
+    padding-left: 1.2rem;
+    margin: 0.5rem 0;
+    color: var(--color-text);
+}
+
+.mvc-part ul li {
+    /* 
+        Item da lista
+        - margin-bottom: 0.3rem
+    */
+    margin-bottom: 0.3rem;
+}
+
+.mvc-example {
+    /* 
+        Exemplo prático
+        - font-size: 0.9rem
+        - background: #f8fafc
+        - padding: 0.5rem 0.8rem
+        - border-radius: 6px
+        - margin-top: 0.5rem
+    */
+    font-size: 0.9rem;
+    background: #f8fafc;
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+}
+
+/* ============================================================ */
+/* 17. PASTAS IMPORTANTES (ÁRVORE DO PROJETO)                */
+/* ============================================================ */
+
+.important-folders {
+    /* 
+        Lista de pastas importantes
+        - background: #f0fdf4
+        - padding: 1.2rem
+        - border-radius: 12px
+        - border: 1px solid #d1fae5
+    */
+    background: #f0fdf4;
+    padding: 1.2rem;
+    border-radius: 12px;
+    border: 1px solid #d1fae5;
+}
+
+.important-folders h4 {
+    /* 
+        Título da lista
+        - font-family: Montserrat
+        - font-weight: 700
+        - color: var(--color-forest-deep)
+        - margin-bottom: 0.5rem
+    */
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    color: var(--color-forest-deep);
+    margin-bottom: 0.5rem;
+}
+
+.important-folders ul {
+    /* 
+        Lista de pastas
+        - padding-left: 1.2rem
+        - margin: 0
+        - color: var(--color-text)
+    */
+    padding-left: 1.2rem;
+    margin: 0;
+    color: var(--color-text);
+}
+
+.important-folders ul li {
+    /* 
+        Item da lista
+        - margin-bottom: 0.5rem
+    */
+    margin-bottom: 0.5rem;
+}
+
+.important-folders ul li strong {
+    /* 
+        Nome da pasta em negrito
+        - color: var(--color-forest-deep)
+    */
+    color: var(--color-forest-deep);
+}
+
+/* ============================================================ */
+/* 18. ÁRVORE DO PROJETO (ESTRUTURA)                          */
+/* ============================================================ */
+
+.tree-container {
+    /* 
+        Container da árvore
+        - background: #0a0e17
+        - border-radius: 12px
+        - padding: 1.5rem
+        - overflow-x: auto (rolagem horizontal)
+        - margin: 1rem 0
+    */
+    background: #0a0e17;
+    border-radius: 12px;
+    padding: 1.5rem;
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+.tree-structure {
+    /* 
+        Texto da árvore
+        - font-family: JetBrains Mono
+        - font-size: 0.8rem
+        - line-height: 1.8
+        - color: #e2e8f0
+        - margin: 0
+    */
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.8;
+    color: #e2e8f0;
+    margin: 0;
+}
+
+/* ============================================================ */
+/* 19. RODAPÉ DO TUTORIAL                                      */
+/* ============================================================ */
+
+.tutorial-footer {
+    /* 
+        Rodapé do tutorial
+        - padding: 3rem 0
+        - text-align: center
+        - border-top: 1px solid #e5e7eb
+        - margin-top: 2rem
+    */
+    padding: 3rem 0;
+    text-align: center;
+    border-top: 1px solid #e5e7eb;
+    margin-top: 2rem;
+}
+
+.footer-credits {
+    /* 
+        Centraliza o botão de créditos
+    */
+    display: flex;
+    justify-content: center;
+}
+
+/* ============================================================ */
+/* 20. ESTADOS VAZIOS                                         */
+/* ============================================================ */
+
+.empty-state {
+    /* 
+        Estado vazio (sem dados)
+        - text-align: center
+        - padding: 3rem 2rem
+        - background: var(--color-bg-card)
+        - border-radius: 12px
+        - border: 1px solid #e5e7eb
+    */
+    text-align: center;
+    padding: 3rem 2rem;
+    background: var(--color-bg-card);
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+}
+
+.empty-state i {
+    /* 
+        Ícone do estado vazio
+        - font-size: 3rem
+        - color: #d1d5db
+    */
+    font-size: 3rem;
+    color: #d1d5db;
+}
+
+.empty-state h3 {
+    /* 
+        Título do estado vazio
+        - margin: 1rem 0 0.5rem
+    */
+    margin: 1rem 0 0.5rem;
+}
+
+.empty-state p {
+    /* 
+        Texto do estado vazio
+        - color: var(--color-text-light)
+    */
+    color: var(--color-text-light);
+}
+
+/* ============================================================ */
+/* 21. RESPONSIVIDADE (MEDIA QUERIES)                         */
+/* ============================================================ */
+
+/* 
+    Media Query para tablets e telas menores (até 1024px)
+*/
+@media (max-width: 1024px) {
+    .mvc-parts {
+        /* 
+            Em telas médias, as partes do MVC ficam em 2 colunas
+        */
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* 
+    Media Query para dispositivos móveis (até 768px)
+*/
+@media (max-width: 768px) {
+    /* Banner */
+    .banner-title {
+        font-size: 1.8rem;
+    }
+    
+    .banner-description {
+        font-size: 1rem;
+    }
+    
+    /* Índice */
+    .index-grid {
+        /* 
+            Índice em uma coluna no mobile
+        */
+        grid-template-columns: 1fr;
+    }
+    
+    /* MVC */
+    .mvc-diagram {
+        /* 
+            Diagrama MVC em coluna no mobile
+        */
+        flex-direction: column;
+        padding: 1.5rem;
+    }
+    
+    .mvc-arrow {
+        transform: rotate(90deg);
+    }
+    
+    .mvc-parts {
+        /* 
+            Partes do MVC em uma coluna no mobile
+        */
+        grid-template-columns: 1fr;
+    }
+    
+    /* Títulos */
+    .section-header h2 {
+        font-size: 1.4rem;
+        flex-wrap: wrap;
+    }
+    
+    /* Botão de créditos */
+    .btn-credits {
+        font-size: 0.9rem;
+        padding: 0.6rem 1rem;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .btn-credits.large {
+        padding: 0.8rem 1.2rem;
+        font-size: 0.95rem;
+    }
+    
+    /* Bloco de código */
+    .code-block {
+        padding: 1rem;
+        font-size: 0.75rem;
+    }
+    
+    .code-block pre {
+        font-size: 0.72rem;
+    }
+}
+
+/* 
+    Media Query para telas muito pequenas (até 480px)
+*/
+@media (max-width: 480px) {
+    .banner-title {
+        font-size: 1.4rem;
+    }
+    
+    .banner-icon {
+        font-size: 3rem;
+    }
+    
+    .pilar-header {
+        flex-wrap: wrap;
+    }
+    
+    .concept-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .flow-step {
+        flex-wrap: wrap;
+        gap: 0.3rem;
+    }
+}
+
+/* ============================================================ */
+/* 22. ANIMAÇÕES                                              */
+/* ============================================================ */
+
+/* 
+    Animação de entrada (fade in + subir)
+    .animate-in: classe aplicada aos elementos que terão animação
+*/
+.animate-in {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.animate-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Delays para animação escalonada */
+.delay-1 { transition-delay: 0.1s; }
+.delay-2 { transition-delay: 0.2s; }
+.delay-3 { transition-delay: 0.3s; }
+.delay-4 { transition-delay: 0.4s; }
+.delay-5 { transition-delay: 0.5s; }
+.delay-6 { transition-delay: 0.6s; }
+.delay-7 { transition-delay: 0.7s; }
+.delay-8 { transition-delay: 0.8s; }
+.delay-9 { transition-delay: 0.9s; }
+.delay-10 { transition-delay: 1.0s; }
+.delay-11 { transition-delay: 1.1s; }
+.delay-12 { transition-delay: 1.2s; }
+.delay-13 { transition-delay: 1.3s; }
+.delay-14 { transition-delay: 1.4s; }
+
+/* ============================================================ */
+/* BOTÃO GITHUB - ABAIXO DOS CRÉDITOS                         */
+/* ============================================================ */
+
+.btn-github {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.6rem 1.2rem;
+    background: #24292e;
+    border: 2px solid #24292e;
+    border-radius: 50px;
+    color: #ffffff;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(36, 41, 46, 0.15);
+    font-family: 'Inter', sans-serif;
+    margin-top: 20px;
+}
+
+.btn-github .github-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+}
+
+.btn-github .github-text {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.btn-github .github-arrow {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.3s ease;
+}
+
+.btn-github:hover {
+    background: #1b1f23;
+    border-color: #1b1f23;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 25px rgba(36, 41, 46, 0.4);
+}
+
+.btn-github:hover .github-arrow {
+    color: #ffffff;
+    transform: translateX(4px);
+}
+
+/* ============================================================ */
+/* ALINHAMENTO CENTRAL DOS BOTÕES                             */
+/* ============================================================ */
+
+.footer-credits,
+.footer-github {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.footer-github {
+    margin-top: 0.8rem;
+}
+/* ============================================================ */
+/* DESCRIÇÃO DO PROJETO - ABAIXO DO BOTÃO GITHUB              */
+/* ============================================================ */
+
+.banner-project-description {
+    margin-top: 1.5rem;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+}
+
+.project-desc-text {
+    font-size: 0.95rem;
+    line-height: 1.8;
+    color: rgba(0, 0, 0, 0.7);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(4px);
+    margin: 0;
+    margin-top: 40px;
+    font-weight: 400;
+    letter-spacing: 0.3px;
+}
+
+.project-desc-text strong {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 600;
+}
+
+.project-desc-text .highlight-tech {
+    color: #34d399;
+    font-weight: 500;
+}
+
+/* ============================================================ */
+/* RESPONSIVIDADE                                              */
+/* ============================================================ */
+
+@media (max-width: 768px) {
+    .project-desc-text {
+        font-size: 0.85rem;
+        padding: 0.8rem 1rem;
+        line-height: 1.6;
+    }
+    
+    .banner-project-description {
+        margin-top: 1rem;
+        padding: 0 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .project-desc-text {
+        font-size: 0.8rem;
+        padding: 0.6rem 0.8rem;
+    }
+}

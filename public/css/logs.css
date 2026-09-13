@@ -1,0 +1,226 @@
+/* public/css/logs.css */
+
+.logs-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.logs-hero h1 {
+    font-family: 'Montserrat', sans-serif;
+    color: var(--color-forest-deep);
+    font-size: 1.8rem;
+}
+
+.logs-subtitle {
+    color: var(--color-text);
+    margin-top: 0.3rem;
+}
+
+.logs-filtros {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.filtros-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 1rem;
+    align-items: end;
+}
+
+.filtro-group label {
+    display: block;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--color-text);
+    margin-bottom: 0.3rem;
+}
+
+.filtro-group .form-control {
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    background: var(--color-white);
+}
+
+.filtro-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-filter {
+    background: #2563eb;
+    color: white;
+    padding: 0.6rem 1.5rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-filter:hover {
+    background: #1d4ed8;
+}
+
+.btn-clear {
+    background: #6c757d;
+    color: white;
+    padding: 0.6rem 1.5rem;
+    border-radius: 6px;
+    text-decoration: none;
+}
+
+.btn-clear:hover {
+    background: #5a6268;
+    color: white;
+}
+
+.logs-table-wrapper {
+    overflow-x: auto;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+}
+
+.logs-table-wrapper table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+}
+
+.logs-table-wrapper thead {
+    background: var(--color-forest-deep);
+}
+
+.logs-table-wrapper thead th {
+    color: white;
+    padding: 0.8rem 1rem;
+    text-align: left;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.logs-table-wrapper tbody td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid #e9ecef;
+    color: var(--color-text);
+    font-size: 0.9rem;
+}
+
+.logs-table-wrapper tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.badge-acao {
+    display: inline-block;
+    padding: 0.2rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 1.5rem 0;
+    flex-wrap: wrap;
+}
+
+.pagination-container a,
+.pagination-container span {
+    padding: 0.4rem 0.8rem;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--color-text);
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.pagination-container a:hover {
+    background: var(--color-impact-green);
+    color: white;
+    border-color: var(--color-impact-green);
+}
+
+.pagination-container .active {
+    background: var(--color-forest-deep);
+    color: white;
+    border-color: var(--color-forest-deep);
+}
+
+.logs-info {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--color-text);
+}
+
+.logs-voltar {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid #f0f0f0;
+    text-align: center;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: #d1d5db;
+    margin-bottom: 1.5rem;
+}
+
+.empty-state h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.3rem;
+    color: var(--color-forest-deep);
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    color: var(--color-text);
+    margin-bottom: 1.5rem;
+}
+
+/* Responsivo */
+@media (max-width: 992px) {
+    .filtros-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .filtros-grid {
+        grid-template-columns: 1fr;
+    }
+    .filtro-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+    .filtro-buttons .btn {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
+}

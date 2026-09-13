@@ -1,0 +1,343 @@
+/* ============================================================
+   USER.CSS - Página Minha Conta
+   ============================================================ */
+
+.profile-section {
+    padding: 3rem 1.5rem;
+    min-height: 80vh;
+    background: var(--color-forest-deep);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Imagem de fundo */
+.profile-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&q=80&w=2000') no-repeat center center/cover;
+    opacity: 0.15;
+    z-index: 0;
+}
+
+/* Overlay escuro */
+.profile-section::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(6, 44, 33, 0.7);
+    z-index: 1;
+}
+
+.profile-container {
+    max-width: 700px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+    width: 100%;
+}
+
+.profile-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+/* Cabeçalho */
+.profile-header {
+    background: var(--color-forest-deep);
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    color: white;
+}
+
+.profile-avatar {
+    font-size: 4rem;
+    color: rgba(255,255,255,0.8);
+    flex-shrink: 0;
+}
+
+.profile-avatar i {
+    display: block;
+}
+
+.profile-info h2 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.5rem;
+    margin: 0;
+    color: white;
+}
+
+.profile-info h2::before {
+    display: none;
+}
+
+.profile-email {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.9rem;
+    margin: 0.2rem 0 0.5rem 0;
+}
+
+.profile-badge {
+    display: inline-block;
+    padding: 0.2rem 1rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-admin {
+    background: #8b5cf6;
+    color: white;
+}
+
+.badge-operador {
+    background: #3b82f6;
+    color: white;
+}
+
+.badge-participante {
+    background: #10b981;
+    color: white;
+}
+
+.badge-master {
+    background: #ef4444;
+    color: white;
+}
+
+.badge-fundo {
+    background: #f59e0b;
+    color: white;
+}
+
+/* Corpo */
+.profile-body {
+    padding: 2rem;
+}
+
+.profile-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem 2rem;
+}
+
+.profile-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.profile-item .profile-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-main);
+    opacity: 0.7;
+}
+
+.profile-item .profile-value {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--color-text-headings);
+    word-break: break-word;
+}
+
+.profile-section-divider {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--color-slate-200);
+}
+
+.profile-section-divider h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.1rem;
+    color: var(--color-text-headings);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.profile-section-divider h3 i {
+    color: var(--color-impact-green);
+}
+
+/* Ações */
+.profile-actions {
+    padding: 1.5rem 2rem;
+    border-top: 1px solid var(--color-slate-200);
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: rgba(248, 250, 252, 0.8);
+}
+
+.profile-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Badges */
+.badge-success {
+    background: #d4edda;
+    color: #155724;
+    padding: 0.2rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+}
+
+.badge-danger {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 0.2rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+}
+
+/* Flash messages */
+.profile-section .flash-sucesso,
+.profile-section .flash-erro,
+.profile-section .flash-aviso {
+    position: relative;
+    z-index: 2;
+    max-width: 700px;
+    margin: 0 auto 1rem auto;
+}
+
+/* ============================================================
+   RESPONSIVIDADE
+   ============================================================ */
+
+@media (max-width: 768px) {
+    .profile-header {
+        flex-direction: column;
+        text-align: center;
+        padding: 1.5rem;
+    }
+    
+    .profile-grid {
+        grid-template-columns: 1fr;
+        gap: 0.8rem;
+    }
+    
+    .profile-body {
+        padding: 1.5rem;
+    }
+    
+    .profile-actions {
+        padding: 1rem 1.5rem;
+        flex-direction: column;
+    }
+    
+    .profile-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-card {
+        border-radius: 12px;
+    }
+    
+    .profile-header {
+        padding: 1rem;
+    }
+    
+    .profile-avatar {
+        font-size: 3rem;
+    }
+    
+    .profile-info h2 {
+        font-size: 1.2rem;
+    }
+}
+
+/* ============================================================
+   USER.CSS - Editar Conta (formulário)
+   ============================================================ */
+
+/* Formulário dentro do perfil */
+.profile-body .auth-form {
+    margin-top: 0;
+}
+
+.profile-body .form-group {
+    margin-bottom: 0.5rem;
+}
+
+.profile-body .form-group label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-headings);
+    margin-bottom: 0.3rem;
+}
+
+.profile-body .form-control {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    border: 1px solid var(--color-slate-200);
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    transition: var(--transition-smooth);
+    background: var(--color-white);
+}
+
+.profile-body .form-control:focus {
+    outline: none;
+    border-color: var(--color-impact-green);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+
+.profile-body .profile-actions {
+    padding: 1rem 0 0 0;
+    border-top: none;
+    background: transparent;
+}
+
+/* Requisitos de senha */
+#requisitos_senha ul {
+    list-style: none;
+    padding: 0;
+    margin: 5px 0;
+    font-size: 12px;
+}
+
+#requisitos_senha li {
+    padding: 2px 0;
+}
+
+@media (max-width: 768px) {
+    .profile-body .profile-actions {
+        flex-direction: column;
+    }
+    
+    .profile-body .profile-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
