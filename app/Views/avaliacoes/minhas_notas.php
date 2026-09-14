@@ -8,6 +8,7 @@ require_once __DIR__ . '/../layouts/flashes.php';
 <p>Turma: <a href="<?= $basePath ?>/turmas/<?= (int) $projeto['turma_id'] ?>"><?= h($projeto['turma_nome']) ?></a></p>
 
 <?php require __DIR__ . '/../projetos/_nav.php'; ?>
+<?php require __DIR__ . '/_nav.php'; ?>
 
 <h2>Minhas notas</h2>
 
@@ -16,13 +17,7 @@ require_once __DIR__ . '/../layouts/flashes.php';
 <?php else: ?>
     <table border="1" cellpadding="6">
         <thead>
-            <tr>
-                <th>Critério</th>
-                <th>Tipo</th>
-                <th>Peso</th>
-                <th>Nota</th>
-                <th>Conceito</th>
-            </tr>
+            <tr><th>Critério</th><th>Tipo</th><th>Peso</th><th>Nota</th><th>Conceito</th></tr>
         </thead>
         <tbody>
             <?php foreach ($boletim['linhas'] as $l): ?>
@@ -30,9 +25,7 @@ require_once __DIR__ . '/../layouts/flashes.php';
                     <td><?= h($l['criterio']['nome']) ?></td>
                     <td><code><?= h($l['criterio']['tipo_avaliacao']) ?></code></td>
                     <td><?= number_format((float) $l['criterio']['peso'], 2, ',', '.') ?></td>
-                    <td>
-                        <?= $l['nota'] === null ? '—' : number_format($l['nota'], 2, ',', '.') ?>
-                    </td>
+                    <td><?= $l['nota'] === null ? '—' : number_format($l['nota'], 2, ',', '.') ?></td>
                     <td>
                         <?php if ($l['conceito'] !== null): ?>
                             <strong><?= h($l['conceito']) ?></strong>

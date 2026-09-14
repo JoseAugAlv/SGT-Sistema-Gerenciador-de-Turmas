@@ -125,3 +125,26 @@ $router->get ('/projetos/{id}/avaliacoes',        'AvaliacaoController@index',  
 $router->get ('/projetos/{id}/avaliacoes/representante',        'AvaliacaoController@bulkRepresentante',       ['master', 'aluno']);
 $router->post('/projetos/{id}/avaliacoes/representante/salvar', 'AvaliacaoController@bulkRepresentanteSalvar', ['master', 'aluno']);
 $router->get ('/projetos/{id}/avaliacoes/minhas', 'AvaliacaoController@minhasNotas',       ['master', 'aluno']);
+// ============ AVALIAÇÕES — DIRETOR ============
+$router->get ('/projetos/{id}/avaliacoes/diretor',        'AvaliacaoController@diretor',      ['master', 'aluno']);
+$router->post('/projetos/{id}/avaliacoes/diretor/salvar', 'AvaliacaoController@diretorSalvar',['master', 'aluno']);
+
+// ============ AVALIAÇÕES — PARES ============
+$router->get ('/projetos/{id}/avaliacoes/pares',        'AvaliacaoController@pares',      ['master', 'aluno']);
+$router->post('/projetos/{id}/avaliacoes/pares/salvar', 'AvaliacaoController@paresSalvar',['master', 'aluno']);
+
+// ============ AVALIAÇÕES — AUTO ============
+$router->get ('/projetos/{id}/avaliacoes/auto',        'AvaliacaoController@auto',      ['master', 'aluno']);
+$router->post('/projetos/{id}/avaliacoes/auto/salvar', 'AvaliacaoController@autoSalvar',['master', 'aluno']);
+
+// ============ AVALIAÇÕES — COLETIVA ============
+$router->get ('/projetos/{id}/avaliacoes/coletiva',        'AvaliacaoController@coletiva',      ['master', 'aluno']);
+$router->post('/projetos/{id}/avaliacoes/coletiva/salvar', 'AvaliacaoController@coletivaSalvar',['master', 'aluno']);
+
+// ============ RELATÓRIOS ============
+$router->get('/projetos/{id}/relatorios/boletim',       'RelatorioController@boletimAluno',   ['master', 'aluno']);
+$router->get('/projetos/{id}/relatorios/boletim/pdf',   'RelatorioController@boletimAlunoPdf',['master', 'aluno']);
+
+$router->get('/projetos/{id}/relatorios/geral',         'RelatorioController@geralProjeto',    ['master', 'aluno']);
+$router->get('/projetos/{id}/relatorios/geral/pdf',     'RelatorioController@geralProjetoPdf', ['master', 'aluno']);
+$router->get('/projetos/{id}/relatorios/geral/excel',   'RelatorioController@geralProjetoExcel',['master', 'aluno']);

@@ -3,19 +3,28 @@ require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 require_once __DIR__ . '/../layouts/flashes.php';
 
+// ---------- Verifica o papel do usuário ----------
+require_once __DIR__ . '/../../Config/database.php';
+require_once __DIR__ . '/../../Models/TurmaUsuario.php';
+
+$u = $_SESSION['usuario'] ?? null;
+$isMaster = $u && $u['tipo'] === 'master';
+
+$tu = new TurmaUsuario();
+$isRep = $u && !$isMaster && $tu->ehRepresentante((int) $projeto['turma_id'], (int) $u['id']);
+
+// Só master ou representante pode editar/reabrir critérios
+$podeGerenciar = $isMaster || $isRep;
+
 $badgePeso = [
-    'incompleto' => ['icon' => 'fas fa-hourglass-half',      'cor' => '#c80', 'txt' => 'Incompleto'],
-    'completo'   => ['icon' => 'fas fa-check-circle',        'cor' => '#0a0', 'txt' => 'Completo'],
-    'excedido'   => ['icon' => 'fas fa-exclamation-triangle','cor' => '#b00', 'txt' => 'Excedido'],
+    'incompleto' => ['icon' => 'fas fa-hourglass-half',       'cor' => '#c80', 'txt' => 'Incompleto'],
+    'completo'   => ['icon' => 'fas fa-check-circle',         'cor' => '#0a0', 'txt' => 'Completo'],
+    'excedido'   => ['icon' => 'fas fa-exclamation-triangle', 'cor' => '#b00', 'txt' => 'Excedido'],
 ];
 $b = $badgePeso[$statusPeso];
 
-$tipoLabel = function (string $t) {
-    return Criterio::TIPOS[$t] ?? $t;
-};
-$aplicLabel = function (string $a) {
-    return Criterio::APLICAVEIS[$a] ?? $a;
-};
+$tipoLabel = fn(string $t) => Criterio::TIPOS[$t] ?? $t;
+$aplicLabel = fn(string $a) => Criterio::APLICAVEIS[$a] ?? $a;
 ?>
 
 <h1><?= h($projeto['nome']) ?></h1>

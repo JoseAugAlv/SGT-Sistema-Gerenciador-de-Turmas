@@ -1,6 +1,5 @@
 <?php
 // app/Views/projetos/_nav.php
-// Mostra apenas as abas que o usuário logado pode acessar.
 
 if (empty($projeto) || empty($projeto['id'])) {
     return;
@@ -20,7 +19,7 @@ $isRep     = false;
 $isDiretor = false;
 
 if ($u && !$isMaster && $turmaId) {
-    $tu   = new TurmaUsuario();
+    $tu    = new TurmaUsuario();
     $isRep = $tu->ehRepresentante($turmaId, (int) $u['id']);
 
     $pdo  = Database::getConnection();
@@ -35,38 +34,26 @@ if ($u && !$isMaster && $turmaId) {
     $isDiretor = (bool) $stmt->fetchColumn();
 }
 
-// Detecta seção ativa
 $secaoAtual = 'etapas';
 foreach (['grupos', 'criterios', 'avaliacoes', 'conceitos', 'relatorios'] as $s) {
     if (strpos($uri, '/' . $s) !== false) { $secaoAtual = $s; break; }
 }
 if (strpos($uri, '/etapas') !== false) $secaoAtual = 'etapas';
 
-// Monta abas respeitando o papel
 $todasAbas = [
-    'etapas'     => ['icon' => 'fas fa-list-ol',         'label' => 'Etapas',     'url' => "/projetos/{$pid}",                'roles' => ['master','aluno']],
-    'grupos'     => ['icon' => 'fas fa-users',           'label' => 'Grupos',     'url' => "/projetos/{$pid}/grupos",         'roles' => ['master','aluno']],
-    'criterios'  => ['icon' => 'fas fa-clipboard-check', 'label' => 'Critérios',  'url' => "/projetos/{$pid}/criterios",      'roles' => ['master','aluno']],
-    'avaliacoes' => ['icon' => 'fas fa-star',            'label' => 'Avaliações', 'url' => "/projetos/{$pid}/avaliacoes",     'roles' => ['master','aluno']],
-    'conceitos'  => ['icon' => 'fas fa-sliders',         'label' => 'Conceitos',  'url' => "/projetos/{$pid}/conceitos",      'roles' => ['master','representante']],
-    'relatorios' => ['icon' => 'fas fa-file-alt',        'label' => 'Relatórios', 'url' => "/projetos/{$pid}/relatorios",     'roles' => ['master','representante']],
+    'etapas'     => ['icon' => 'fas fa-list-ol',         'label' => 'Etapas',     'url' => "/projetos/{$pid}",            'roles' => ['master','aluno']],
+    'grupos'     => ['icon' => 'fas fa-users',           'label' => 'Grupos',     'url' => "/projetos/{$pid}/grupos",     'roles' => ['master','aluno']],
+    'criterios'  => ['icon' => 'fas fa-clipboard-check', 'label' => 'Critérios',  'url' => "/projetos/{$pid}/criterios",  'roles' => ['master','aluno']],
+    'avaliacoes' => ['icon' => 'fas fa-star',            'label' => 'Avaliações', 'url' => "/projetos/{$pid}/avaliacoes", 'roles' => ['master','aluno']],
+    'conceitos'  => ['icon' => 'fas fa-sliders',         'label' => 'Conceitos',  'url' => "/projetos/{$pid}/conceitos",  'roles' => ['master','representante']],
+    'relatorios' => ['icon' => 'fas fa-file-alt',        'label' => 'Relatórios', 'url' => "/projetos/{$pid}/relatorios", 'roles' => ['master','representante']],
 ];
 
-// Aplica regras de visibilidade
 $abasVisiveis = [];
 foreach ($todasAbas as $chave => $aba) {
-    if (in_array('master', $aba['roles'], true) && $isMaster) {
-        $abasVisiveis[$chave] = $aba;
-        continue;
-    }
-    if (in_array('representante', $aba['roles'], true) && $isRep) {
-        $abasVisiveis[$chave] = $aba;
-        continue;
-    }
-    if (in_array('aluno', $aba['roles'], true) && $u) {
-        $abasVisiveis[$chave] = $aba;
-        continue;
-    }
+    if (in_array('master', $aba['roles'], true) && $isMaster)     { $abasVisiveis[$chave] = $aba; continue; }
+    if (in_array('representante', $aba['roles'], true) && $isRep) { $abasVisiveis[$chave] = $aba; continue; }
+    if (in_array('aluno', $aba['roles'], true) && $u)             { $abasVisiveis[$chave] = $aba; continue; }
 }
 ?>
 
@@ -74,12 +61,11 @@ foreach ($todasAbas as $chave => $aba) {
     <?php $primeiro = true; ?>
     <?php foreach ($abasVisiveis as $chave => $aba): ?>
         <?php if (!$primeiro): ?> — <?php endif; $primeiro = false; ?>
-
-        <?php if ($chave === $secaoAtual): ?>
-            <strong><i class="<?= h($aba['icon']) ?>"></i> <?= h($aba['label']) ?></strong>
-        <?php else: ?>
-            <a href="<?= $basePath . $aba['url'] ?>"><i class="<?= h($aba['icon']) ?>"></i> <?= h($aba['label']) ?></a>
-        <?php endif; ?>
+        <?php $ativo = ($chave === $secaoAtual); ?>
+        <a href="<?= $basePath . $aba['url'] ?>"
+           style="text-decoration:none;<?= $ativo ? 'background:#e5e7eb;padding:4px 10px;border-radius:4px;font-weight:700;color:#111;' : '' ?>">
+            <i class="<?= h($aba['icon']) ?>"></i> <?= h($aba['label']) ?>
+        </a>
     <?php endforeach; ?>
 </nav>
 

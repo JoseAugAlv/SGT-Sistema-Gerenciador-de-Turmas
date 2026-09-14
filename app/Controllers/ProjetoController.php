@@ -8,6 +8,7 @@ require_once __DIR__ . '/../Models/ConfiguracaoConceito.php';
 require_once __DIR__ . '/../Models/Auditoria.php';
 require_once __DIR__ . '/../Helpers/ViewHelper.php';
 require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
+require_once __DIR__ . '/../Services/SnapshotService.php';
 
 class ProjetoController
 {
@@ -278,7 +279,8 @@ class ProjetoController
         $souRep    = $this->tu->ehRepresentante((int) $projeto['turma_id'], (int) $u['id']);
 
         if (!$souMaster && !$souRep) {
-            http_response_code(403); exit('Sem permissão.');
+            http_response_code(403);
+            exit('Sem permissão.');
         }
 
         if ($projeto['encerrado']) {
@@ -290,21 +292,42 @@ class ProjetoController
             $this->redirect('/projetos/' . $id . '/encerrar');
         }
 
+        // 1. Encerra o projeto
         $this->projeto->encerrar($id, (int) $u['id']);
 
-        // TODO FASE 7: SnapshotService::congelarBoletim($id)
+        // 2. Congela o boletim
+        $snapshot = new SnapshotService();
+        $total    = $snapshot->congelarBoletim($id);
 
         $this->audit->registrar('projeto_encerrado', 'projetos', $id,
-            ['encerrado' => 0], ['encerrado' => 1, 'por' => $u['id']]);
+            ['encerrado' => 0], ['encerrado' => 1, 'por' => $u['id'], 'snapshots' => $total]);
 
-        $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Projeto encerrado. Boletim congelado (F7).'];
+        $_SESSION['flash'] = [
+            'tipo' => 'sucesso',
+            'mensagem' => "Projeto encerrado. Boletim de {$total} aluno(s) congelado.",
+        ];
         $this->redirect('/projetos/' . $id);
     }
 
     public function grupos(int $id)      { $this->placeholder($id, 'Grupos'); }
     public function criterios(int $id)   { $this->placeholder($id, 'Critérios'); }
     public function avaliacoes(int $id)  { $this->placeholder($id, 'Avaliações'); }
-    public function relatorios(int $id)  { $this->placeholder($id, 'Relatórios'); }
+
+    public function relatorios(int $id)
+    {
+        $projeto = $this->projeto->porId($id);
+        if (!$projeto) { $this->flash('Projeto não encontrado.'); $this->redirect('/turmas'); }
+
+        $u         = $_SESSION['usuario'];
+        $souMaster = $u['tipo'] === 'master';
+        $estou     = $this->tu->estaAtivo((int) $projeto['turma_id'], (int) $u['id']);
+        if (!$souMaster && !$estou) { http_response_code(403); exit('Sem acesso.'); }
+
+        $this->render('relatorios/index', [
+            'projeto'    => $projeto,
+            'meuBoletim' => true,
+        ]);
+    }
 
     private function placeholder(int $id, string $tituloSecao): void
     {
