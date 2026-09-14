@@ -1,8 +1,6 @@
 <?php
 // app/Core/Mail.php
-
 require_once __DIR__ . '/App.php';
-require_once __DIR__ . '/../Config/Config.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
@@ -10,111 +8,114 @@ use PHPMailer\PHPMailer\Exception;
 
 class Mail
 {
-    private $host;
-    private $port;
-    private $username;
-    private $password;
-    private $fromName;
+    private string $host;
+    private int    $port;
+    private string $user;
+    private string $pass;
+    private string $fromName;
 
     public function __construct()
     {
-        $this->host = Config::get('MAIL_HOST');
-        $this->port = Config::get('MAIL_PORT');
-        $this->username = Config::get('MAIL_USER');
-        $this->password = Config::get('MAIL_PASS');
-        $this->fromName = Config::get('MAIL_FROM_NAME', App::getName());
+        $this->host     = (string) App::get('MAIL_HOST', '');
+        $this->port     = (int)    App::get('MAIL_PORT', 587);
+        $this->user     = (string) App::get('MAIL_USER', '');
+        $this->pass     = (string) App::get('MAIL_PASS', '');
+        $this->fromName = (string) App::get('MAIL_FROM_NAME', App::getName());
     }
 
     /**
-     * Envia um e-mail usando SMTP
+     * Envia (ou tenta enviar) email. Sempre registra em logs/mail.log.
      */
-    public function send($para, $assunto, $mensagem, $paraNome = '')
+    public function enviar(string $para, string $assunto, string $html, string $paraNome = ''): bool
     {
-        $mail = new PHPMailer(true);
-        
+        $this->logar($para, $assunto, $html);
+
+        if (empty($this->user)) {
+            return true; // modo dev — só log
+        }
+
         try {
+            $mail = new PHPMailer(true);
             $mail->isSMTP();
             $mail->Host       = $this->host;
             $mail->SMTPAuth   = true;
-            $mail->Username   = $this->username;
-            $mail->Password   = $this->password;
+            $mail->Username   = $this->user;
+            $mail->Password   = $this->pass;
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port       = $this->port;
+            $mail->CharSet    = 'UTF-8';
 
-            $mail->setFrom($this->username, $this->fromName);
+            $mail->setFrom($this->user, $this->fromName);
             $mail->addAddress($para, $paraNome);
 
             $mail->isHTML(true);
             $mail->Subject = $assunto;
-            $mail->Body    = $mensagem;
+            $mail->Body    = $html;
 
-            return $mail->send();
-            
+            $mail->send();
+            return true;
         } catch (Exception $e) {
-            error_log("Erro ao enviar e-mail: " . $mail->ErrorInfo);
+            error_log('Mailer: ' . $e->getMessage());
             return false;
         }
     }
 
-    /**
-     * Envia e-mail de redefinição de senha
-     */
-    public function sendResetPassword($email, $nome, $token)
+    // Aliases legados
+    public function send($para, $assunto, $msg, $nome = '') { return $this->enviar($para, $assunto, $msg, $nome); }
+
+    public function emailConfirmacao(string $para, string $nome, string $token): bool
     {
-        $appName = App::getName();
-        $appUrl = App::getUrl();
-        $link = $appUrl . '/auth/redefinir?token=' . $token;
-        
-        $assunto = "Redefinição de Senha - " . $appName;
-        
-        $mensagem = "
-        <html>
-        <head>
-            <style>
-                body { font-family: Arial, sans-serif; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
-                .header { background: #10b981; color: #fff; padding: 15px; text-align: center; border-radius: 5px 5px 0 0; }
-                .content { padding: 20px; }
-                .btn { display: inline-block; background: #10b981; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px; }
-                .btn:hover { background: #059669; }
-                .footer { text-align: center; padding: 15px; font-size: 12px; color: #888; border-top: 1px solid #ddd; margin-top: 20px; }
-                .token { background: #f5f5f5; padding: 10px; border-radius: 4px; font-family: monospace; word-break: break-all; }
-            </style>
-        </head>
-        <body>
-            <div class='container'>
-                <div class='header'>
-                    <h2>" . $appName . "</h2>
-                </div>
-                <div class='content'>
-                    <p>Olá <strong>" . htmlspecialchars($nome) . "</strong>,</p>
-                    <p>Recebemos uma solicitação para redefinir sua senha no sistema " . $appName . ".</p>
-                    <p>Clique no botão abaixo para redefinir sua senha:</p>
-                    <p style='text-align: center;'>
-                        <a href='" . $link . "' class='btn' style='color:#ffffff;'>Redefinir Senha</a>
-                    </p>
-                    <p>Ou copie e cole o link no navegador:</p>
-                    <p class='token'>" . $link . "</p>
-                    <p><strong>Este link é válido por 1 hora.</strong></p>
-                    <p>Se você não solicitou a redefinição de senha, ignore este e-mail.</p>
-                </div>
-                <div class='footer'>
-                    <p>&copy; " . date('Y') . " " . $appName . " - Todos os direitos reservados.</p>
-                </div>
-            </div>
-        </body>
-        </html>
+        $link = App::getUrl() . '/auth/confirmar-email?token=' . urlencode($token);
+        $assunto = 'Confirme seu email — ' . App::getName();
+        $html = "
+            <p>Olá, <strong>{$nome}</strong>.</p>
+            <p>Confirme seu email clicando no link abaixo (válido por 24h):</p>
+            <p><a href=\"{$link}\">{$link}</a></p>
         ";
-        
-        return $this->send($email, $assunto, $mensagem, $nome);
+        return $this->enviar($para, $assunto, $html, $nome);
     }
 
-    /**
-     * Método enviar() - alias para send() para compatibilidade
-     * Usado pelo AuthController
-     */
-    public function enviar($email, $nome, $assunto, $mensagem)
+    public function emailResetSenha(string $para, string $nome, string $token): bool
     {
-        return $this->send($email, $assunto, $mensagem, $nome);
+        $link = App::getUrl() . '/auth/redefinir?token=' . urlencode($token);
+        $assunto = 'Redefinição de senha — ' . App::getName();
+        $html = "
+            <p>Olá, <strong>{$nome}</strong>.</p>
+            <p>Para redefinir sua senha, clique no link abaixo (válido por 2h):</p>
+            <p><a href=\"{$link}\">{$link}</a></p>
+            <p>Se você não solicitou, ignore este email.</p>
+        ";
+        return $this->enviar($para, $assunto, $html, $nome);
+    }
+
+    public function emailPrimeiroAcesso(string $para, string $nome, string $token, string $senhaTemp): bool
+    {
+        $link = App::getUrl() . '/login';
+        $assunto = 'Sua conta foi criada — ' . App::getName();
+        $html = "
+            <p>Olá, <strong>{$nome}</strong>.</p>
+            <p>Sua conta foi criada com a senha temporária: <strong>{$senhaTemp}</strong></p>
+            <p>Acesse o sistema: <a href=\"{$link}\">{$link}</a></p>
+            <p>No primeiro acesso você precisará trocar a senha e aceitar os termos LGPD.</p>
+        ";
+        return $this->enviar($para, $assunto, $html, $nome);
+    }
+
+    public function emailSenhaAlterada(string $para, string $nome): bool
+    {
+        $assunto = 'Sua senha foi alterada — ' . App::getName();
+        $html = "<p>Olá, <strong>{$nome}</strong>.</p><p>Sua senha foi alterada com sucesso.</p>";
+        return $this->enviar($para, $assunto, $html, $nome);
+    }
+
+    private function logar(string $para, string $assunto, string $html): void
+    {
+        $dir = __DIR__ . '/../../logs';
+        if (!is_dir($dir)) @mkdir($dir, 0750, true);
+        $linha  = str_repeat('=', 70) . "\n";
+        $linha .= "[" . date('Y-m-d H:i:s') . "] To: {$para}\n";
+        $linha .= "Assunto: {$assunto}\n";
+        $linha .= $html . "\n";
+        @file_put_contents($dir . '/mail.log', $linha, FILE_APPEND);
     }
 }
