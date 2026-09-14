@@ -148,3 +148,37 @@ $router->get('/projetos/{id}/relatorios/boletim/pdf',   'RelatorioController@bol
 $router->get('/projetos/{id}/relatorios/geral',         'RelatorioController@geralProjeto',    ['master', 'aluno']);
 $router->get('/projetos/{id}/relatorios/geral/pdf',     'RelatorioController@geralProjetoPdf', ['master', 'aluno']);
 $router->get('/projetos/{id}/relatorios/geral/excel',   'RelatorioController@geralProjetoExcel',['master', 'aluno']);
+
+
+// ============ ATAS ============
+$router->get ('/projetos/{id}/atas',           'AtaController@index',          ['master', 'aluno']);
+$router->get ('/projetos/{id}/atas/criar',     'AtaController@criarForm',      ['master', 'aluno']);
+$router->post('/projetos/{id}/atas/salvar',    'AtaController@salvar',         ['master', 'aluno']);
+
+$router->get ('/atas/{id}',                    'AtaController@detalhe',        ['master', 'aluno']);
+$router->post('/atas/{id}/excluir',            'AtaController@excluir',        ['master', 'aluno']);
+$router->post('/atas/{id}/validar',            'AtaController@validar',        ['master', 'aluno']);
+$router->post('/atas/{id}/finalizar',          'AtaController@finalizar',      ['master', 'aluno']);
+
+$router->post('/atas/{id}/atividade',          'AtaController@adicionarAtividade', ['master', 'aluno']);
+$router->post('/atividades/{id}/excluir',      'AtaController@excluirAtividade',   ['master', 'aluno']);
+
+$router->post('/atas/{id}/relatorio',          'AtaController@adicionarRelatorio', ['master', 'aluno']);
+$router->post('/relatorios/{id}/excluir',      'AtaController@excluirRelatorio',   ['master', 'aluno']);
+
+$router->get ('/atas/{id}/editar',   'AtaController@editarForm', ['master', 'aluno']);
+$router->post('/atas/{id}/atualizar','AtaController@atualizar',  ['master', 'aluno']);
+
+// ============ MATERIAIS ============
+$router->get ('/projetos/{id}/materiais',                    'MaterialController@index',            ['master', 'aluno']);
+$router->get ('/projetos/{id}/materiais/cadastrar',          'MaterialController@cadastrarForm',    ['master', 'aluno']);
+$router->post('/projetos/{id}/materiais/salvar',             'MaterialController@salvarCadastro',   ['master', 'aluno']);
+$router->get ('/projetos/{id}/materiais/movimentacoes',      'MaterialController@movimentacoes',    ['master', 'aluno']);
+
+$router->get ('/materiais/{id}/usar',                        'MaterialController@usarForm',         ['master', 'aluno']);
+$router->post('/materiais/{id}/usar',                        'MaterialController@usar',             ['master', 'aluno']);
+
+$router->get ('/materiais/{id}/comprar',                     'MaterialController@comprarForm',      ['master', 'aluno']);
+$router->post('/materiais/{id}/comprar',                     'MaterialController@comprar',          ['master', 'aluno']);
+
+$router->post('/materiais/{id}/excluir',                     'MaterialController@excluir',          ['master', 'aluno']);

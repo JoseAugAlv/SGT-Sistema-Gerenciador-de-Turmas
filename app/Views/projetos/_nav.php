@@ -1,5 +1,7 @@
 <?php
 // app/Views/projetos/_nav.php
+// Abas do projeto filtradas por papel. A aba ativa fica com fundo cinza,
+// mas continua sendo um link (clicar recarrega a mesma página).
 
 if (empty($projeto) || empty($projeto['id'])) {
     return;
@@ -34,8 +36,9 @@ if ($u && !$isMaster && $turmaId) {
     $isDiretor = (bool) $stmt->fetchColumn();
 }
 
+// Detecta a seção ativa (Atas incluído)
 $secaoAtual = 'etapas';
-foreach (['grupos', 'criterios', 'avaliacoes', 'conceitos', 'relatorios'] as $s) {
+foreach (['grupos', 'atas', 'criterios', 'avaliacoes', 'conceitos', 'relatorios'] as $s) {
     if (strpos($uri, '/' . $s) !== false) { $secaoAtual = $s; break; }
 }
 if (strpos($uri, '/etapas') !== false) $secaoAtual = 'etapas';
@@ -43,10 +46,12 @@ if (strpos($uri, '/etapas') !== false) $secaoAtual = 'etapas';
 $todasAbas = [
     'etapas'     => ['icon' => 'fas fa-list-ol',         'label' => 'Etapas',     'url' => "/projetos/{$pid}",            'roles' => ['master','aluno']],
     'grupos'     => ['icon' => 'fas fa-users',           'label' => 'Grupos',     'url' => "/projetos/{$pid}/grupos",     'roles' => ['master','aluno']],
+    'atas'       => ['icon' => 'fas fa-book',            'label' => 'Atas',       'url' => "/projetos/{$pid}/atas",       'roles' => ['master','aluno']],
     'criterios'  => ['icon' => 'fas fa-clipboard-check', 'label' => 'Critérios',  'url' => "/projetos/{$pid}/criterios",  'roles' => ['master','aluno']],
     'avaliacoes' => ['icon' => 'fas fa-star',            'label' => 'Avaliações', 'url' => "/projetos/{$pid}/avaliacoes", 'roles' => ['master','aluno']],
     'conceitos'  => ['icon' => 'fas fa-sliders',         'label' => 'Conceitos',  'url' => "/projetos/{$pid}/conceitos",  'roles' => ['master','representante']],
     'relatorios' => ['icon' => 'fas fa-file-alt',        'label' => 'Relatórios', 'url' => "/projetos/{$pid}/relatorios", 'roles' => ['master','representante']],
+    'materiais'  => ['icon' => 'fas fa-boxes',           'label' => 'Materiais',  'url' => "/projetos/{$pid}/materiais",  'roles' => ['master','representante','diretor']],
 ];
 
 $abasVisiveis = [];
