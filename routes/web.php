@@ -59,3 +59,48 @@ $router->post('/configuracoes/turmas/curso/salvar',         'ConfiguracaoTurmaCo
 $router->post('/configuracoes/turmas/curso/toggle/{id}',    'ConfiguracaoTurmaController@toggleCurso',  ['master']);
 $router->post('/configuracoes/turmas/periodo/salvar',       'ConfiguracaoTurmaController@salvarPeriodo',['master']);
 $router->post('/configuracoes/turmas/periodo/toggle/{id}',  'ConfiguracaoTurmaController@togglePeriodo',['master']);
+
+// ============ PROJETOS ============
+$router->get('/projetos',                          'ProjetoController@index',          ['master', 'aluno']);
+$router->get('/projetos/criar',                    'ProjetoController@criarForm',      ['master']);
+$router->post('/projetos/salvar',                  'ProjetoController@salvar',         ['master']);
+
+$router->get('/projetos/{id}',                     'ProjetoController@detalhe',        ['master', 'aluno']);
+$router->get('/projetos/{id}/editar',              'ProjetoController@editarForm',     ['master']);
+$router->post('/projetos/{id}/atualizar',          'ProjetoController@atualizar',      ['master']);
+
+$router->get('/projetos/{id}/encerrar',            'ProjetoController@encerrarForm',   ['master', 'aluno']);
+$router->post('/projetos/{id}/encerrar',           'ProjetoController@encerrar',       ['master', 'aluno']);
+
+$router->get('/projetos/{id}/grupos', 'GrupoController@index', ['master', 'aluno']);
+$router->get('/projetos/{id}/criterios',   'ProjetoController@criterios',  ['master', 'aluno']);
+$router->get('/projetos/{id}/avaliacoes',  'ProjetoController@avaliacoes', ['master', 'aluno']);
+$router->get('/projetos/{id}/relatorios',  'ProjetoController@relatorios', ['master', 'aluno']);
+
+// ============ ETAPAS ============
+$router->post('/projetos/{id}/etapas/criar',       'EtapaController@criar',            ['master', 'aluno']);
+$router->get('/etapas/{id}/editar',                'EtapaController@editarForm',       ['master', 'aluno']);
+$router->post('/etapas/{id}/atualizar',            'EtapaController@atualizar',        ['master', 'aluno']);
+$router->post('/etapas/{id}/excluir',              'EtapaController@excluir',          ['master', 'aluno']);
+$router->post('/etapas/{id}/mover',                'EtapaController@mover',            ['master', 'aluno']);
+
+// ============ CONCEITOS ============
+$router->get('/projetos/{id}/conceitos',           'ConceitoController@index',         ['master', 'aluno']);
+$router->post('/projetos/{id}/conceitos/salvar',   'ConceitoController@salvar',        ['master', 'aluno']);
+
+// ============ GRUPOS ============
+$router->get('/projetos/{id}/grupos/criar',        'GrupoController@criarForm',       ['master', 'aluno']);
+$router->post('/projetos/{id}/grupos/salvar',      'GrupoController@salvar',          ['master', 'aluno']);
+
+$router->get('/grupos/{id}',                       'GrupoController@detalhe',         ['master', 'aluno']);
+$router->get('/grupos/{id}/editar',                'GrupoController@editarForm',      ['master', 'aluno']);
+$router->post('/grupos/{id}/atualizar',            'GrupoController@atualizar',       ['master', 'aluno']);
+$router->post('/grupos/{id}/excluir',              'GrupoController@excluir',         ['master', 'aluno']);
+$router->post('/grupos/{id}/membros/adicionar',    'GrupoController@adicionarMembro', ['master', 'aluno']);
+$router->post('/grupos/{id}/membros/remover',      'GrupoController@removerMembro',   ['master', 'aluno']);
+
+// ============ DIRETORES ============
+$router->get('/grupos/{id}/diretores',             'DiretorController@gerenciar',     ['master', 'aluno']);
+$router->get('/grupos/{id}/diretores/historico',   'DiretorController@historico',     ['master', 'aluno']);
+$router->post('/grupos/{id}/diretores/nomear',     'DiretorController@nomear',        ['master', 'aluno']);
+$router->post('/grupos/{id}/diretores/remover',    'DiretorController@remover',       ['master', 'aluno']);

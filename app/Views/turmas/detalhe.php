@@ -28,6 +28,14 @@ require_once __DIR__ . '/../layouts/flashes.php';
         <a href="<?= $basePath ?>/turmas/<?= (int) $turma['id'] ?>/excluir" style="color:#b00">
             <i class="fas fa-trash"></i> Excluir turma
         </a>
+        —
+        <a href="<?= $basePath ?>/projetos?turma_id=<?= (int) $turma['id'] ?>">
+            <i class="fas fa-diagram-project"></i> Ver projetos
+        </a>
+        —
+        <a href="<?= $basePath ?>/turmas/<?= (int) $turma['id'] ?>/representantes">
+            <i class="fas fa-user-tie"></i> <strong>Gerenciar representantes</strong>
+        </a>
     </p>
 <?php endif; ?>
 
@@ -54,10 +62,6 @@ require_once __DIR__ . '/../layouts/flashes.php';
                 <button type="submit"><i class="fas fa-lock"></i> Bloquear</button>
             </form>
         <?php endif; ?>
-
-        <a href="<?= $basePath ?>/turmas/<?= (int) $turma['id'] ?>/representantes">
-            <i class="fas fa-user-tie"></i> Gerenciar representantes
-        </a>
     </fieldset>
 <?php elseif ($isRep): ?>
     <form method="POST" action="<?= $basePath ?>/turmas/<?= (int) $turma['id'] ?>/regenerar-codigo" style="display:inline">
@@ -69,6 +73,7 @@ require_once __DIR__ . '/../layouts/flashes.php';
 <?php endif; ?>
 
 <h2>Representantes (<?= count($representantes) ?>/2)</h2>
+
 <?php if (empty($representantes)): ?>
     <p>Nenhum representante nomeado.</p>
 <?php else: ?>
@@ -79,9 +84,20 @@ require_once __DIR__ . '/../layouts/flashes.php';
     </ul>
 <?php endif; ?>
 
+<?php if ($isMaster): ?>
+    <p>
+        <a href="<?= $basePath ?>/turmas/<?= (int) $turma['id'] ?>/representantes">
+            <i class="fas fa-user-plus"></i> Nomear representantes
+        </a>
+    </p>
+<?php endif; ?>
+
 <h2>Alunos (<?= count($alunos) ?>)</h2>
+
 <table border="1" cellpadding="6">
-    <thead><tr><th>Nome</th><th>Email</th><th>Papel</th><th>Entrou em</th></tr></thead>
+    <thead>
+        <tr><th>Nome</th><th>Email</th><th>Papel</th><th>Entrou em</th></tr>
+    </thead>
     <tbody>
         <?php foreach ($alunos as $a): ?>
             <tr>
@@ -94,6 +110,6 @@ require_once __DIR__ . '/../layouts/flashes.php';
     </tbody>
 </table>
 
-<p><a href="<?= $basePath ?>/turmas"><i class="fas fa-arrow-left"></i> Voltar</a></p>
+<p><a href="<?= $basePath ?>/turmas"><i class="fas fa-arrow-left"></i> Voltar para turmas</a></p>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

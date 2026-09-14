@@ -27,23 +27,39 @@ require_once __DIR__ . '/../layouts/flashes.php';
 <p><a href="<?= $basePath ?>/auth/esqueci-senha"><i class="fas fa-key"></i> Esqueci minha senha</a></p>
 <p>Não tem conta? <a href="<?= $basePath ?>/login/cadastrar">Cadastre-se</a></p>
 
-<?php if (\App::get('APP_ENV') === 'development'): ?>
+<?php if (App::get('APP_ENV') === 'development'): ?>
     <hr>
     <fieldset>
         <legend><i class="fas fa-flask"></i> Dev — preenchimento rápido</legend>
-        <p>Clique para preencher o formulário. Estes botões só aparecem em <code>APP_ENV=development</code>.</p>
+        <p>Estes botões só aparecem em <code>APP_ENV=development</code>. Senha de todos: <code>Teste@1234</code></p>
 
-        <button type="button" onclick="devFill('master@adm.com', 'Teste@1234')">
-            <i class="fas fa-user-shield"></i> Master
-        </button>
+        <p>
+            <button type="button" onclick="devFill('master@adm.com', 'Teste@1234')">
+                <i class="fas fa-user-shield"></i> Master
+            </button>
 
-        <button type="button" onclick="devFill('aluno.sem@teste.com', 'Teste@1234')">
-            <i class="fas fa-user"></i> Aluno sem turma
-        </button>
+            <button type="button" onclick="devFill('rep@teste.com', 'Teste@1234')">
+                <i class="fas fa-user-tie"></i> Representante (turma Info2026)
+            </button>
 
-        <button type="button" onclick="devFill('aluno.com@teste.com', 'Teste@1234')">
-            <i class="fas fa-user-graduate"></i> Aluno com turma (Info2026)
-        </button>
+            <button type="button" onclick="devFill('diretor@teste.com', 'Teste@1234')">
+                <i class="fas fa-crown"></i> Diretor (Grupo Alpha)
+            </button>
+        </p>
+
+        <p>
+            <button type="button" onclick="devFill('membro@teste.com', 'Teste@1234')">
+                <i class="fas fa-user-graduate"></i> Aluno comum (no grupo)
+            </button>
+
+            <button type="button" onclick="devFill('aluno.com@teste.com', 'Teste@1234')">
+                <i class="fas fa-user"></i> Aluno (turma, sem grupo)
+            </button>
+
+            <button type="button" onclick="devFill('aluno.sem@teste.com', 'Teste@1234')">
+                <i class="fas fa-user-slash"></i> Aluno sem turma
+            </button>
+        </p>
     </fieldset>
 
     <script>
