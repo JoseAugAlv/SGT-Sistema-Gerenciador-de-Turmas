@@ -15,6 +15,7 @@ require_once __DIR__ . '/../Models/Auditoria.php';
 require_once __DIR__ . '/../Helpers/ViewHelper.php';
 require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
 require_once __DIR__ . '/../Config/database.php';
+require_once __DIR__ . '/../Models/Notificacao.php';
 
 class AvaliacaoController
 {
@@ -41,6 +42,29 @@ class AvaliacaoController
         $this->cfg      = new ConfiguracaoConceito();
         $this->nota     = new NotaService();
         $this->audit    = new Auditoria();
+    }
+        /**
+     * Notifica cada aluno que recebeu uma avaliação.
+     * $porAluno = [aluno_id => ['conceito' => 'B', 'valor' => 75], ...]
+     */
+    private function notificarAvaliados(int $projetoId, array $porAluno, string $criterioNome): void
+    {
+        if (empty($porAluno)) return;
+
+        $notif = new Notificacao();
+
+        foreach ($porAluno as $alunoId => $dados) {
+            $conceito = $dados['conceito'] ?? '';
+            $valor    = isset($dados['valor']) ? number_format((float) $dados['valor'], 2, ',', '.') : '';
+
+            $notif->criar(
+                (int) $alunoId,
+                'avaliacao',
+                'Nova avaliação recebida',
+                "Você recebeu uma avaliação no critério '{$criterioNome}': conceito {$conceito} ({$valor}).",
+                '/projetos/' . $projetoId . '/avaliacoes/minhas'
+            );
+        }
     }
 
     /**
@@ -198,6 +222,24 @@ class AvaliacaoController
 
         $this->audit->registrar('avaliacao_rep_salva', 'avaliacoes', $projetoId, null,
             ['avaliador_id' => $u['id'], 'limpar' => $limpar, 'total' => $salvos]);
+
+                // Notifica alunos que receberam avaliação
+        $notificados = [];
+        foreach ($criterios as $c) {
+            $cid = (int) $c['id'];
+            $linha = $_POST['aval'][$cid] ?? [];
+            foreach ($linha as $alunoId => $dados) {
+                if (($dados['conceito'] ?? '') !== '' || ((float) ($dados['valor'] ?? 0)) > 0) {
+                    $notificados[(int) $alunoId] = [
+                        'conceito' => $dados['conceito'] ?? '',
+                        'valor'    => $dados['valor'] ?? 0,
+                    ];
+                }
+            }
+        }
+        if (!empty($notificados)) {
+            $this->notificarAvaliados($projetoId, $notificados, 'Representante');
+        }
 
         $this->flash("Avaliações salvas ({$salvos}).", 'sucesso');
         $this->redirect('/projetos/' . $projetoId . '/avaliacoes/representante');
@@ -568,6 +610,26 @@ class AvaliacaoController
             'total'        => $salvos,
         ]);
 
+                // Notifica os colegas avaliados
+        $notificados = [];
+        foreach ($criterios as $c) {
+            if ($c['bloqueado']) continue;
+            $cid = (int) $c['id'];
+            $linha = $_POST['aval'][$cid] ?? [];
+            foreach ($linha as $alunoId => $dados) {
+                if ((int) $alunoId === (int) $u['id']) continue;
+                if (($dados['conceito'] ?? '') !== '' || ((float) ($dados['valor'] ?? 0)) > 0) {
+                    $notificados[(int) $alunoId] = [
+                        'conceito' => $dados['conceito'] ?? '',
+                        'valor'    => $dados['valor'] ?? 0,
+                    ];
+                }
+            }
+        }
+        if (!empty($notificados)) {
+            $this->notificarAvaliados($projetoId, $notificados, 'Avaliação por pares');
+        }
+
         $this->flash("Avaliações salvas ({$salvos}).", 'sucesso');
         $this->redirect('/projetos/' . $projetoId . '/avaliacoes/pares');
     }
@@ -757,6 +819,33 @@ class AvaliacaoController
 
         $this->audit->registrar('avaliacao_coletiva_salva', 'avaliacoes_coletivas', $projetoId, null,
             ['avaliador_id' => $u['id'], 'total' => $salvos]);
+
+                // Notifica todos os membros dos grupos avaliados
+        $pdo = Database::getConnection();
+        $alunosNotificar = [];
+        foreach ($criterios as $c) {
+            if ($c['bloqueado']) continue;
+            $cid = (int) $c['id'];
+            $linha = $_POST['aval'][$cid] ?? [];
+            foreach ($linha as $grupoId => $dados) {
+                if (($dados['conceito'] ?? '') === '' && ((float) ($dados['valor'] ?? 0)) <= 0) continue;
+
+                $stmt = $pdo->prepare("
+                    SELECT usuario_id FROM grupo_alunos
+                    WHERE grupo_id = ? AND saiu_em IS NULL
+                ");
+                $stmt->execute([(int) $grupoId]);
+                foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $uid) {
+                    $alunosNotificar[(int) $uid] = [
+                        'conceito' => $dados['conceito'] ?? '',
+                        'valor'    => $dados['valor'] ?? 0,
+                    ];
+                }
+            }
+        }
+        if (!empty($alunosNotificar)) {
+            $this->notificarAvaliados($projetoId, $alunosNotificar, 'Nota coletiva');
+        }
 
         $this->flash("Avaliações coletivas salvas ({$salvos}).", 'sucesso');
         $this->redirect('/projetos/' . $projetoId . '/avaliacoes/coletiva');

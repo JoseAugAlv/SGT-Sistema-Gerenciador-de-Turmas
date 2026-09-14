@@ -1,0 +1,305 @@
+/* ============================================================
+   RESPONSIVO
+   ============================================================ */
+
+/* ---------- TABLET GRANDE / NOTEBOOK PEQUENO ---------- */
+@media (max-width: 1150px) {
+    :root { --sidebar: 215px; }
+
+    .stats-grid    { grid-template-columns: repeat(2, 1fr); }
+    .three-thirds  { grid-template-columns: 1fr 1fr; }
+    .two-thirds    { grid-template-columns: 1fr; }
+
+    .role-panel    { grid-column: span 2; }
+    .role-panel .donut-area { justify-content: center; }
+
+    .component-grid { grid-template-columns: 1fr 1fr; }
+    .component-card:last-child { grid-column: span 2; }
+
+    .bottom-grid { grid-template-columns: 1fr; }
+}
+/* ---------- MOBILE ---------- */
+@media (max-width: 800px) {
+    :root { --sidebar: 0px; }
+
+    html, body { overflow-x: hidden; }
+
+    /* ============ SHELL ============ */
+    .app-shell {
+        display: block;
+        min-height: 100vh;
+    }
+
+    /* ============ SIDEBAR VIRA DRAWER ============ */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 280px;
+        max-width: 85vw;
+        height: 100vh;
+        padding: 20px 14px 18px;
+        border-right: 1px solid var(--border);
+        background: var(--surface);
+        z-index: 40;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        transform: translateX(-100%);
+        transition: transform .25s ease;
+        box-shadow: 8px 0 30px rgba(0, 0, 0, .18);
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .sidebar-header {
+        padding: 0 4px 18px;
+        margin-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+        padding: 0;
+        margin: 0;
+        border: 0;
+    }
+    .brand-mark { width: 32px; height: 32px; font-size: 15px; }
+    .brand strong { font-size: 15px; }
+    .brand span { font-size: 9px; }
+
+    .sidebar-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .sidebar-context { display: none; }
+
+    /* Nav vertical novamente (dentro do drawer) */
+    .main-nav {
+        flex: 1;
+        display: block !important;
+        flex-direction: column !important;
+        overflow-y: auto;
+        margin: 0;
+        padding: 0;
+    }
+
+    .nav-label {
+        display: block !important;
+        padding: 14px 11px 6px;
+        margin: 0;
+    }
+
+    .nav-item {
+        display: flex;
+        flex-direction: row;
+        min-height: 42px;
+        padding: 0 12px;
+        margin: 2px 0;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        font-size: 13.5px;
+        gap: 12px;
+    }
+    .nav-item.active {
+        background: var(--primary-soft);
+        color: var(--primary);
+        border: 0;
+    }
+    .nav-item b {
+        margin-left: auto;
+        min-width: 18px;
+        height: 18px;
+        font-size: 10px;
+    }
+    .nav-icon { width: 18px; font-size: 15px; }
+
+    .sidebar-bottom {
+        display: block !important;
+        margin-top: 18px;
+        padding-top: 14px;
+        border-top: 1px solid var(--border);
+    }
+
+    /* Esconde hamburger quando a sidebar está aberta */
+    body.sidebar-open { overflow: hidden; }
+
+    /* ============ MAIN ============ */
+    .main-content { margin-left: 0; width: 100%; }
+
+    .topbar {
+        position: sticky;
+        top: 0;
+        height: 54px;
+        padding: 0 12px;
+        z-index: 10;
+        backdrop-filter: blur(10px);
+        background: color-mix(in srgb, var(--bg) 92%, transparent);
+    }
+
+    .hamburger { display: inline-flex; }
+
+    .topbar-left { gap: 6px; flex: 1; min-width: 0; }
+
+    .breadcrumb {
+        font-size: 12px;
+        gap: 6px;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+    .breadcrumb > span:first-child { display: none; }
+    .breadcrumb strong { overflow: hidden; text-overflow: ellipsis; }
+
+    .topbar-actions { gap: 6px; }
+    .topbar-actions .avatar { width: 28px; height: 28px; font-size: 10px; }
+
+    .theme-switch > span:first-child,
+    .theme-switch > span:last-child { display: none; }
+
+    .page-wrap {
+        padding: 20px 14px 26px;
+        max-width: 100%;
+    }
+
+    /* ============ HERO ============ */
+    .hero-section {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+    .hero-section h1 { font-size: 24px; letter-spacing: -.8px; }
+    .hero-subtitle { font-size: 12px; }
+    .hero-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        width: 100%;
+    }
+    .hero-actions .button {
+        width: 100%;
+        padding: 0 10px;
+        font-size: 11px;
+        min-height: 36px;
+    }
+
+    /* ============ GRIDS ============ */
+    .stats-grid,
+    .two-thirds,
+    .three-thirds,
+    .component-grid,
+    .bottom-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .role-panel,
+    .component-card:last-child { grid-column: auto; }
+
+    /* ============ PAINÉIS ============ */
+    .panel { padding: 15px; border-radius: 13px; }
+    .panel h2 { font-size: 14px; }
+    .panel-header { margin-bottom: 12px; gap: 8px; }
+
+    .stat-card { padding: 14px; border-radius: 12px; }
+    .stat-value { font-size: 22px; }
+
+    /* ============ PROJETOS ============ */
+    .project-row { min-height: 66px; gap: 8px; }
+    .project-logo { width: 32px; height: 32px; font-size: 10px; border-radius: 8px; }
+    .row-arrow { display: none; }
+
+    /* ============ DONUT / GRÁFICO ============ */
+    .chart-wrap { height: 130px; }
+    .donut-area { justify-content: center; gap: 14px; }
+    .donut { width: 100px; height: 100px; }
+    .donut::after { width: 66px; height: 66px; }
+
+    /* ============ SEÇÕES ============ */
+    .section-heading {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        margin: 24px 0 12px;
+    }
+    .section-heading h2 { font-size: 18px; }
+
+    /* ============ FORMULÁRIOS ============ */
+    .field-row { grid-template-columns: 1fr; }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"],
+    select,
+    textarea {
+        min-height: 40px;
+        font-size: 14px; /* evita zoom no iOS */
+    }
+
+    /* ============ TABELAS ============ */
+    table {
+        font-size: 12px;
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    table thead th,
+    table tbody td { padding: 10px 8px; white-space: nowrap; }
+
+    .table-row { min-width: 0; grid-template-columns: 1.4fr .8fr .7fr; }
+    .table-toolbar { flex-direction: column; }
+    .table-toolbar .field-search { width: 100%; }
+    .table-toolbar .button { width: 100%; }
+
+    /* ============ CTA ============ */
+    .cta-panel { min-height: 0; padding: 18px; }
+    .cta-illustration { display: none; }
+    .cta-actions { flex-direction: column; }
+    .cta-actions .button { width: 100%; }
+
+    .shortcut-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    /* ============ FOOTER ============ */
+    .footer {
+        flex-direction: column;
+        gap: 10px;
+        padding: 22px 14px;
+        font-size: 10px;
+        text-align: center;
+    }
+    .footer span:last-child {
+        justify-content: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 520px) {
+    .topbar { height: 50px; }
+    .hero-section h1 { font-size: 22px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; gap: 9px; }
+    .stat-value { font-size: 20px; }
+    .shortcut-grid { grid-template-columns: 1fr; }
+    .hero-actions { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 380px) {
+    .stats-grid { grid-template-columns: 1fr; }
+    .donut-area { flex-direction: column; }
+    .role-legend {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+    .role-legend span:last-child { grid-column: span 2; text-align: center; }
+}

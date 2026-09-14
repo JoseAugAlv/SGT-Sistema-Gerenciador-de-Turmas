@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../Models/Notificacao.php';
 // app/Controllers/TurmaController.php
 require_once __DIR__ . '/../Core/App.php';
 require_once __DIR__ . '/../Models/Turma.php';
@@ -226,7 +227,7 @@ class TurmaController
         ]);
     }
 
-    public function nomearRepresentante(int $id)
+        public function nomearRepresentante(int $id)
     {
         $this->exigirMaster();
         CsrfMiddleware::validate();
@@ -251,11 +252,21 @@ class TurmaController
         $this->audit->registrar('representante_nomeado', 'turma_usuarios', $id, null,
             ['usuario_id' => $usuarioId, 'papel' => 'representante']);
 
+        $turma = $this->turma->porId($id);
+
+        (new Notificacao())->criar(
+            $usuarioId,
+            'papel',
+            'Você agora é representante',
+            "Você foi nomeado representante da turma '{$turma['nome']}'.",
+            '/turmas/' . $id
+        );
+
         $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Representante nomeado.'];
         $this->redirect('/turmas/' . $id . '/representantes');
     }
 
-    public function removerRepresentante(int $id)
+        public function removerRepresentante(int $id)
     {
         $this->exigirMaster();
         CsrfMiddleware::validate();
@@ -267,7 +278,10 @@ class TurmaController
         }
 
         if ($this->tu->contarRepresentantes($id) <= 1) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Não é possível remover o último representante. Nomeie outro antes.'];
+            $_SESSION['flash'] = [
+                'tipo' => 'erro',
+                'mensagem' => 'Não é possível remover o último representante. Nomeie outro antes.'
+            ];
             $this->redirect('/turmas/' . $id . '/representantes');
         }
 
@@ -276,10 +290,19 @@ class TurmaController
             ['usuario_id' => $usuarioId, 'papel' => 'representante'],
             ['usuario_id' => $usuarioId, 'papel' => 'aluno']);
 
+        $turma = $this->turma->porId($id);
+
+        (new Notificacao())->criar(
+            $usuarioId,
+            'papel',
+            'Você não é mais representante',
+            "Seu papel de representante na turma '{$turma['nome']}' foi removido.",
+            '/turmas/' . $id
+        );
+
         $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Representante removido.'];
         $this->redirect('/turmas/' . $id . '/representantes');
     }
-
     private function exigirMaster(): void
     {
         if (empty($_SESSION['usuario']) || $_SESSION['usuario']['tipo'] !== 'master') {

@@ -14,7 +14,6 @@ if (file_exists($modulesConfig)) {
 
 // ============ PÚBLICAS ============
 $router->get('/',         'HomeController@index');
-$router->get('/tutorial', 'TutorialController@index');
 
 // ============ AUTH ============
 $router->get ('/login',          'AuthController@loginForm');
@@ -182,3 +181,57 @@ $router->get ('/materiais/{id}/comprar',                     'MaterialController
 $router->post('/materiais/{id}/comprar',                     'MaterialController@comprar',          ['master', 'aluno']);
 
 $router->post('/materiais/{id}/excluir',                     'MaterialController@excluir',          ['master', 'aluno']);
+
+// ============ ALERTAS ============
+$router->get ('/turmas/{id}/alertas',        'AlertaController@index',     ['master', 'aluno']);
+$router->get ('/turmas/{id}/alertas/criar',  'AlertaController@criarForm', ['master', 'aluno']);
+$router->post('/turmas/{id}/alertas/salvar', 'AlertaController@salvar',    ['master', 'aluno']);
+
+// ============ NOTIFICAÇÕES ============
+$router->get ('/notificacoes',                        'NotificacaoController@index',       ['master', 'aluno']);
+$router->post('/notificacoes/marcar-lida',            'NotificacaoController@marcarLida',  ['master', 'aluno']);
+$router->post('/notificacoes/marcar-todas-lidas',     'NotificacaoController@marcarTodasLidas', ['master', 'aluno']);
+$router->get ('/notificacoes/contador',               'NotificacaoController@contador',    ['master', 'aluno']);
+$router->get ('/notificacoes/dropdown',               'NotificacaoController@dropdown',    ['master', 'aluno']);
+$router->get ('/notificacoes/preferencias',           'NotificacaoController@preferencias',['master', 'aluno']);
+$router->post('/notificacoes/preferencias/salvar',    'NotificacaoController@salvarPreferencias', ['master', 'aluno']);
+
+// ============ PÁGINAS PÚBLICAS ============
+$router->get('/sobre',  'SobreController@index');
+$router->get('/termos', 'TermosController@index');
+$router->get('/lgpd',   'LgpdController@index');
+
+// ============ ÁREA DO USUÁRIO ============
+$router->get ('/user',          'UserController@index',    ['master', 'aluno']);
+$router->get ('/user/editar',   'UserController@editar',   ['master', 'aluno']);
+$router->post('/user/atualizar','UserController@atualizar',['master', 'aluno']);
+$router->get ('/user/senha',    'UserController@senha',    ['master', 'aluno']);
+$router->post('/user/senha',    'UserController@salvarSenha', ['master', 'aluno']);
+
+// ============ LGPD — ÁREA DO TITULAR ============
+$router->get ('/lgpd/meus-direitos',      'LgpdController@meusDireitos',      ['master', 'aluno']);
+$router->post('/lgpd/exportar',           'LgpdController@exportar',          ['master', 'aluno']);
+$router->get ('/lgpd/exportacao/{id}/baixar', 'LgpdController@baixarExportacao', ['master', 'aluno']);
+$router->post('/lgpd/solicitar-exclusao', 'LgpdController@solicitarExclusao', ['master', 'aluno']);
+
+// ============ MASTER ============
+$router->get ('/master',                         'MasterController@index',                ['master']);
+$router->get ('/master/auditoria',               'MasterController@auditoria',            ['master']);
+$router->get ('/master/auditoria/{id}',          'MasterController@auditoriaDetalhe',     ['master']);
+$router->get ('/master/criterios-arquivados',    'MasterController@criteriosArquivados',  ['master']);
+$router->post('/master/criterios-arquivados/{id}/restaurar', 'MasterController@restaurarCriterio', ['master']);
+$router->get ('/master/lgpd',                    'MasterController@lgpdSolicitacoes',     ['master']);
+$router->post('/master/lgpd/{id}/aprovar',       'MasterController@aprovarLgpd',          ['master']);
+$router->post('/master/lgpd/{id}/negar',         'MasterController@negarLgpd',            ['master']);
+$router->get ('/master/backup',                  'MasterController@backup',               ['master']);
+$router->post('/master/backup/gerar',            'MasterController@gerarBackup',          ['master']);
+$router->get ('/master/backup/{nome}/baixar',    'MasterController@baixarBackup',         ['master']);
+$router->post('/master/backup/{nome}/excluir',   'MasterController@excluirBackup',        ['master']);
+$router->get ('/master/configuracoes',           'MasterController@configuracoes',        ['master']);
+
+// ============ TUTORIAL ============
+$router->get('/tutorial',               'TutorialController@index');
+$router->get('/tutorial/aluno',         'TutorialController@aluno');
+$router->get('/tutorial/diretor',       'TutorialController@diretor');
+$router->get('/tutorial/representante', 'TutorialController@representante');
+$router->get('/tutorial/master',        'TutorialController@master');

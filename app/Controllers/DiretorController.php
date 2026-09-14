@@ -9,6 +9,7 @@ require_once __DIR__ . '/../Models/TurmaUsuario.php';
 require_once __DIR__ . '/../Models/Auditoria.php';
 require_once __DIR__ . '/../Helpers/ViewHelper.php';
 require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
+require_once __DIR__ . '/../Models/Notificacao.php';
 
 class DiretorController
 {
@@ -95,11 +96,20 @@ class DiretorController
         $this->audit->registrar('diretor_nomeado', 'grupo_diretores', $grupoId, null,
             ['usuario_id' => $usuarioId, 'por' => $meuId]);
 
+        // Notificação para o novo diretor
+        (new Notificacao())->criar(
+            $usuarioId,
+            'papel',
+            'Você agora é diretor',
+            "Você foi nomeado diretor do grupo '{$grupo['nome']}'.",
+            '/grupos/' . $grupoId . '/diretores'
+        );
+
         $this->flash('Diretor nomeado.', 'sucesso');
         $this->redirect('/grupos/' . $grupoId . '/diretores');
     }
 
-    public function remover(int $grupoId)
+        public function remover(int $grupoId)
     {
         $grupo = $this->grupo->porId($grupoId);
         if (!$grupo) { $this->flash('Grupo não encontrado.'); $this->redirect('/turmas'); }
@@ -131,6 +141,29 @@ class DiretorController
         $this->audit->registrar('diretor_removido', 'grupo_diretores', $grupoId,
             ['usuario_id' => $usuarioId, 'por' => $meuId],
             ['atas_reatribuidas' => $totalReatribuidas]);
+
+        // Notificação para o diretor removido
+        (new Notificacao())->criar(
+            $usuarioId,
+            'papel',
+            'Você foi removido como diretor',
+            "Você não é mais diretor do grupo '{$grupo['nome']}'.",
+            '/grupos/' . $grupoId
+        );
+
+        // Se houver atas reatribuídas, notifica o novo diretor
+        if ($totalReatribuidas > 0) {
+            $novoDiretor = (new GrupoDiretor())->listarAtivos($grupoId);
+            foreach ($novoDiretor as $d) {
+                (new Notificacao())->criar(
+                    (int) $d['usuario_id'],
+                    'ata',
+                    "Você herdou {$totalReatribuidas} ata(s) pendente(s)",
+                    "Atas do grupo '{$grupo['nome']}' foram reatribuídas para você.",
+                    '/grupos/' . $grupoId . '/diretores'
+                );
+            }
+        }
 
         $msg = 'Diretor removido.';
         if ($totalReatribuidas > 0) {

@@ -12,6 +12,7 @@ require_once __DIR__ . '/../Models/TurmaUsuario.php';
 require_once __DIR__ . '/../Models/Auditoria.php';
 require_once __DIR__ . '/../Helpers/ViewHelper.php';
 require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
+require_once __DIR__ . '/../Models/Notificacao.php';
 
 class AtaController
 {
@@ -308,7 +309,7 @@ class AtaController
         return ['grupo' => $doGrupo, 'turma' => $daTurma];
     }
 
-    public function salvar(int $projetoId)
+        public function salvar(int $projetoId)
     {
         $projeto = $this->projeto->porId($projetoId);
         if (!$projeto) { $this->flash('Projeto não encontrado.'); $this->redirect('/turmas'); }
@@ -340,11 +341,9 @@ class AtaController
         $idsCriados = [];
 
         foreach ($gruposIds as $grupoId) {
-            // Valida que o grupo pertence ao projeto
             $grupo = $this->grupo->porId($grupoId);
             if (!$grupo || (int) $grupo['projeto_id'] !== $projetoId) continue;
 
-            // Precisa ter diretor ativo
             $diretoresAtivos = $this->diretor->listarAtivos($grupoId);
             if (empty($diretoresAtivos)) {
                 $semDiretor[] = $grupo['nome'];
@@ -365,10 +364,18 @@ class AtaController
             ]);
 
             $this->audit->registrar('ata_criada', 'atas', $id, null, [
-                'grupo_id'    => $grupoId,
-                'diretor_id'  => $diretorId,
-                'titulo'      => $titulo,
+                'grupo_id' => $grupoId, 'diretor_id' => $diretorId, 'titulo' => $titulo,
             ]);
+
+            // Notifica o diretor designado
+            (new Notificacao())->criar(
+                $diretorId,
+                'ata',
+                'Nova ata para preencher',
+                "Você foi designado para preencher a ata '{$titulo}' do grupo '{$grupo['nome']}'." .
+                    ($prazo ? " Prazo: {$prazo}." : ''),
+                '/atas/' . $id
+            );
 
             $idsCriados[] = $id;
             $criadas++;
@@ -383,14 +390,12 @@ class AtaController
             $this->redirect('/projetos/' . $projetoId . '/atas/criar');
         }
 
-        // Mensagem de sucesso
         $msg = "Ata(s) criada(s): {$criadas} grupo(s).";
         if (!empty($semDiretor)) {
             $msg .= " Ignorados (sem diretor ativo): " . implode(', ', $semDiretor) . '.';
         }
         $this->flash($msg, 'sucesso');
 
-        // Se criou apenas 1, vai direto para ela
         if (count($idsCriados) === 1) {
             $this->redirect('/atas/' . $idsCriados[0]);
         }
@@ -558,7 +563,7 @@ class AtaController
         $this->redirect('/atas/' . $rel['ata_id']);
     }
 
-    public function finalizar(int $id)
+        public function finalizar(int $id)
     {
         $ata = $this->ata->porId($id);
         if (!$ata) { $this->flash('Ata não encontrada.'); $this->redirect('/turmas'); }
@@ -566,7 +571,6 @@ class AtaController
         $this->exigirPreenchimento($ata);
         CsrfMiddleware::validate();
 
-        // Precisa ter ao menos 1 atividade
         $atividades = $this->ativ->listarPorAta($id);
         if (empty($atividades)) {
             $this->flash('Adicione pelo menos 1 atividade antes de finalizar.');
@@ -574,7 +578,25 @@ class AtaController
         }
 
         $this->ata->definirStatus($id, 'preenchida');
-        $this->audit->registrar('ata_preenchida', 'atas', $id, ['status' => 'pendente'], ['status' => 'preenchida']);
+        $this->audit->registrar('ata_preenchida', 'atas', $id,
+            ['status' => 'pendente'], ['status' => 'preenchida']);
+
+        // Notifica todos os representantes da turma
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("
+            SELECT usuario_id FROM turma_usuarios
+            WHERE turma_id = ? AND papel = 'representante' AND ativo = 1
+        ");
+        $stmt->execute([(int) $ata['turma_id']]);
+        $reps = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        (new Notificacao())->criarParaVarios(
+            $reps,
+            'ata',
+            'Ata aguardando validação',
+            "A ata '{$ata['titulo']}' do grupo '{$ata['grupo_nome']}' foi preenchida e aguarda revisão.",
+            '/atas/' . $id
+        );
 
         $this->flash('Ata finalizada. Aguardando validação do representante.', 'sucesso');
         $this->redirect('/atas/' . $id);
@@ -582,7 +604,7 @@ class AtaController
 
     // ============ VALIDAR (REP / MASTER) ============
 
-    public function validar(int $id)
+        public function validar(int $id)
     {
         $ata = $this->ata->porId($id);
         if (!$ata) { $this->flash('Ata não encontrada.'); $this->redirect('/turmas'); }
@@ -597,7 +619,19 @@ class AtaController
         }
 
         $this->ata->definirStatus($id, 'revisada');
-        $this->audit->registrar('ata_validada', 'atas', $id, ['status' => 'preenchida'], ['status' => 'revisada']);
+        $this->audit->registrar('ata_validada', 'atas', $id,
+            ['status' => 'preenchida'], ['status' => 'revisada']);
+
+        // Notifica o diretor que preencheu
+        if (!empty($ata['diretor_id'])) {
+            (new Notificacao())->criar(
+                (int) $ata['diretor_id'],
+                'ata',
+                'Ata validada',
+                "Sua ata '{$ata['titulo']}' foi revisada e aprovada pelo representante.",
+                '/atas/' . $id
+            );
+        }
 
         $this->flash('Ata validada.', 'sucesso');
         $this->redirect('/atas/' . $id);
