@@ -19,8 +19,13 @@ require_once __DIR__ . '/../layouts/flashes.php';
     <?php endif; ?>
 </p>
 
-<?php if ($isMaster): ?>
-    <p>
+<p>
+    <a href="<?= $basePath ?>/projetos?turma_id=<?= (int) $turma['id'] ?>">
+        <i class="fas fa-diagram-project"></i> Ver projetos
+    </a>
+
+    <?php if ($isMaster): ?>
+        —
         <a href="<?= $basePath ?>/turmas/<?= (int) $turma['id'] ?>/editar">
             <i class="fas fa-pen"></i> Editar turma
         </a>
@@ -29,15 +34,11 @@ require_once __DIR__ . '/../layouts/flashes.php';
             <i class="fas fa-trash"></i> Excluir turma
         </a>
         —
-        <a href="<?= $basePath ?>/projetos?turma_id=<?= (int) $turma['id'] ?>">
-            <i class="fas fa-diagram-project"></i> Ver projetos
-        </a>
-        —
         <a href="<?= $basePath ?>/turmas/<?= (int) $turma['id'] ?>/representantes">
             <i class="fas fa-user-tie"></i> <strong>Gerenciar representantes</strong>
         </a>
-    </p>
-<?php endif; ?>
+    <?php endif; ?>
+</p>
 
 <?php if ($isMaster): ?>
     <fieldset>
