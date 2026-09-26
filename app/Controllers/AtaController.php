@@ -365,7 +365,18 @@ class AtaController
 
             $this->audit->registrar('ata_criada', 'atas', $id, null, [
                 'grupo_id' => $grupoId, 'diretor_id' => $diretorId, 'titulo' => $titulo,
+                
             ]);
+
+            // Auto-cadastra todos os membros do grupo como participantes (presente = 'sim')
+            $membros = $this->membro->listarAtivos($grupoId);
+            $pdo = Database::getConnection();
+            foreach ($membros as $m) {
+                $pdo->prepare("
+                    INSERT IGNORE INTO ata_participantes (ata_id, aluno_id, presente)
+                    VALUES (?, ?, 'sim')
+                ")->execute([$id, (int) $m['usuario_id']]);
+            }
 
             // Notifica o diretor designado
             (new Notificacao())->criar(
@@ -400,6 +411,50 @@ class AtaController
             $this->redirect('/atas/' . $idsCriados[0]);
         }
         $this->redirect('/projetos/' . $projetoId . '/atas');
+    }
+        public function salvarParticipantes(int $id)
+    {
+        $ata = $this->ata->porId($id);
+        if (!$ata) { $this->flash('Ata não encontrada.'); $this->redirect('/turmas'); }
+
+        $this->exigirPreenchimento($ata);
+        CsrfMiddleware::validate();
+
+        $presencas      = $_POST['presenca'] ?? [];
+        $justificativas = $_POST['justificativa'] ?? [];
+
+        $pdo = Database::getConnection();
+
+        // Todos os membros do grupo precisam ter linha em ata_participantes
+        $membros = $this->membro->listarAtivos((int) $ata['grupo_id']);
+        $idsValidos = array_map(fn($m) => (int) $m['usuario_id'], $membros);
+
+        foreach ($idsValidos as $alunoId) {
+            $presente = $presencas[$alunoId] ?? 'sim';
+            if (!in_array($presente, ['sim', 'nao', 'justificado'], true)) {
+                $presente = 'sim';
+            }
+            $just = trim($justificativas[$alunoId] ?? '') ?: null;
+
+            // Justificativa só faz sentido quando NÃO está presente
+            if ($presente === 'sim') {
+                $just = null;
+            }
+
+            $pdo->prepare("
+                INSERT INTO ata_participantes (ata_id, aluno_id, presente, justificativa)
+                VALUES (?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    presente = VALUES(presente),
+                    justificativa = VALUES(justificativa)
+            ")->execute([$id, $alunoId, $presente, $just]);
+        }
+
+        $this->audit->registrar('ata_participantes_atualizados', 'ata_participantes', $id, null,
+            ['total' => count($idsValidos)]);
+
+        $this->flash('Presenças atualizadas.', 'sucesso');
+        $this->redirect('/atas/' . $id);
     }
 
     // ============ DETALHE / VISUALIZAÇÃO ============
@@ -530,7 +585,13 @@ class AtaController
         }
 
         $usuario = $_SESSION['usuario'];
-        $tipoUsuario = $usuario['tipo'] === 'master' ? 'diretor' : 'diretor'; // diretor por padrão
+
+        // Descobre o papel real do autor neste contexto
+        $projeto = $this->projeto->porId((int) $ata['projeto_id']);
+        $souRep  = $this->tu->ehRepresentante((int) $projeto['turma_id'], (int) $usuario['id']);
+
+        // Master cai em 'diretor' por padrão (é quem revisa), a menos que seja rep da turma
+        $tipoUsuario = $souRep ? 'representante' : 'diretor';
 
         $relId = $this->rel->criar($id, (int) $usuario['id'], $tipoUsuario, $titulo, $conteudo, $tipoRelatorio, $tema);
 

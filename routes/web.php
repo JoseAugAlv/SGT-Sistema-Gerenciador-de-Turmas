@@ -235,3 +235,20 @@ $router->get('/tutorial/aluno',         'TutorialController@aluno');
 $router->get('/tutorial/diretor',       'TutorialController@diretor');
 $router->get('/tutorial/representante', 'TutorialController@representante');
 $router->get('/tutorial/master',        'TutorialController@master');
+
+// ============ ALUNOS ============
+$router->get ('/alunos',                          'AlunoController@index',          ['master', 'aluno']);
+$router->get ('/alunos/criar',                    'AlunoController@criar',          ['master', 'aluno']);
+$router->post('/alunos/salvar',                   'AlunoController@salvar',         ['master', 'aluno']);
+
+$router->get ('/alunos/massa',                    'AlunoController@massa',          ['master', 'aluno']);
+$router->post('/alunos/massa/salvar',             'AlunoController@massaSalvar',    ['master', 'aluno']);
+$router->get ('/alunos/massa/resultado',          'AlunoController@massaResultado', ['master', 'aluno']);
+
+$router->post('/alunos/{id}/alternar-ativo',      'AlunoController@alternarAtivo',  ['master', 'aluno']);
+
+$router->get ('/alunos/{id}/editar',    'AlunoController@editarForm',     ['master', 'aluno']);
+$router->post('/alunos/{id}/atualizar', 'AlunoController@atualizar',      ['master', 'aluno']);
+$router->get ('/alunos/{id}/grupos',    'AlunoController@grupos',         ['master', 'aluno']);
+
+$router->post('/atas/{id}/participantes', 'AtaController@salvarParticipantes', ['master', 'aluno']);

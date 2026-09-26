@@ -21,6 +21,13 @@ class HomeController
         $userId   = (int) $u['id'];
         $isMaster = $u['tipo'] === 'master';
 
+                // Verifica prazos próximos a cada acesso ao dashboard
+        try {
+            (new Notificacao())->verificarPrazosProximos($userId, 3);
+        } catch (\Throwable $e) {
+            // silencioso — não trava o dashboard
+        }
+
         $pdo          = Database::getConnection();
         $turmaModel   = new Turma();
         $tuModel      = new TurmaUsuario();

@@ -61,24 +61,83 @@ $u = $_SESSION['usuario'];
 <hr>
 
 <h2>Participantes (<?= count($participantes) ?>)</h2>
-<?php if (empty($participantes)): ?>
-    <p>Nenhum participante registrado.</p>
-<?php else: ?>
-    <table border="1" cellpadding="6">
-        <thead><tr><th>Nome</th><th>Presença</th><th>Justificativa</th></tr></thead>
-        <tbody>
-            <?php foreach ($participantes as $p): ?>
-                <tr>
-                    <td><?= h($p['usuario_nome']) ?></td>
-                    <td><?= h($p['presente']) ?></td>
-                    <td><?= h($p['justificativa'] ?? '—') ?></td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-<?php endif; ?>
 
-<hr>
+<?php if ($podePreencher): ?>
+    <p>
+        <small style="color:var(--muted);">
+            <i class="fas fa-info-circle"></i>
+            Ajuste a presença de cada membro. Justificativa é obrigatória para "Não" e "Justificado".
+        </small>
+    </p>
+
+    <form method="POST" action="<?= $basePath ?>/atas/<?= (int) $ata['id'] ?>/participantes">
+        <?= ViewHelper::csrfField() ?>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Aluno</th>
+                    <th>Presença</th>
+                    <th>Justificativa</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($participantes as $p): ?>
+                    <tr>
+                        <td><?= h($p['usuario_nome']) ?></td>
+                        <td>
+                            <select name="presenca[<?= (int) $p['aluno_id'] ?>]" class="field">
+                                <option value="sim"         <?= $p['presente'] === 'sim'         ? 'selected' : '' ?>>Presente</option>
+                                <option value="nao"         <?= $p['presente'] === 'nao'         ? 'selected' : '' ?>>Ausente</option>
+                                <option value="justificado" <?= $p['presente'] === 'justificado' ? 'selected' : '' ?>>Justificado</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="text" class="field"
+                                   name="justificativa[<?= (int) $p['aluno_id'] ?>]"
+                                   value="<?= h($p['justificativa'] ?? '') ?>"
+                                   maxlength="500" placeholder="(opcional)">
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+
+        <p>
+            <button type="submit" class="button button-primary">
+                <i class="fas fa-check"></i> Salvar presenças
+            </button>
+        </p>
+    </form>
+<?php else: ?>
+    <?php if (empty($participantes)): ?>
+        <p>Nenhum participante registrado.</p>
+    <?php else: ?>
+        <table>
+            <thead>
+                <tr><th>Nome</th><th>Presença</th><th>Justificativa</th></tr>
+            </thead>
+            <tbody>
+                <?php foreach ($participantes as $p): ?>
+                    <tr>
+                        <td><?= h($p['usuario_nome']) ?></td>
+                        <td>
+                            <?php
+                            $badges = [
+                                'sim'         => '<span class="badge badge-green">Presente</span>',
+                                'nao'         => '<span class="badge badge-red">Ausente</span>',
+                                'justificado' => '<span class="badge badge-yellow">Justificado</span>',
+                            ];
+                            echo $badges[$p['presente']] ?? h($p['presente']);
+                            ?>
+                        </td>
+                        <td><?= h($p['justificativa'] ?? '—') ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+<?php endif; ?>
 
 <h2>Atividades (<?= count($atividades) ?>)</h2>
 <?php if (empty($atividades)): ?>

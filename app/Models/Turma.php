@@ -23,7 +23,13 @@ class Turma extends Model
     public function listarDoUsuario(int $usuarioId): array
     {
         $stmt = $this->conn->prepare("
-            SELECT t.*, tu.papel AS meu_papel
+            SELECT t.*, tu.papel AS meu_papel,
+                   (SELECT COUNT(*) FROM turma_usuarios tu2
+                    WHERE tu2.turma_id = t.id AND tu2.ativo = 1) AS total_alunos,
+                   (SELECT COUNT(*) FROM turma_usuarios tu3
+                    WHERE tu3.turma_id = t.id
+                      AND tu3.papel = 'representante'
+                      AND tu3.ativo = 1) AS total_reps
             FROM turmas t
             INNER JOIN turma_usuarios tu ON tu.turma_id = t.id
             WHERE tu.usuario_id = ? AND tu.ativo = 1

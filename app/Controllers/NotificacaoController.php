@@ -17,12 +17,14 @@ class NotificacaoController
         $this->prefs = new PreferenciasUsuario();
     }
 
-        public function index()
+    public function index()
     {
         $u = $_SESSION['usuario'];
 
-        // Verifica prazos próximos (roda a cada visita)
-        $this->verificarPrazosProximos((int) $u['id']);
+        // Verifica prazos ao abrir a tela
+        try {
+            $this->notif->verificarPrazosProximos((int) $u['id'], 3);
+        } catch (\Throwable $e) {}
 
         $filtro = $_GET['filtro'] ?? null;
 
@@ -72,6 +74,17 @@ class NotificacaoController
         $u = $_SESSION['usuario'] ?? null;
         header('Content-Type: application/json');
         if (!$u) { echo json_encode(['total' => 0]); exit; }
+
+        // Verifica prazos no máximo a cada 5 minutos por sessão
+        $agora = time();
+        if (empty($_SESSION['ultima_verif_prazos']) || ($agora - $_SESSION['ultima_verif_prazos']) > 300) {
+            try {
+                $this->notif->verificarPrazosProximos((int) $u['id'], 3);
+            } catch (\Throwable $e) {
+                // silencioso
+            }
+            $_SESSION['ultima_verif_prazos'] = $agora;
+        }
 
         echo json_encode(['total' => $this->notif->contarNaoLidas((int) $u['id'])]);
         exit;

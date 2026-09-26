@@ -59,6 +59,14 @@ return [
             'type'  => 'notif',
             'secao' => 'Visão geral',
         ],
+        [
+            'label' => 'Projetos',
+            'url'   => '/projetos',
+            'icon'  => 'fa-solid fa-diagram-project',
+            'roles' => ['master', 'aluno'],
+            'type'  => 'notif',
+            'secao' => 'Visão geral',
+        ],
 
         // ============ MINHA CONTA ============
         [

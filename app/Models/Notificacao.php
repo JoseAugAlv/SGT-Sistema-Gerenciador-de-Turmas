@@ -108,4 +108,67 @@ class Notificacao extends Model
         $stmt->execute([$usuarioId]);
         return $stmt->rowCount();
     }
+        /**
+     * Cria notificações para critérios que vencem em até $dias dias.
+     * Idempotente: não recria se já existir notificação do tipo 'prazo'
+     * com mesmo referencia_id para o mesmo usuário.
+     */
+    public function verificarPrazosProximos(int $usuarioId, int $dias = 3): int
+    {
+        $pdo = Database::getConnection();
+
+        // Projetos do usuário
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT p.id
+            FROM projetos p
+            INNER JOIN turma_usuarios tu ON tu.turma_id = p.turma_id
+            WHERE tu.usuario_id = ? AND tu.ativo = 1 AND p.encerrado = 0
+        ");
+        $stmt->execute([$usuarioId]);
+        $projetos = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (empty($projetos)) return 0;
+
+        $ph = implode(',', array_fill(0, count($projetos), '?'));
+
+        $stmt = $pdo->prepare("
+            SELECT c.id, c.nome, c.prazo_avaliacao, c.projeto_id, p.nome AS projeto_nome
+            FROM criterios c
+            INNER JOIN projetos p ON p.id = c.projeto_id
+            WHERE c.projeto_id IN ({$ph})
+              AND c.bloqueado = 0
+              AND c.prazo_avaliacao IS NOT NULL
+              AND c.prazo_avaliacao >= NOW()
+              AND c.prazo_avaliacao <= DATE_ADD(NOW(), INTERVAL ? DAY)
+        ");
+        $params = array_merge($projetos, [$dias]);
+        $stmt->execute($params);
+        $crits = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($crits)) return 0;
+
+        $total = 0;
+        foreach ($crits as $c) {
+            // Já existe notificação deste critério para o usuário?
+            $stmt = $pdo->prepare("
+                SELECT 1 FROM notificacoes
+                WHERE usuario_id = ? AND tipo = 'prazo' AND referencia_id = ?
+                LIMIT 1
+            ");
+            $stmt->execute([$usuarioId, (int) $c['id']]);
+            if ($stmt->fetchColumn()) continue;
+
+            $this->criar(
+                $usuarioId,
+                'prazo',
+                'Prazo próximo',
+                "O critério '{$c['nome']}' do projeto '{$c['projeto_nome']}' vence em " . date('d/m H:i', strtotime($c['prazo_avaliacao'])) . '.',
+                '/projetos/' . (int) $c['projeto_id'] . '/avaliacoes',
+                (int) $c['id']
+            );
+            $total++;
+        }
+
+        return $total;
+    }    
 }

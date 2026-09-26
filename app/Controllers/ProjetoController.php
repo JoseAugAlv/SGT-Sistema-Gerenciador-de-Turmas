@@ -39,11 +39,28 @@ class ProjetoController
         $turmaId = (int) ($_GET['turma_id'] ?? 0);
         $u = $_SESSION['usuario'];
 
+        // ---------- Sem turma_id: listar projetos de TODAS as turmas do usuário ----------
         if (!$turmaId) {
-            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Informe a turma.'];
-            $this->redirect('/turmas');
+            $turmas = $u['tipo'] === 'master'
+                ? $this->turma->listarTodas()
+                : $this->turma->listarDoUsuario((int) $u['id']);
+
+            $projetosPorTurma = [];
+            foreach ($turmas as $t) {
+                $projetosPorTurma[] = [
+                    'turma'    => $t,
+                    'projetos' => $this->projeto->listarPorTurma((int) $t['id']),
+                ];
+            }
+
+            $this->render('projetos/geral', [
+                'projetosPorTurma' => $projetosPorTurma,
+                'isMaster'         => $u['tipo'] === 'master',
+            ]);
+            return;
         }
 
+        // ---------- Com turma_id: listar projetos da turma específica ----------
         $turma = $this->turma->porId($turmaId);
         if (!$turma) {
             $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Turma não encontrada.'];

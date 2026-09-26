@@ -43,13 +43,9 @@ class RelatorioController
 
         $alunoId = (int) ($_GET['aluno_id'] ?? $u['id']);
 
-        // Aluno comum só pode ver o próprio
-        $souMaster = $u['tipo'] === 'master';
-        $souRep    = $this->tu->ehRepresentante((int) $projeto['turma_id'], (int) $u['id']);
-
-        if (!$souMaster && !$souRep && $alunoId !== (int) $u['id']) {
+        if (!$this->podeVerBoletimDe($projetoId, $alunoId)) {
             http_response_code(403);
-            exit('Aluno só vê o próprio boletim.');
+            exit('Você não tem permissão para ver este boletim.');
         }
 
         $aluno = $this->usuario->findById($alunoId);
@@ -57,6 +53,9 @@ class RelatorioController
 
         $boletim = $this->snap->boletimEfetivo($projetoId, $alunoId);
         $cfg     = $this->cfg->garantir($projetoId);
+
+        $souMaster = $u['tipo'] === 'master';
+        $souRep    = $this->tu->ehRepresentante((int) $projeto['turma_id'], (int) $u['id']);
 
         $this->render('relatorios/boletim_aluno', [
             'projeto'  => $projeto,
@@ -79,10 +78,7 @@ class RelatorioController
 
         $alunoId = (int) ($_GET['aluno_id'] ?? $u['id']);
 
-        $souMaster = $u['tipo'] === 'master';
-        $souRep    = $this->tu->ehRepresentante((int) $projeto['turma_id'], (int) $u['id']);
-
-        if (!$souMaster && !$souRep && $alunoId !== (int) $u['id']) {
+        if (!$this->podeVerBoletimDe($projetoId, $alunoId)) {
             http_response_code(403); exit('Sem permissão.');
         }
 
@@ -182,6 +178,94 @@ class RelatorioController
     }
 
     // ============ HELPERS ============
+
+        /**
+     * Verifica se o usuário atual pode ver o boletim do aluno $alvoId.
+     * Aplica as regras de visibilidade do projeto.
+     */
+    private function podeVerBoletimDe(int $projetoId, int $alvoId): bool
+    {
+        $u = $_SESSION['usuario'] ?? null;
+        if (!$u) return false;
+
+        $meuId   = (int) $u['id'];
+        $projeto = $this->projeto->porId($projetoId);
+        if (!$projeto) return false;
+
+        // Sempre pode ver o próprio
+        if ($meuId === $alvoId) return true;
+
+        // Master vê qualquer um
+        if ($u['tipo'] === 'master') return true;
+
+        // Representante vê qualquer um da turma
+        if ($this->tu->ehRepresentante((int) $projeto['turma_id'], $meuId)) return true;
+
+        // Caso contrário, respeita a configuração do projeto
+        $cfg = $this->cfg->garantir($projetoId);
+        $pdo = Database::getConnection();
+
+        // É diretor ativo de algum grupo do projeto?
+        $stmt = $pdo->prepare("
+            SELECT 1 FROM grupo_diretores gd
+            INNER JOIN grupos g ON g.id = gd.grupo_id
+            WHERE g.projeto_id = ? AND gd.usuario_id = ? AND gd.ativo = 1
+            LIMIT 1
+        ");
+        $stmt->execute([$projetoId, $meuId]);
+        $souDiretor = (bool) $stmt->fetchColumn();
+
+        $regra = $souDiretor ? $cfg['visibilidade_diretor'] : $cfg['visibilidade_aluno'];
+
+        if ($regra === 'turma') {
+            // Alvo precisa estar ativo na turma do projeto
+            $stmt = $pdo->prepare("
+                SELECT 1 FROM turma_usuarios
+                WHERE turma_id = ? AND usuario_id = ? AND ativo = 1
+                LIMIT 1
+            ");
+            $stmt->execute([(int) $projeto['turma_id'], $alvoId]);
+            return (bool) $stmt->fetchColumn();
+        }
+
+        if ($regra === 'grupo') {
+            // Alvo precisa compartilhar algum grupo comigo (como diretor ou membro)
+            $stmt = $pdo->prepare("
+                SELECT 1
+                FROM grupo_alunos ga1
+                INNER JOIN grupo_alunos ga2 ON ga2.grupo_id = ga1.grupo_id
+                INNER JOIN grupos g ON g.id = ga1.grupo_id
+                WHERE g.projeto_id = ?
+                  AND ga1.usuario_id = ?
+                  AND ga2.usuario_id = ?
+                  AND ga1.saiu_em IS NULL
+                  AND ga2.saiu_em IS NULL
+                LIMIT 1
+            ");
+            $stmt->execute([$projetoId, $meuId, $alvoId]);
+            if ($stmt->fetchColumn()) return true;
+
+            // Ou o alvo está em algum grupo que eu dirijo
+            $stmt = $pdo->prepare("
+                SELECT 1
+                FROM grupo_diretores gd
+                INNER JOIN grupos g ON g.id = gd.grupo_id
+                INNER JOIN grupo_alunos ga ON ga.grupo_id = g.id
+                WHERE g.projeto_id = ?
+                  AND gd.usuario_id = ?
+                  AND gd.ativo = 1
+                  AND ga.usuario_id = ?
+                  AND ga.saiu_em IS NULL
+                LIMIT 1
+            ");
+            $stmt->execute([$projetoId, $meuId, $alvoId]);
+            return (bool) $stmt->fetchColumn();
+        }
+
+        // 'proprio' — já checado no início
+        return false;
+    }
+
 
     private function exigirAcesso(array $projeto): void
     {
