@@ -1,3 +1,0 @@
-# backups/.htaccess
-Order allow,deny
-Deny from all
