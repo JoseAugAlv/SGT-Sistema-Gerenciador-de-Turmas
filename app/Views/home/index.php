@@ -76,6 +76,7 @@ if ($turmaFoco && $souRepFoco) {
         ['fas fa-bullhorn',  'Novo aviso', $tt . '/alertas/criar'],
         ['fas fa-user-plus', 'Alunos',     $basePath . '/alunos'],
         ['fas fa-palette',   'Identidade', $tt . '/identidade'],
+        ['fas fa-receipt',   'Plano',      $tt . '/plano'],
     ];
 }
 ?>

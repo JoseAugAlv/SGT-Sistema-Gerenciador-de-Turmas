@@ -97,6 +97,14 @@ require_once __DIR__ . '/../layouts/flashes.php';
                 </div>
             </a>
 
+            <a class="master-shortcut green" href="<?= $basePath ?>/master/comercial">
+                <i class="icon fas fa-receipt"></i>
+                <div class="info">
+                    <strong>Comercial</strong>
+                    <small>Planos, cupons, descontos e vendas</small>
+                </div>
+            </a>
+
             <a class="master-shortcut" href="<?= $basePath ?>/configuracoes/turmas">
                 <i class="icon fas fa-gear"></i>
                 <div class="info">

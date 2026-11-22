@@ -1693,3 +1693,16 @@ VALUES (
 INSERT INTO preferencias_usuario (usuario_id, receber_email, receber_email_prazos, receber_email_alertas, receber_email_avaliacoes)
 VALUES (1, 1, 1, 1, 1);
 
+
+---
+
+## PLANOS E PAGAMENTOS (modo de teste)
+
+Preços e regras comerciais: `precos.md`. Cálculo em `app/Services/PrecoService.php`.
+
+- **Quem compra:** o representante da turma (ou o master), em `/turmas/{id}/plano`. Só planos de **turma** estão à venda; os de grêmio estão cadastrados, mas dependem da lógica de grêmios.
+- **Cálculo:** desconto do cupom sobre o preço à vista (nunca abaixo do piso do plano) e, depois, o acréscimo das parcelas. Tabela A (Semestral, Anual, Completo e grêmios): 2x 5%, 3x 7%, 4x 10%, 5x 12%, 6x 14%. Tabela B (Estendido e Vitalício): até 6x sem acréscimo, 7x 4% … 12x 14%. A última parcela absorve o arredondamento.
+- **Cupom:** código digitado na tela do plano. Pode ter percentual próprio; sem ele, usa o padrão da configuração (turma 30%, grêmio 15%, editáveis pelo master em `/master/comercial`). Validade e limite de usos opcionais. O uso conta quando a 1ª parcela é paga.
+- **Pedido:** gera a assinatura `aguardando` e todas as parcelas (vencimento a cada 30 dias). Pode ser cancelado enquanto nada foi pago. Uma turma só tem um plano em andamento por vez.
+- **Pagamento (teste):** a tela do Pix mostra um QR e um "copia e cola" ilustrativos. O botão "Simular pagamento" pede confirmação num alerta e marca a parcela como paga. As parcelas são pagas em ordem. A 1ª ativa o plano: o acesso conta a partir dela (`fim` = início + meses; Vitalício sem `fim`).
+- **Ainda não aplicado:** bloqueio por atraso (5 dias), antecipação, arrependimento, indicação, adicionais, códigos de resgate de escola e o limite de projetos (hoje só exibido). A cobrança real (Mercado Pago) entra quando `config_comercial.modo_pagamento` deixar de ser `teste`.

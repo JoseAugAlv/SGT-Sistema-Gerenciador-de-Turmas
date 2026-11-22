@@ -1,0 +1,123 @@
+/* ============================================================
+   PLANOS E PAGAMENTOS
+   ============================================================ */
+.plano-teste { margin-bottom: 20px; }
+
+/* Cupom */
+.plano-cupom { margin-bottom: 20px; max-width: 520px; }
+.plano-cupom-linha { display: flex; gap: 8px; align-items: center; }
+.plano-cupom-linha .field { margin: 0; text-transform: uppercase; }
+.plano-cupom-ok { display: block; margin-top: 6px; color: var(--green); font-weight: 600; }
+
+/* Cartões de plano */
+.planos-grade {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;
+    border: 0; padding: 0; margin: 0 0 20px;
+}
+.bloco-titulo-legend { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 8px; padding: 0; }
+.plano-card {
+    position: relative; display: flex; flex-direction: column; gap: 6px;
+    padding: 18px 16px 16px; border: 1.5px solid var(--border); border-radius: 14px;
+    background: var(--surface); cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.plano-card:hover { border-color: var(--border-strong); }
+.plano-card:has(input:checked) { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.plano-card input { position: absolute; top: 16px; right: 16px; accent-color: var(--primary); width: 18px; height: 18px; }
+.plano-card:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
+.plano-tag {
+    align-self: flex-start; padding: 2px 8px; border-radius: 99px;
+    background: var(--primary); color: #fff; font-size: 11px; font-weight: 700;
+}
+.plano-nome { font-size: 18px; }
+.plano-duracao, .plano-parcela, .plano-por-aluno { font-size: 13px; color: var(--muted); }
+.plano-preco { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.plano-preco b { font-size: 26px; color: var(--text); }
+.plano-preco s { font-size: 13px; color: var(--muted); }
+.plano-preco small { font-size: 12px; color: var(--muted); }
+.plano-por-aluno { margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--border); }
+
+/* Resumo */
+.plano-resumo {
+    display: grid; grid-template-columns: minmax(220px, 1fr) auto auto; gap: 20px; align-items: center;
+}
+.plano-resumo-campos .field { margin-bottom: 4px; }
+.plano-resumo-total { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.plano-resumo-linha { font-size: 13px; color: var(--muted); }
+.plano-resumo-total strong { font-size: 30px; }
+.plano-resumo-total small { font-size: 12px; color: var(--muted); }
+.plano-botao { white-space: nowrap; }
+
+/* Plano ativo */
+.plano-ativo { margin-bottom: 18px; }
+.plano-ativo-topo { margin-bottom: 14px; }
+.plano-ativo h2 { margin: 6px 0 2px; font-size: 26px; }
+.plano-ativo p { margin: 0; color: var(--muted); }
+.plano-selo {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px;
+    background: color-mix(in srgb, var(--green) 14%, var(--surface)); color: var(--green);
+    font-size: 12px; font-weight: 700;
+}
+.plano-ativo.vencido .plano-selo { background: color-mix(in srgb, var(--red) 12%, var(--surface)); color: var(--red); }
+.plano-num-valor { font-size: 28px !important; }
+.lista-parcelas .tarefa-icone.pago { background: color-mix(in srgb, var(--green) 14%, var(--surface)); color: var(--green); }
+.parcela-status { font-size: 12px; font-weight: 700; color: var(--muted); }
+.parcela-status.pago { color: var(--green); }
+.plano-aguardando h2 { margin: 0 0 6px; font-size: 18px; }
+.plano-aguardando p { color: var(--muted); }
+.plano-aguardando-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+/* Pix */
+.pix-caixa { display: grid; grid-template-columns: 200px 1fr; gap: 24px; align-items: center; }
+.pix-qr {
+    aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    border: 2px dashed var(--border-strong); border-radius: 14px; color: var(--muted);
+}
+.pix-qr i { font-size: 96px; color: var(--text); opacity: .85; }
+.pix-qr span { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.pix-passos { margin: 0 0 16px; padding-left: 20px; line-height: 1.8; }
+.pix-copia-linha { display: flex; gap: 8px; }
+.pix-copia-linha .field { margin: 0; font-family: ui-monospace, monospace; font-size: 12px; }
+.pix-teste {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px;
+    padding: 16px 18px; border: 1.5px dashed var(--orange); border-radius: 12px;
+    background: color-mix(in srgb, var(--orange) 8%, var(--surface));
+}
+.pix-teste strong { color: var(--orange); }
+.pix-teste p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+
+/* Master: comercial */
+.comercial-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 22px; }
+.comercial-h2 { margin: 0 0 6px; font-size: 16px; }
+.lista-cupons li.inativo { opacity: .6; }
+.venda-status { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.venda-status.ativa { color: var(--green); }
+.venda-status.aguardando { color: var(--orange); }
+.comercial-planos summary { cursor: pointer; font-weight: 700; color: var(--primary); margin-bottom: 10px; }
+.tabela-planos { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tabela-planos th, .tabela-planos td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+.tabela-planos th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.tabela-planos .dir { text-align: right; }
+
+@media (max-width: 760px) {
+    .plano-resumo { grid-template-columns: 1fr; bottom: calc(72px + env(safe-area-inset-bottom)); }
+    .plano-resumo-total { align-items: flex-start; text-align: left; }
+    .plano-botao { width: 100%; justify-content: center; }
+    .pix-caixa { grid-template-columns: 1fr; }
+    .pix-qr { max-width: 200px; margin: 0 auto; }
+    .pix-teste { flex-direction: column; align-items: stretch; }
+    .comercial-grade { grid-template-columns: 1fr; }
+}
+.planos-grade { background: none; min-width: 0; }
+.plano-cupom-linha .field::placeholder { text-transform: none; }
+
+/* Barra fixa do resumo (reaproveita .aval-barra-salvar) */
+.plano-form { padding-bottom: 96px; }
+.plano-resumo { display: block; max-width: 520px; }
+.plano-barra .plano-resumo-total { display: flex; flex-direction: column; align-items: flex-start; text-align: left; color: var(--muted); }
+.plano-barra .plano-resumo-total strong { font-size: 24px; color: var(--text); line-height: 1.1; }
+@media (max-width: 760px) {
+    .plano-form { padding-bottom: 170px; }
+    .plano-barra .plano-botao { width: auto; }
+    .plano-barra .plano-resumo-total strong { font-size: 20px; }
+}

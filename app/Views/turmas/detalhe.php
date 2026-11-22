@@ -29,6 +29,9 @@ require_once __DIR__ . '/../layouts/flashes.php';
         <a class="button button-secondary" href="<?= $basePath ?>/turmas/<?= (int) $turma['id'] ?>/identidade">
             <i class="fas fa-palette"></i> Identidade
         </a>
+        <a class="button button-secondary" href="<?= $basePath ?>/turmas/<?= (int) $turma['id'] ?>/plano">
+            <i class="fas fa-receipt"></i> Plano
+        </a>
     <?php endif; ?>
     <?php if ($isMaster): ?>
         <a class="button button-secondary" href="<?= $basePath ?>/turmas/<?= (int) $turma['id'] ?>/editar">

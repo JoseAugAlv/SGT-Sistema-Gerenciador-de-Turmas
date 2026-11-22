@@ -1,5 +1,8 @@
 <?php
 
+// Fuso do Brasil, igual ao do MySQL: prazos e vencimentos comparam datas do PHP com as do banco
+date_default_timezone_set('America/Sao_Paulo');
+
 // 1. PRIMEIRO: Carregar o App para poder usar as configurações
 require_once __DIR__ . '/../app/Config/SessionConfig.php';
 SessionConfig::configure();

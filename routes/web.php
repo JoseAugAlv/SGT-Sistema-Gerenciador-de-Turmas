@@ -299,6 +299,20 @@ $router->post('/solicitacoes/{id}/excluir',  'MaterialController@excluirSolicita
 // ═══════════════════════════════════════════════════════════════
 // MASTER
 // ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// PLANOS E PAGAMENTOS (modo de teste: pagamento simulado)
+// ═══════════════════════════════════════════════════════════════
+$router->get ('/turmas/{id}/plano',             'PlanoController@turma',    ['master', 'aluno']);
+$router->post('/turmas/{id}/plano/assinar',     'PlanoController@assinar',  ['master', 'aluno']);
+$router->get ('/pagamentos/{id}',               'PlanoController@pix',      ['master', 'aluno']);
+$router->post('/pagamentos/{id}/simular',       'PlanoController@simular',  ['master', 'aluno']);
+$router->post('/assinaturas/{id}/cancelar',     'PlanoController@cancelar', ['master', 'aluno']);
+
+$router->get ('/master/comercial',                        'ComercialController@index',         ['master']);
+$router->post('/master/comercial/config',                 'ComercialController@salvarConfig',  ['master']);
+$router->post('/master/comercial/cupons',                 'ComercialController@criarCupom',    ['master']);
+$router->post('/master/comercial/cupons/{id}/alternar',   'ComercialController@alternarCupom', ['master']);
+
 $router->get ('/master',                       'MasterController@index',               ['master']);
 $router->get ('/master/auditoria',             'MasterController@auditoria',           ['master']);
 $router->get ('/master/auditoria/{id}',        'MasterController@auditoriaDetalhe',    ['master']);
