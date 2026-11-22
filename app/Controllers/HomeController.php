@@ -24,6 +24,8 @@ class HomeController
                 // Verifica prazos próximos a cada acesso ao dashboard
         try {
             (new Notificacao())->verificarPrazosProximos($userId, 3);
+            require_once __DIR__ . '/../Models/Criterio.php';
+            (new Criterio())->fecharVencidos();
         } catch (\Throwable $e) {
             // silencioso — não trava o dashboard
         }
@@ -100,6 +102,9 @@ class HomeController
         // ============ PRÓXIMOS PRAZOS ============
         $prazos = $this->proximosPrazos($pdo, $idsTurmas);
 
+        // ============ CRITÉRIOS QUE O REPRESENTANTE PRECISA CRIAR ============
+        $criteriosPendentes = $this->criteriosPendentes($pdo, $minhasTurmas, $isMaster);
+
         // ============ DISTRIBUIÇÃO DE PAPÉIS (por turma) ============
         $papeis = $this->distribuicaoPapeis($pdo, $idsTurmas);
 
@@ -118,6 +123,7 @@ class HomeController
             'projetos'              => $projetos,
             'atividade'             => $atividade,
             'prazos'                => $prazos,
+            'criteriosPendentes'    => $criteriosPendentes,
             'papeis'                => $papeis,
         ];
         extract($dados);
@@ -198,7 +204,7 @@ class HomeController
         $ph = implode(',', array_fill(0, count($idsTurmas), '?'));
 
         $stmt = $pdo->prepare("
-            SELECT p.id, p.nome, p.prazo, p.modo_avaliacao, t.nome AS turma_nome,
+            SELECT p.id, p.nome, p.prazo, p.modo_avaliacao, p.turma_id, t.nome AS turma_nome,
                    (SELECT COUNT(*) FROM grupos g WHERE g.projeto_id = p.id) AS total_grupos,
                    (SELECT COUNT(*) FROM criterios c WHERE c.projeto_id = p.id) AS total_criterios
             FROM projetos p
@@ -297,6 +303,33 @@ class HomeController
         return $atividade;
     }
 
+    /**
+     * Projetos em andamento das turmas em que o usuário é representante (ou todas, para o master)
+     * que ainda não têm critérios ou cujos pesos não somam 10.
+     */
+    private function criteriosPendentes(PDO $pdo, array $minhasTurmas, bool $isMaster): array
+    {
+        $ids = [];
+        foreach ($minhasTurmas as $t) {
+            if ($isMaster || ($t['meu_papel'] ?? '') === 'representante') $ids[] = (int) $t['id'];
+        }
+        if (empty($ids)) return [];
+        $ph = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $pdo->prepare("
+            SELECT p.id, p.nome, t.nome AS turma_nome,
+                   COUNT(c.id) AS total, COALESCE(SUM(c.peso), 0) AS soma
+            FROM projetos p
+            INNER JOIN turmas t ON t.id = p.turma_id
+            LEFT JOIN criterios c ON c.projeto_id = p.id
+            WHERE p.turma_id IN ($ph) AND p.encerrado = 0
+            GROUP BY p.id, p.nome, t.nome
+            HAVING total = 0 OR ABS(soma - 10) >= 0.01
+            ORDER BY total ASC, p.nome
+        ");
+        $stmt->execute($ids);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     private function proximosPrazos(PDO $pdo, array $idsTurmas): array
     {
         if (empty($idsTurmas)) return [];
@@ -305,7 +338,7 @@ class HomeController
         // Unifica: critérios com prazo (30 dias) + projetos com prazo (30 dias)
         $stmt = $pdo->prepare("
             (SELECT c.id, c.nome AS titulo, c.prazo_avaliacao AS prazo,
-                    p.nome AS contexto, p.id AS projeto_id, 'criterio' AS tipo
+                    p.nome AS contexto, p.id AS projeto_id, 'criterio' AS tipo, c.obrigatorio
              FROM criterios c
              INNER JOIN projetos p ON p.id = c.projeto_id
              WHERE p.turma_id IN ($ph)
@@ -314,7 +347,7 @@ class HomeController
                AND c.prazo_avaliacao <= DATE_ADD(NOW(), INTERVAL 30 DAY))
             UNION
             (SELECT p.id, p.nome AS titulo, CAST(p.prazo AS DATETIME) AS prazo,
-                    t.nome AS contexto, p.id AS projeto_id, 'projeto' AS tipo
+                    t.nome AS contexto, p.id AS projeto_id, 'projeto' AS tipo, 0 AS obrigatorio
              FROM projetos p
              INNER JOIN turmas t ON t.id = p.turma_id
              WHERE p.turma_id IN ($ph)

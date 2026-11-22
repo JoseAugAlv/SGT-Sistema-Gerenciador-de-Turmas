@@ -1,35 +1,32 @@
 <?php
 // app/Views/avaliacoes/_nav.php
-// Sub-nav de avaliações, filtrado por papel com prioridade:
-// master > representante > diretor > aluno.
-// Representante NÃO vê a aba Diretor.
+// Sub-nav de avaliações, filtrado por papel:
+// a aba "Diretor" SÓ aparece se o usuário for diretor ativo em algum
+// grupo do projeto. Master e representante veem as demais abas normalmente.
 
 require_once __DIR__ . '/../../Config/database.php';
 require_once __DIR__ . '/../../Models/TurmaUsuario.php';
 
 $u = $_SESSION['usuario'] ?? null;
+if (!$u) return;
 
-if (!$u) {
-    return; // ninguém logado — não renderiza nada
-}
-
-$isMaster = $u['tipo'] === 'master';
-$turmaId  = (int) ($projeto['turma_id'] ?? 0);
+$isMaster  = $u['tipo'] === 'master';
+$turmaId   = (int) ($projeto['turma_id'] ?? 0);
 $projetoId = (int) ($projeto['id'] ?? 0);
 
-// Verifica se é representante da turma
 $isRep = false;
 if (!$isMaster && $turmaId) {
     $tu    = new TurmaUsuario();
     $isRep = $tu->ehRepresentante($turmaId, (int) $u['id']);
 }
 
-// Verifica se é diretor ativo em algum grupo do projeto (só se NÃO for rep)
+// ---------- Diretor ativo em algum grupo DESTE projeto? ----------
 $isDiretor = false;
-if (!$isMaster && !$isRep && $projetoId) {
+if ($projetoId) {
     $pdo  = Database::getConnection();
     $stmt = $pdo->prepare("
-        SELECT 1 FROM grupo_diretores gd
+        SELECT 1
+        FROM grupo_diretores gd
         INNER JOIN grupos g ON g.id = gd.grupo_id
         WHERE g.projeto_id = ? AND gd.usuario_id = ? AND gd.ativo = 1
         LIMIT 1
@@ -38,19 +35,35 @@ if (!$isMaster && !$isRep && $projetoId) {
     $isDiretor = (bool) $stmt->fetchColumn();
 }
 
-// Define a lista de abas conforme o papel (rep não vê dir)
-if ($isMaster) {
-    $chaves = ['rep', 'dir', 'par', 'auto', 'col', 'minhas'];
-} elseif ($isRep) {
-    $chaves = ['rep', 'col', 'par', 'auto', 'minhas']; // SEM 'dir'
-} elseif ($isDiretor) {
-    $chaves = ['dir', 'par', 'auto', 'minhas'];
-} else {
-    $chaves = ['par', 'auto', 'minhas'];
+// ---------- Monta a lista de abas visíveis ----------
+$chaves = [];
+
+if ($isMaster || $isRep) {
+    $chaves[] = 'rep';
 }
 
-// Metadados de cada aba
+// SÓ aparece se for diretor ativo
+if ($isDiretor) {
+    $chaves[] = 'dir';
+}
+
+// Aluno comum (sem papel de coordenação): começa pelo que falta fazer
+if (!$isMaster && !$isRep && !$isDiretor) {
+    $chaves[] = 'geral';
+}
+
+$chaves[] = 'par';
+$chaves[] = 'auto';
+
+if ($isMaster || $isRep) {
+    $chaves[] = 'col';
+}
+
+$chaves[] = 'minhas';
+
+// ---------- Definição das abas ----------
 $todas = [
+    'geral'  => ['url' => "/projetos/{$projetoId}/avaliacoes/geral",         'label' => 'A fazer',       'icon' => 'fas fa-list-check'],
     'rep'    => ['url' => "/projetos/{$projetoId}/avaliacoes/representante", 'label' => 'Representante', 'icon' => 'fas fa-user-tie'],
     'dir'    => ['url' => "/projetos/{$projetoId}/avaliacoes/diretor",       'label' => 'Diretor',       'icon' => 'fas fa-crown'],
     'par'    => ['url' => "/projetos/{$projetoId}/avaliacoes/pares",         'label' => 'Pares',         'icon' => 'fas fa-users'],
@@ -59,29 +72,26 @@ $todas = [
     'minhas' => ['url' => "/projetos/{$projetoId}/avaliacoes/minhas",        'label' => 'Minhas Notas',  'icon' => 'fas fa-graduation-cap'],
 ];
 
-// Detecta seção ativa
+// ---------- Detecta a seção ativa pela URL ----------
 $uri   = $_SERVER['REQUEST_URI'] ?? '';
-$secao = $chaves[0];
-
+$secao = $chaves[0] ?? 'minhas';
 if (strpos($uri, '/diretor')       !== false) $secao = 'dir';
 if (strpos($uri, '/pares')         !== false) $secao = 'par';
 if (strpos($uri, '/auto')          !== false) $secao = 'auto';
 if (strpos($uri, '/coletiva')      !== false) $secao = 'col';
 if (strpos($uri, '/minhas')        !== false) $secao = 'minhas';
 if (strpos($uri, '/representante') !== false) $secao = 'rep';
+if (strpos($uri, '/geral')         !== false) $secao = 'geral';
+if (strpos($uri, '/parcial')       !== false) $secao = 'minhas';
 ?>
 
-<nav>
-    <?php $primeiro = true; ?>
+<nav class="aval-nav">
     <?php foreach ($chaves as $chave): ?>
-        <?php if (!isset($todas[$chave])) continue; ?>
-        <?php $aba = $todas[$chave]; ?>
-        <?php if (!$primeiro): ?> — <?php endif; $primeiro = false; ?>
-        <?php $ativo = ($chave === $secao); ?>
-        <a href="<?= $basePath . $aba['url'] ?>"
-           style="text-decoration:none;<?= $ativo ? 'background:#e5e7eb;padding:4px 10px;border-radius:4px;font-weight:700;color:#111;' : '' ?>">
-            <i class="<?= h($aba['icon']) ?>"></i> <?= h($aba['label']) ?>
-        </a>
+        <?php $aba = $todas[$chave] ?? null; if (!$aba) continue; ?>
+        <?php if ($chave === $secao): ?>
+            <strong><i class="<?= h($aba['icon']) ?>"></i> <?= h($aba['label']) ?></strong>
+        <?php else: ?>
+            <a href="<?= $basePath . $aba['url'] ?>"><i class="<?= h($aba['icon']) ?>"></i> <?= h($aba['label']) ?></a>
+        <?php endif; ?>
     <?php endforeach; ?>
 </nav>
-<hr>

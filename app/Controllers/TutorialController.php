@@ -66,6 +66,63 @@ class TutorialController
         require __DIR__ . '/../Views/tutorial/representante.php';
     }
 
+    // ============ GALERIA DE EXEMPLOS ============
+
+    public function exemplos()
+    {
+        $tituloPagina = 'Exemplos de telas — ' . App::getName();
+        $basePath     = App::getBasePath();
+        $appName      = App::getName();
+        require __DIR__ . '/../Views/tutorial/exemplos.php';
+    }
+
+    /**
+     * Página de demo renderizada DENTRO do iframe.
+     * Sem header/nav/footer do sistema — layout próprio.
+     */
+    public function demo(string $slug)
+    {
+        $permitidos = [
+            'dashboard-aluno',
+            'dashboard-diretor',
+            'dashboard-representante',
+            'turma-detalhe',
+            'projeto-detalhe',
+            'grupo-detalhe',
+            'criterios',
+            'avaliacoes-rep',
+            'avaliacoes-diretor',
+            'avaliacoes-pares',
+            'avaliacoes-auto',
+            'minhas-notas',
+            'atas-rep',
+            'atas-diretor',
+            'materiais',
+            'relatorio-geral',
+            'notificacoes',
+            'conceitos',
+        ];
+
+        if (!in_array($slug, $permitidos, true)) {
+            http_response_code(404);
+            exit('Exemplo não disponível.');
+        }
+
+        $arquivo = __DIR__ . '/../Views/tutorial/demos/' . $slug . '.php';
+        if (!file_exists($arquivo)) {
+            http_response_code(404);
+            exit('Demo não encontrada.');
+        }
+
+        // Layout base da demo
+        $basePath = App::getBasePath();
+        $appName  = App::getName();
+        $ativo    = $slug;
+        $conteudo = $arquivo;
+
+        require __DIR__ . '/../Views/tutorial/demos/_layout.php';
+    }
+
     public function master()
     {
         $this->exigirLogin();

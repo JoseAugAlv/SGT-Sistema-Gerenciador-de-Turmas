@@ -117,4 +117,10 @@ class Turma extends Model
                    ->execute([$novo, $id]);
         return $novo;
     }
+
+    public function atualizarIdentidade(int $id, string $cor, int $personalizada, ?string $logo): void
+    {
+        $this->conn->prepare("UPDATE turmas SET cor_primaria = ?, cor_personalizada = ?, logo = ? WHERE id = ?")
+                   ->execute([$cor, $personalizada, $logo, $id]);
+    }
 }

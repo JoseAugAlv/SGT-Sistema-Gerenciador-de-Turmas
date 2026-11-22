@@ -1,0 +1,10 @@
+{
+  "title": "Camiseta de Turma: escolha as cores",
+  "question": "Mesma estrutura que você escolheu, agora com cores modernas e tecnológicas. Qual paleta fica?",
+  "options": [
+    { "id": "roxo-preto", "label": "Roxo e preto (tema escuro)", "thesis": "Fundo quase preto, roxo vivo nos destaques e lilás nos números.", "palette": ["#0D0C12", "#14121C", "#7C5CFF", "#B9A8FF", "#ECEAF5"], "risk": "Tema escuro cansa menos à noite, mas exige um tema claro equivalente para quem prefere.", "html": ".impeccable/mocks/decision/cor-roxo-preto.html", "htmlFrame": "390x844" },
+    { "id": "branco-azul", "label": "Branco e azul", "thesis": "Faixa azul forte, fundo claro e ciano nos números de prazo.", "palette": ["#F5F7FB", "#FFFFFF", "#1D4ED8", "#22D3EE", "#0B1220"], "risk": "Azul é a cor mais comum em software; a identidade vem dos numerais e da faixa.", "html": ".impeccable/mocks/decision/cor-branco-azul.html", "htmlFrame": "390x844" },
+    { "id": "preto-roxo-branco", "label": "Preto, roxo e branco", "thesis": "Topo preto com numerais roxos, corpo claro e roxo nas ações.", "palette": ["#121019", "#6D4AFF", "#9B82FF", "#F6F5FA", "#FFFFFF"], "risk": "Mistura os dois pedidos; o topo escuro sobre corpo claro precisa ser consistente em todas as telas.", "html": ".impeccable/mocks/decision/cor-preto-roxo-claro.html", "htmlFrame": "390x844" }
+  ],
+  "steer": true
+}

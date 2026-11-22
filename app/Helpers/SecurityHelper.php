@@ -17,6 +17,17 @@ class SecurityHelper
         return ['valida' => empty($erros), 'erros' => $erros];
     }
 
+    /**
+     * Confere o tipo real do arquivo pelo conteúdo (não pela extensão).
+     */
+    public static function validarMimeArquivo(string $caminho, array $mimesPermitidos): bool
+    {
+        if (!is_file($caminho)) return false;
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime  = $finfo->file($caminho);
+        return $mime !== false && in_array($mime, $mimesPermitidos, true);
+    }
+
     public static function gerarToken(int $bytes = 32): string
     {
         return bin2hex(random_bytes($bytes));

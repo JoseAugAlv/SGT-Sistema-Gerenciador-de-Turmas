@@ -1,0 +1,391 @@
+/* ============================================================
+   ALUNOS — estilos específicos
+   Carregado em /alunos/*
+   ============================================================ */
+
+/* ---------- Wrapper da tabela ---------- */
+.alunos-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    margin-bottom: 16px;
+}
+
+.alunos-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    margin: 0;
+}
+
+.alunos-tabela th,
+.alunos-tabela td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    text-align: left;
+}
+
+.alunos-tabela thead th {
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.alunos-tabela tbody tr { transition: background .15s; }
+.alunos-tabela tbody tr:hover { background: var(--surface-2); }
+.alunos-tabela tbody tr:last-child td { border-bottom: 0; }
+
+/* ---------- Célula do aluno (avatar + nome + email) ---------- */
+.aluno-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 200px;
+}
+.aluno-cell .avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+.aluno-cell-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.aluno-cell-info strong {
+    font-size: 12.5px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.aluno-cell-info small {
+    color: var(--muted);
+    font-size: 10.5px;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---------- Badges de turmas na célula ---------- */
+.turmas-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-width: 280px;
+}
+.turma-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary);
+    white-space: nowrap;
+}
+.turma-badge.vazio {
+    background: var(--surface-2);
+    color: var(--muted);
+    font-style: italic;
+    font-weight: 500;
+}
+
+/* ---------- Ações da linha (botões) ---------- */
+.aluno-acoes {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.aluno-acoes form { display: inline-flex; }
+
+/* ---------- Hero meta ---------- */
+.aluno-hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    align-items: center;
+    color: var(--muted);
+    font-size: 12.5px;
+    margin-top: 4px;
+}
+.aluno-hero-meta code {
+    background: var(--surface-2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.92em;
+    color: var(--text);
+}
+
+/* ---------- Lista de checkbox de turmas ---------- */
+.checkbox-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.checkbox-turma {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+}
+.checkbox-turma:hover {
+    border-color: var(--primary);
+    background: var(--surface-2);
+}
+.checkbox-turma input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.checkbox-turma-info {
+    flex: 1;
+    min-width: 0;
+}
+.checkbox-turma-info strong {
+    display: block;
+    font-size: 13px;
+    color: var(--text);
+}
+.checkbox-turma-info small {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+/* ---------- Textarea de massa ---------- */
+.massa-textarea {
+    width: 100%;
+    min-height: 260px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    padding: 14px 16px;
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text);
+    resize: vertical;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+}
+.massa-textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.massa-textarea::placeholder {
+    color: var(--muted);
+    opacity: .7;
+}
+
+.massa-contador {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    font-size: 11.5px;
+    color: var(--muted);
+}
+.massa-contador strong {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+/* ---------- Resultado da massa ---------- */
+.resultado-resumo {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.resultado-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 18px 20px;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--border-strong);
+}
+.resultado-card.sucesso { border-left-color: var(--green); }
+.resultado-card.erro    { border-left-color: var(--red); }
+
+.resultado-card .label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+}
+.resultado-card .valor {
+    font-size: 28px;
+    font-weight: 750;
+    letter-spacing: -1px;
+    line-height: 1;
+}
+.resultado-card.sucesso .valor { color: #29946e; }
+.resultado-card.erro    .valor { color: var(--red); }
+
+/* ---------- Lista de erros ---------- */
+.erros-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.erros-lista li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: rgba(228, 109, 120, .06);
+    border-left: 3px solid var(--red);
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text);
+}
+.erros-lista li i {
+    color: var(--red);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* ---------- Grupos do aluno ---------- */
+.aluno-grupo-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    border-left: 4px solid var(--primary);
+    transition: border-color .15s;
+}
+.aluno-grupo-card:hover { border-color: var(--border-strong); }
+.aluno-grupo-card.encerrado { border-left-color: var(--red); opacity: .85; }
+.aluno-grupo-card.removido  { border-left-color: var(--muted); opacity: .75; }
+
+.aluno-grupo-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+}
+.aluno-grupo-header h3 {
+    margin: 0 0 4px;
+    font-size: 14px;
+    color: var(--text);
+}
+.aluno-grupo-header p {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--muted);
+}
+
+.aluno-grupo-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px 20px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+}
+.aluno-grupo-meta .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.aluno-grupo-meta .meta-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--muted);
+}
+.aluno-grupo-meta .meta-valor {
+    color: var(--text);
+    font-weight: 500;
+}
+
+/* ---------- Lista de diretorias ativas ---------- */
+.diretorias-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+/* ---------- Empty state ---------- */
+.aluno-empty {
+    text-align: center;
+    padding: 40px 24px;
+}
+.aluno-empty .icon-large {
+    font-size: 42px;
+    margin-bottom: 12px;
+    display: block;
+}
+.aluno-empty h2 { margin-bottom: 8px; }
+.aluno-empty p {
+    color: var(--muted);
+    max-width: 520px;
+    margin: 0 auto 18px;
+}
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 800px) {
+    .alunos-tabela th,
+    .alunos-tabela td { padding: 8px 10px; font-size: 11.5px; }
+
+    .alunos-tabela thead th { font-size: 9.5px; letter-spacing: 0; }
+
+    .aluno-cell { min-width: 140px; }
+    .aluno-cell .avatar { width: 28px; height: 28px; font-size: 11px; }
+    .turmas-badges { max-width: 160px; }
+
+    .aluno-acoes {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+    }
+    .aluno-acoes .button { width: 100%; }
+
+    .checkbox-turma { padding: 10px 12px; }
+
+    .massa-textarea { min-height: 200px; font-size: 12px; }
+
+    .resultado-resumo { grid-template-columns: 1fr; }
+
+    .aluno-grupo-meta { grid-template-columns: 1fr; gap: 8px; }
+    .diretorias-grid  { grid-template-columns: 1fr; }
+}

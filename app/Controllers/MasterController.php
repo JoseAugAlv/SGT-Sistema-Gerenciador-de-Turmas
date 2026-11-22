@@ -42,6 +42,20 @@ class MasterController
     }
 
     // ============ AUDITORIA ============
+    // ============ LISTA DE USUÁRIOS (VIEW MASTER) ============
+
+// ============ LISTA DE USUÁRIOS (VIEW MASTER) ============
+
+public function usuarios()
+{
+    $this->exigirMaster();
+    // A view lê $_GET['busca'] diretamente e faz a query.
+    // O controller só precisa renderizar.
+
+    $tituloPagina = 'Gerenciar Usuários — ' . App::getName();
+
+    require __DIR__ . '/../Views/master/usuarios.php';
+}
 
     public function auditoria()
     {

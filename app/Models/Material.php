@@ -14,7 +14,8 @@ class Material extends Model
     {
         $stmt = $this->conn->prepare("
             SELECT m.*,
-                   (SELECT COUNT(*) FROM movimentacoes_materiais mv WHERE mv.material_id = m.id) AS total_movimentacoes
+                   (SELECT COUNT(*) FROM movimentacoes_materiais mv WHERE mv.material_id = m.id) AS total_movimentacoes,
+                   (SELECT COUNT(*) FROM movimentacoes_materiais mv WHERE mv.material_id = m.id AND mv.tipo_movimentacao <> 'cadastro') AS total_compras_usos
             FROM materiais m
             WHERE m.projeto_id = ?
             ORDER BY m.nome ASC
@@ -32,6 +33,14 @@ class Material extends Model
             WHERE m.id = ? LIMIT 1
         ");
         $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    /** Material do projeto com o mesmo nome (sem diferenciar maiúsculas e espaços nas pontas). */
+    public function porNome(int $projetoId, string $nome): ?array
+    {
+        $stmt = $this->conn->prepare("SELECT * FROM materiais WHERE projeto_id = ? AND LOWER(TRIM(nome)) = LOWER(TRIM(?)) LIMIT 1");
+        $stmt->execute([$projetoId, $nome]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 

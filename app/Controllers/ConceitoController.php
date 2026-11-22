@@ -40,6 +40,28 @@ class ConceitoController
             'visibilidades' => self::VISIBILIDADES,
         ]);
     }
+    public function preview(int $projetoId)
+{
+    $projeto = $this->projeto->porId($projetoId);
+    if (!$projeto) { http_response_code(404); exit('Projeto não encontrado.'); }
+
+    $u = $_SESSION['usuario'] ?? null;
+    if (!$u) { header('Location: ' . App::getBasePath() . '/login'); exit; }
+
+    $souMaster = $u['tipo'] === 'master';
+    $souRep    = $this->tu->ehRepresentante((int) $projeto['turma_id'], (int) $u['id']);
+    $estou     = $this->tu->estaAtivo((int) $projeto['turma_id'], (int) $u['id']);
+
+    if (!$souMaster && !$souRep && !$estou) {
+        http_response_code(403);
+        exit('Sem acesso ao projeto.');
+    }
+
+    $this->render('conceitos/preview', [
+        'projeto' => $projeto,
+        'cfg'     => $this->cfg->garantir($projetoId),
+    ]);
+}
 
     public function salvar(int $projetoId)
     {

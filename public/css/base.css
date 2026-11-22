@@ -2,50 +2,104 @@
    BASE — variáveis, reset, tipografia, tema claro/escuro
    ============================================================ */
 
+/* Três temas, escolhidos pelo usuário (data-theme no <html>):
+   light = "Claro"  (branco e azul)
+   dark  = "Escuro" (roxo e preto)
+   misto = "Misto"  (topo preto, corpo claro, roxo)
+   Os valores light/dark foram mantidos por compatibilidade com o CSS existente. */
 :root {
     color-scheme: light;
 
-    --bg:             #f5f6fb;
+    /* ---------- Superfícies ---------- */
+    --bg:             #f5f7fb;
     --surface:        #ffffff;
-    --surface-2:      #f8f9fd;
-    --text:           #252b3a;
-    --muted:          #7d8495;
-    --muted-2:        #a2a8b7;
-    --border:         #e9ebf2;
-    --border-strong:  #d9ddea;
+    --surface-2:      #eef2f8;
 
-    --primary:        #7165e8;
-    --primary-dark:   #594dcf;
-    --primary-soft:   #efedff;
+    /* ---------- Texto ---------- */
+    --text:           #0b1220;
+    --muted:          #55607a;
+    --muted-2:        #7a8499;
 
-    --blue:           #3c8eea;
-    --green:          #39b889;
-    --orange:         #f5a648;
-    --red:            #e46d78;
+    /* ---------- Bordas ---------- */
+    --border:         #e1e6ef;
+    --border-strong:  #c9d1de;
 
-    --shadow:         0 12px 32px rgba(39, 48, 80, .055);
+    /* ---------- Marca ---------- */
+    --primary:        #1d4ed8;
+    --primary-dark:   #1e3a8a;
+    --primary-soft:   #e6edff;
+    --accent:         #0891b2;   /* números de prazo e destaques */
+    --accent-on-dark: #22d3ee;   /* acento sobre placas escuras */
 
+    /* ---------- Shell (barra superior e faixa da turma) ---------- */
+    --shell-bg:       #1d4ed8;
+    --shell-text:     #ffffff;
+    --shell-muted:    #c9d7ff;
+    --shell-border:   rgba(255, 255, 255, .14);
+
+    /* ---------- Tipografia ---------- */
+    --font-num: "Barlow Condensed", "Arial Narrow", sans-serif;
+
+    /* ---------- Cores funcionais (mais saturadas) ---------- */
+    --blue:           #2563eb;
+    --green:          #16a34a;
+    --orange:         #e08600;
+    --red:            #dc3b4d;
+
+    /* ---------- Sombra (mais perceptível) ---------- */
+    --shadow:         0 10px 28px rgba(26, 31, 46, .08);
+
+    /* ---------- Raio ---------- */
     --radius:         16px;
     --radius-sm:      10px;
 
+    /* ---------- Layout ---------- */
     --sidebar:        250px;
-    --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --sans: "Public Sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-/* Tema escuro */
+/* Tema Escuro: roxo e preto */
 html[data-theme="dark"] {
     color-scheme: dark;
 
-    --bg:             #181a24;
-    --surface:        #232632;
-    --surface-2:      #2a2e3c;
-    --text:           #f4f5fb;
-    --muted:          #a9afc2;
-    --muted-2:        #7f879c;
-    --border:         #353a4b;
-    --border-strong:  #4a5063;
-    --primary-soft:   #332f5d;
-    --shadow:         0 12px 32px rgba(0, 0, 0, .18);
+    --bg:             #0d0c12;
+    --surface:        #15131c;
+    --surface-2:      #1f1c29;
+    --text:           #eceaf5;
+    --muted:          #a19db5;
+    --muted-2:        #7e7992;
+    --border:         #26232f;
+    --border-strong:  #3a3646;
+    --primary:        #7857ff;
+    --primary-dark:   #5f3ff0;
+    --primary-soft:   #231d3d;
+    --accent:         #b9a8ff;
+    --accent-on-dark: #b9a8ff;
+    --shell-bg:       #14121c;
+    --shell-text:     #eceaf5;
+    --shell-muted:    #a19db5;
+    --shell-border:   #26232f;
+    --shadow:         0 12px 32px rgba(0, 0, 0, .28);
+}
+
+/* Tema Misto: topo preto, corpo claro, roxo */
+html[data-theme="misto"] {
+    --bg:             #f6f5fa;
+    --surface-2:      #f0eef7;
+    --text:           #121019;
+    --muted:          #5d5872;
+    --muted-2:        #827d96;
+    --border:         #e4e1ee;
+    --border-strong:  #cdc8db;
+    --primary:        #5b3df0;
+    --primary-dark:   #4329c9;
+    --primary-soft:   #eee9ff;
+    --accent:         #5b3df0;
+    --accent-on-dark: #9b82ff;
+    --shell-bg:       #121019;
+    --shell-text:     #ffffff;
+    --shell-muted:    #b7b2c9;
+    --shell-border:   #2a2636;
 }
 
 *,

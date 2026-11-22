@@ -274,6 +274,11 @@ Igual ao fluxo 2, mas o master pode escolher **uma ou mais turmas** para alocar 
 - Após `prazo_avaliacao`, o critério é considerado bloqueado. O bloqueio efetivo (o que a aplicação checa antes de aceitar uma avaliação) é: `bloqueado_efetivo = (prazo_avaliacao < agora) AND (bloqueado = 1)`.
 - A coluna `criterios.bloqueado` **não é o interruptor manual do critério** — ela nasce em `0` e o sistema a define para `1` automaticamente assim que detecta, em qualquer leitura, que `prazo_avaliacao` já passou (job ou verificação on-read, tanto faz; o importante é que o valor persistido reflita o estado real). Isso existe só para permitir listar/filtrar critérios bloqueados sem recalcular datas toda hora (ex. no painel do master).
 - **Reabertura**: somente **master** ou o **ocupante atual do cargo** (representante atual da turma ou diretor atual do grupo) pode reabrir. Reabrir seta `bloqueado = 0` **e** define um novo `prazo_avaliacao` (obrigatório informar a nova data/hora no ato da reabertura — não é permitido reabrir sem novo prazo, senão o critério voltaria a `bloqueado = 1` no próximo request).
+- **Edição do prazo** (representante/master): o bloqueio acompanha o prazo salvo. Prazo no futuro (ou vazio) deixa `bloqueado = 0`; prazo no passado deixa `bloqueado = 1`.
+- **Criação**: o prazo, se informado, precisa ser no futuro.
+- **Tipo de avaliação travado**: depois que o critério tem qualquer nota (individual ou coletiva), `tipo_avaliacao` não pode mudar. Para trocar, exclui-se o critério (as notas vão para o arquivo de 30 dias) e cria-se outro.
+- **Critério obrigatório** (`criterios.obrigatorio`): só para `pares` e `autoavaliacao` (os tipos que o aluno preenche) e exige prazo. O aluno vê o critério marcado como "Obrigatório" no topo das pendências e no painel, e o aviso de prazo (3 dias antes) diz que é obrigatório. O representante/master vê na lista de critérios quantos e quais alunos ainda não preencheram (pares: falta nota para algum colega de grupo; autoavaliação: ainda não se avaliou). Não há penalidade automática na nota.
+- **Representante precisa criar os critérios**: enquanto um projeto em andamento não tiver critérios, ou os pesos não somarem 10, o painel do representante mostra a pendência ("Crie os critérios…" / "Ajuste os pesos…") e a página do projeto mostra um aviso. Não bloqueia nada: a média é ponderada e continua correta com qualquer soma.
 - Reabertura grava `reaberto_por` e `reaberto_em`.
 
 ### 6.4 Exclusão com avaliações
@@ -300,8 +305,8 @@ Igual ao fluxo 2, mas o master pode escolher **uma ou mais turmas** para alocar 
 - `avaliacoes.avaliador_id` identifica qual dos dois representantes fez cada avaliação; ambos usam `tipo = 'representante'` (a `UNIQUE KEY (criterio_id, aluno_id, avaliador_id, tipo)` já permite as duas linhas coexistirem, pois `avaliador_id` é diferente).
 
 **`pares`**:
-- Cada aluno do grupo avalia **cada outro aluno** (menos a si mesmo).
-- **Justificativa obrigatória**.
+- Cada aluno do grupo avalia **cada outro aluno do mesmo grupo** (menos a si mesmo). Colegas de outros grupos não aparecem nem são aceitos.
+- **Justificativa obrigatória para conceitos R e I** (decisão de 21/11/2026); opcional para B e MB.
 - Justificativa é **interna** — visível apenas para representante/diretor.
 - Nota final do critério = **média** das notas dadas pelos pares.
 
@@ -335,7 +340,7 @@ Igual ao fluxo 2, mas o master pode escolher **uma ou mais turmas** para alocar 
 > Quando a turma tem 2 representantes ativos, cada um faz login e opera esse fluxo de forma independente — a tela mostra/edita apenas as avaliações cujo `avaliador_id` é o representante logado no momento (por isso o "Limpar e Salvar" do item 9 nunca apaga as avaliações do outro representante).
 
 1. Representante seleciona um projeto.
-2. Vê tabela: linhas = alunos da turma (incluindo rep e diretores); colunas = critérios.
+2. Vê um critério por vez com a lista de alunos da turma (incluindo rep e diretores). Critérios de `pares`, `autoavaliacao` e `diretor` aparecem **só para leitura**, com a nota calculada: o representante não grava nota no lugar de colegas, do próprio aluno ou de diretores.
 3. Colunas separadas visualmente:
    - **Azul**: critérios aplicáveis a **todos**.
    - **Laranja**: critérios **apenas para diretores**.
@@ -407,11 +412,13 @@ Configurável por projeto em `configuracoes_conceito`:
 - `B`: `limite_b_min` até `limite_b_max`.
 - `MB`: `limite_mb_min` até 100.
 
-Ao selecionar um conceito, o valor numérico padrão:
+Ao selecionar um conceito, o valor numérico padrão é o **topo da faixa** (decisão de 21/11/2026, igual em todas as telas e no servidor):
 - `I` → `limite_i_max`;
-- `R` → média de `limite_r_min` e `limite_r_max`;
-- `B` → média de `limite_b_min` e `limite_b_max`;
-- `MB` → `limite_mb_min`.
+- `R` → `limite_r_max`;
+- `B` → `limite_b_max`;
+- `MB` → 100.
+
+O valor digitado sempre manda (0 a 100, inclusive zero); o conceito é recalculado a partir dele.
 
 Ao digitar um valor, o conceito é recalculado automaticamente pela faixa em que se encaixa.
 
@@ -430,6 +437,19 @@ Ao digitar um valor, o conceito é recalculado automaticamente pela faixa em que
 5. Sistema cria notificação para o diretor.
 6. **Reatribuição automática:** se o diretor referenciado em `diretor_id` for trocado (ver 5.3) enquanto a ata ainda está `pendente`, o sistema atualiza `diretor_id` para o novo diretor ativo do grupo e registra a mudança em auditoria. Atas já `preenchida` ou `revisada` **não** são reatribuídas — mantêm o `diretor_id` original como registro histórico de quem de fato preencheu.
 
+### 8.1.1 Quem preenche (decisão de 21/11/2026)
+
+- Ao criar (ou editar) a ata, o representante escolhe `atas.preenchimento`:
+  - `diretor` (padrão): qualquer diretor ativo do grupo preenche;
+  - `grupo`: além do diretor, **todo membro ativo do grupo** registra o que fez (atividades) e pode escrever relatórios internos. Diretor e representante também são alunos e participam como os demais.
+- No modo `grupo`, todos os membros recebem aviso ao criar a ata. Presenças e o envio ("Finalizar") continuam com o diretor.
+- Membro comum só remove o que ele mesmo registrou; diretor e master removem qualquer item.
+
+### 8.1.2 Menções
+
+- Quem é marcado como participante de uma atividade recebe uma notificação.
+- Cada aluno tem a página **Minhas atividades** (`/minhas-atividades`) com todas as atividades em que foi mencionado ou que registrou, em todos os projetos.
+
 ### 8.2 Preenchimento (diretor)
 
 1. Diretor acessa `/atas/detalhe/{id}` de uma ata `pendente`.
@@ -439,6 +459,7 @@ Ao digitar um valor, o conceito é recalculado automaticamente pela faixa em que
    - Temas de relatório: falta de compromisso, não ajudou, colaborou sendo de outro grupo, liderança, proatividade, dificuldade técnica, conflito, entrega fora do prazo, qualidade do trabalho, outro.
 3. Ao finalizar, clica em "Finalizar Ata" → status vira `preenchida`.
 4. Depois disso, **não pode mais editar** (a menos que o representante reabra).
+5. **Reabrir (devolver para correção):** o representante/master pode devolver uma ata `preenchida` ou `revisada` (projeto não encerrado). Informa um motivo obrigatório; a ata volta para `pendente` e os diretores ativos do grupo recebem o aviso com o motivo e o link para preencher.
 
 ### 8.3 Validação (representante)
 
@@ -464,6 +485,8 @@ Ao digitar um valor, o conceito é recalculado automaticamente pela faixa em que
 - Representante ou diretor cadastra material.
 - Campos: nome, quantidade inicial, unidade, preço unitário, projeto.
 - Ao cadastrar, gera movimentação `tipo_movimentacao = 'cadastro'`.
+- Não pode haver dois materiais com o mesmo nome no projeto (sem diferenciar maiúsculas): para somar quantidade, usa-se "Comprar" no existente.
+- **Exclusão**: só enquanto o material tiver apenas a movimentação de cadastro. Depois de qualquer compra ou retirada, o histórico é a prestação de contas e o material não pode ser excluído. Projeto encerrado não aceita nenhuma alteração de material.
 
 ### 9.2 Uso (retirada)
 
@@ -489,6 +512,12 @@ Ao digitar um valor, o conceito é recalculado automaticamente pela faixa em que
     ```
   - Atualiza `quantidade` e `preco`;
   - Gera movimentação `tipo_movimentacao = 'compra'`.
+
+### 9.3.1 Pedidos de material (alunos)
+
+- Qualquer membro pede um material; representante e diretores são avisados.
+- Representante/diretor aprova ou recusa (com motivo, que o aluno vê). O aluno pode cancelar o próprio pedido enquanto não foi comprado.
+- Ao registrar a compra de um pedido, o item soma no material de mesmo nome ou cria um novo; nos dois casos a movimentação é `compra`.
 
 ### 9.4 Histórico
 

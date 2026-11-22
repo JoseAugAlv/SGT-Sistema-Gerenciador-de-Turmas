@@ -16,6 +16,7 @@ require_once __DIR__ . '/../Helpers/ViewHelper.php';
 require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
 require_once __DIR__ . '/../Config/database.php';
 require_once __DIR__ . '/../Models/Notificacao.php';
+require_once __DIR__ . '/../Models/Usuario.php';
 
 class AvaliacaoController
 {
@@ -43,25 +44,24 @@ class AvaliacaoController
         $this->nota     = new NotaService();
         $this->audit    = new Auditoria();
     }
-        /**
-     * Notifica cada aluno que recebeu uma avaliação.
-     * $porAluno = [aluno_id => ['conceito' => 'B', 'valor' => 75], ...]
+    /**
+     * Avisa cada aluno que recebeu avaliação nova ou alterada: uma notificação por salvamento,
+     * sem mostrar a nota nem quem avaliou. $contagemPorAluno = [aluno_id => quantidade].
      */
-    private function notificarAvaliados(int $projetoId, array $porAluno, string $criterioNome): void
+    private function notificarAvaliados(int $projetoId, array $contagemPorAluno, string $origem): void
     {
-        if (empty($porAluno)) return;
+        if (empty($contagemPorAluno)) return;
 
         $notif = new Notificacao();
-
-        foreach ($porAluno as $alunoId => $dados) {
-            $conceito = $dados['conceito'] ?? '';
-            $valor    = isset($dados['valor']) ? number_format((float) $dados['valor'], 2, ',', '.') : '';
-
+        foreach ($contagemPorAluno as $alunoId => $qtd) {
+            $qtd = (int) $qtd;
             $notif->criar(
                 (int) $alunoId,
                 'avaliacao',
                 'Nova avaliação recebida',
-                "Você recebeu uma avaliação no critério '{$criterioNome}': conceito {$conceito} ({$valor}).",
+                $qtd === 1
+                    ? "Você recebeu uma nova avaliação ({$origem})."
+                    : "Você recebeu {$qtd} novas avaliações ({$origem}).",
                 '/projetos/' . $projetoId . '/avaliacoes/minhas'
             );
         }
@@ -88,8 +88,8 @@ class AvaliacaoController
         if ($souDiretor) {
             $this->redirect('/projetos/' . $projetoId . '/avaliacoes/diretor');
         }
-        // Aluno comum: vê suas notas
-        $this->redirect('/projetos/' . $projetoId . '/avaliacoes/minhas');
+        // Aluno comum: começa pelo que falta fazer (e vê o boletim parcial logo abaixo)
+        $this->redirect('/projetos/' . $projetoId . '/avaliacoes/geral');
     }
 
     // ============ BULK REPRESENTANTE ============
@@ -139,6 +139,22 @@ class AvaliacaoController
             $minhasAvaliacoes[(int) $c['id']] = $this->aval->listarDoAvaliador((int) $c['id'], (int) $u['id']);
         }
 
+        // Quais critérios este usuário edita aqui; os demais aparecem só para leitura,
+        // com a nota calculada (média dos colegas, do próprio aluno ou dos diretores).
+        $editaveis    = [];
+        $notasLeitura = [];
+        foreach ($criterios as $c) {
+            if ($c['tipo_avaliacao'] === 'coletiva') continue;
+            $cid = (int) $c['id'];
+            $editaveis[$cid] = in_array($c['tipo_avaliacao'], ['representante', 'misto'], true)
+                            || ($c['tipo_avaliacao'] === 'diretor' && $souMaster);
+            if (!$editaveis[$cid]) {
+                foreach ($alunos as $a) {
+                    $notasLeitura[$cid][(int) $a['id']] = $this->nota->notaDoCriterio($cid, (int) $a['id']);
+                }
+            }
+        }
+
         $this->render('avaliacoes/index_rep', [
             'projeto'          => $projeto,
             'cfg'              => $cfg,
@@ -147,6 +163,8 @@ class AvaliacaoController
             'critRepresent'    => $critRepresent,
             'alunos'           => $alunos,
             'minhasAvaliacoes' => $minhasAvaliacoes,
+            'editaveis'        => $editaveis,
+            'notasLeitura'     => $notasLeitura,
         ]);
     }
 
@@ -168,11 +186,16 @@ class AvaliacaoController
 
         $limpar = !empty($_POST['limpar_antes']);
 
+        // Atualiza bloqueios ANTES de limpar: critérios já bloqueados ficam intactos
+        $this->criterio->atualizarBloqueios($projetoId);
+
         if ($limpar) {
-            $this->aval->deletarDoAvaliadorNoProjeto($projetoId, (int) $u['id']);
+            $this->aval->deletarDoAvaliadorEmCriteriosAbertos($projetoId, (int) $u['id']);
         }
 
-        $this->criterio->atualizarBloqueios($projetoId);
+        // Só alunos ativos desta turma podem receber nota
+        $idsTurma = array_map(fn($a) => (int) ($a['id'] ?? $a['usuario_id'] ?? 0), $this->tu->listarAlunos((int) $projeto['turma_id']));
+        $mudancas = [];
         $cfg       = $this->cfg->garantir($projetoId);
         $criterios = $this->criterio->listarPorProjeto($projetoId);
 
@@ -187,7 +210,8 @@ class AvaliacaoController
             // Decide se este representante aplica este critério
             // Critérios 'diretor' são aplicados pelo representante apenas se o aluno for
             // único diretor do grupo — deixamos para a F6 parte 2 (não forçamos aqui)
-            $aplica = in_array($c['tipo_avaliacao'], ['representante', 'pares', 'autoavaliacao', 'misto'], true)
+            // Pares e autoavaliação são dos alunos: o representante só visualiza essas colunas
+            $aplica = in_array($c['tipo_avaliacao'], ['representante', 'misto'], true)
                    || ($c['tipo_avaliacao'] === 'diretor' && $souMaster);
             if (!$aplica) continue;
             if (!$tipoAval) continue;
@@ -196,26 +220,18 @@ class AvaliacaoController
             $linha = $_POST['aval'][$cid] ?? [];
             foreach ($linha as $alunoId => $dados) {
                 $alunoId = (int) $alunoId;
-                $conceito = $dados['conceito'] ?? '';
-                $valor    = (float) str_replace(',', '.', $dados['valor'] ?? '');
+                if (!in_array($alunoId, $idsTurma, true)) continue;
 
-                if ($conceito === '' && $valor == 0.0) {
+                $nota = $this->lerNota((array) $dados, $cfg);
+                if ($nota === null) {
                     // vazio: se estava salvo, remove
                     $this->aval->deletar($cid, $alunoId, (int) $u['id'], $tipoAval);
                     continue;
                 }
 
-                if (!in_array($conceito, ['I','R','B','MB'], true)) {
-                    $conceito = NotaService::conceitoPorValor($valor, $cfg);
+                if ($this->aval->upsert($cid, $alunoId, (int) $u['id'], $tipoAval, $nota['conceito'], $nota['valor'])) {
+                    $mudancas[$alunoId] = ($mudancas[$alunoId] ?? 0) + 1;
                 }
-                if ($valor <= 0) {
-                    $valor = NotaService::valorPadraoPorConceito($conceito, $cfg);
-                }
-
-                $this->aval->upsert(
-                    $cid, $alunoId, (int) $u['id'], $tipoAval,
-                    $conceito, $valor, null, null
-                );
                 $salvos++;
             }
         }
@@ -223,23 +239,7 @@ class AvaliacaoController
         $this->audit->registrar('avaliacao_rep_salva', 'avaliacoes', $projetoId, null,
             ['avaliador_id' => $u['id'], 'limpar' => $limpar, 'total' => $salvos]);
 
-                // Notifica alunos que receberam avaliação
-        $notificados = [];
-        foreach ($criterios as $c) {
-            $cid = (int) $c['id'];
-            $linha = $_POST['aval'][$cid] ?? [];
-            foreach ($linha as $alunoId => $dados) {
-                if (($dados['conceito'] ?? '') !== '' || ((float) ($dados['valor'] ?? 0)) > 0) {
-                    $notificados[(int) $alunoId] = [
-                        'conceito' => $dados['conceito'] ?? '',
-                        'valor'    => $dados['valor'] ?? 0,
-                    ];
-                }
-            }
-        }
-        if (!empty($notificados)) {
-            $this->notificarAvaliados($projetoId, $notificados, 'Representante');
-        }
+        $this->notificarAvaliados($projetoId, $mudancas, 'representante');
 
         $this->flash("Avaliações salvas ({$salvos}).", 'sucesso');
         $this->redirect('/projetos/' . $projetoId . '/avaliacoes/representante');
@@ -386,6 +386,7 @@ class AvaliacaoController
 
         $salvos = 0;
         $bloqueados = 0;
+        $mudancas = [];
 
         foreach ($criterios as $c) {
             if ($c['bloqueado']) { $bloqueados++; continue; }
@@ -403,28 +404,23 @@ class AvaliacaoController
                 // Aluno precisa ser membro ativo do grupo
                 if (!$this->membro->estaAtivo($grupoId, $alunoId)) continue;
 
-                $conceito = $dados['conceito'] ?? '';
-                $valor    = (float) str_replace(',', '.', $dados['valor'] ?? '');
-
-                if ($conceito === '' && $valor == 0.0) {
+                $nota = $this->lerNota((array) $dados, $cfg);
+                if ($nota === null) {
                     $this->aval->deletar($cid, $alunoId, (int) $u['id'], $tipoAval);
                     continue;
                 }
 
-                if (!in_array($conceito, ['I','R','B','MB'], true)) {
-                    $conceito = NotaService::conceitoPorValor($valor, $cfg);
+                if ($this->aval->upsert($cid, $alunoId, (int) $u['id'], $tipoAval, $nota['conceito'], $nota['valor'])) {
+                    $mudancas[$alunoId] = ($mudancas[$alunoId] ?? 0) + 1;
                 }
-                if ($valor <= 0) {
-                    $valor = NotaService::valorPadraoPorConceito($conceito, $cfg);
-                }
-
-                $this->aval->upsert($cid, $alunoId, (int) $u['id'], $tipoAval, $conceito, $valor);
                 $salvos++;
             }
         }
 
         $this->audit->registrar('avaliacao_diretor_salva', 'avaliacoes', $grupoId, null,
             ['avaliador_id' => $u['id'], 'total' => $salvos]);
+
+        $this->notificarAvaliados($projetoId, $mudancas, 'diretor do grupo');
 
         $msg = "Avaliações salvas ({$salvos}).";
         if ($bloqueados > 0) $msg .= " {$bloqueados} critério(s) ignorado(s) por estar bloqueado(s).";
@@ -434,7 +430,7 @@ class AvaliacaoController
 
     // ============ AVALIAÇÃO POR PARES ============
 
-    public function pares(int $projetoId)
+        public function pares(int $projetoId)
     {
         $projeto = $this->projeto->porId($projetoId);
         if (!$projeto) { $this->flash('Projeto não encontrado.'); $this->redirect('/turmas'); }
@@ -448,21 +444,33 @@ class AvaliacaoController
             fn($c) => $c['tipo_avaliacao'] === 'pares' && !$c['bloqueado']
         );
 
-        $pdo = Database::getConnection();
+        $pdo     = Database::getConnection();
         $turmaId = (int) $projeto['turma_id'];
 
-        // Todos os alunos ativos na turma, exceto o próprio avaliador
+        // Colegas ativos na turma com grupos do projeto
         $stmt = $pdo->prepare("
-            SELECT u.id, u.nome, u.email
+            SELECT u.id, u.nome, u.email,
+                   (
+                     SELECT GROUP_CONCAT(DISTINCT g.nome ORDER BY g.nome SEPARATOR ', ')
+                     FROM grupo_alunos ga
+                     INNER JOIN grupos g ON g.id = ga.grupo_id
+                     WHERE ga.usuario_id = u.id
+                       AND ga.saiu_em IS NULL
+                       AND g.projeto_id = ?
+                   ) AS grupos
             FROM turma_usuarios tu
             INNER JOIN usuarios u ON u.id = tu.usuario_id
             WHERE tu.turma_id = ? AND tu.ativo = 1 AND u.id != ?
             ORDER BY u.nome ASC
         ");
-        $stmt->execute([$turmaId, (int) $u['id']]);
-        $alunosDaTurma = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt->execute([$projetoId, $turmaId, (int) $u['id']]);
+        $colegasIds    = $this->colegasDeGrupo($projetoId, (int) $u['id']);
+        $alunosDaTurma = array_values(array_filter(
+            $stmt->fetchAll(PDO::FETCH_ASSOC),
+            fn($a) => in_array((int) $a['id'], $colegasIds, true)
+        ));
 
-        // Diretores ativos no projeto (qualquer grupo do projeto)
+        // Diretores ativos no projeto
         $stmt = $pdo->prepare("
             SELECT DISTINCT gd.usuario_id
             FROM grupo_diretores gd
@@ -485,7 +493,6 @@ class AvaliacaoController
             $cid       = (int) $c['id'];
             $aplicavel = $c['aplicavel_a'];
 
-            // Filtra alunos conforme o critério
             $colegas = [];
             foreach ($alunosDaTurma as $a) {
                 $aid = (int) $a['id'];
@@ -499,7 +506,6 @@ class AvaliacaoController
                 $colegas[$aid] = $a;
             }
 
-            // Minhas avaliações anteriores para este critério
             $minhas = [];
             foreach ($this->aval->listarDoAvaliador($cid, (int) $u['id']) as $m) {
                 $minhas[(int) $m['aluno_id']] = $m;
@@ -521,118 +527,125 @@ class AvaliacaoController
         ]);
     }
 
-        public function paresSalvar(int $projetoId)
-    {
-        $projeto = $this->projeto->porId($projetoId);
-        if (!$projeto) { $this->flash('Projeto não encontrado.'); $this->redirect('/turmas'); }
+    public function paresSalvar(int $projetoId)
+{
+    $projeto = $this->projeto->porId($projetoId);
+    if (!$projeto) { $this->flash('Projeto não encontrado.'); $this->redirect('/turmas'); }
 
-        $u = $_SESSION['usuario'];
-        $this->exigirAcesso($projeto);
-        CsrfMiddleware::validate();
+    $u = $_SESSION['usuario'];
+    $this->exigirAcesso($projeto);
+    CsrfMiddleware::validate();
 
-        if ($projeto['encerrado']) {
-            $this->flash('Projeto encerrado.');
-            $this->redirect('/projetos/' . $projetoId);
-        }
-
-        $this->criterio->atualizarBloqueios($projetoId);
-        $cfg = $this->cfg->garantir($projetoId);
-
-        $criterios = array_filter(
-            $this->criterio->listarPorProjeto($projetoId),
-            fn($c) => $c['tipo_avaliacao'] === 'pares'
-        );
-
-        $pdo     = Database::getConnection();
-        $turmaId = (int) $projeto['turma_id'];
-
-        // Lista de alunos ativos da turma (com cache em memória)
-        $stmt = $pdo->prepare("
-            SELECT usuario_id FROM turma_usuarios
-            WHERE turma_id = ? AND ativo = 1
-        ");
-        $stmt->execute([$turmaId]);
-        $alunosDaTurma = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
-
-        $salvos = 0;
-        foreach ($criterios as $c) {
-            if ($c['bloqueado']) continue;
-
-            $cid   = (int) $c['id'];
-            $linha = $_POST['aval'][$cid] ?? [];
-
-            foreach ($linha as $alunoId => $dados) {
-                $alunoId = (int) $alunoId;
-
-                // Não pode se autoavaliar
-                if ($alunoId === (int) $u['id']) continue;
-
-                // Aluno precisa estar ativo na turma
-                if (!in_array($alunoId, $alunosDaTurma, true)) continue;
-
-                $conceito = $dados['conceito'] ?? '';
-                $valor    = (float) str_replace(',', '.', $dados['valor'] ?? '');
-                $just     = trim($dados['justificativa'] ?? '');
-
-                // Célula vazia — apaga se existia
-                if ($conceito === '' && $valor == 0.0) {
-                    $this->aval->deletar($cid, $alunoId, (int) $u['id'], 'par');
-                    continue;
-                }
-
-                // Justificativa obrigatória em pares — ignora silenciosamente se faltar
-                if ($just === '') continue;
-
-                // Se o usuário só digitou valor sem conceito, calcula
-                if (!in_array($conceito, ['I', 'R', 'B', 'MB'], true)) {
-                    $conceito = NotaService::conceitoPorValor($valor, $cfg);
-                }
-                // Se só escolheu conceito, aplica valor padrão da faixa
-                if ($valor <= 0) {
-                    $valor = NotaService::valorPadraoPorConceito($conceito, $cfg);
-                }
-
-                $this->aval->upsert(
-                    $cid,
-                    $alunoId,
-                    (int) $u['id'],
-                    'par',
-                    $conceito,
-                    $valor,
-                    $just
-                );
-                $salvos++;
-            }
-        }
-
-        $this->audit->registrar('avaliacao_pares_salva', 'avaliacoes', $projetoId, null, [
-            'avaliador_id' => $u['id'],
-            'total'        => $salvos,
-        ]);
-
-                // Notifica os colegas avaliados
-        $notificados = [];
-        foreach ($criterios as $c) {
-            if ($c['bloqueado']) continue;
-            $cid = (int) $c['id'];
-            $linha = $_POST['aval'][$cid] ?? [];
-            foreach ($linha as $alunoId => $dados) {
-                if ((int) $alunoId === (int) $u['id']) continue;
-                if (($dados['conceito'] ?? '') !== '' || ((float) ($dados['valor'] ?? 0)) > 0) {
-                    $notificados[(int) $alunoId] = [
-                        'conceito' => $dados['conceito'] ?? '',
-                        'valor'    => $dados['valor'] ?? 0,
-                    ];
-                }
-            }
-        }
-        if (!empty($notificados)) {
-            $this->notificarAvaliados($projetoId, $notificados, 'Avaliação por pares');
-        }
-
-        $this->flash("Avaliações salvas ({$salvos}).", 'sucesso');
-        $this->redirect('/projetos/' . $projetoId . '/avaliacoes/pares');
+    if ($projeto['encerrado']) {
+        $this->flash('Projeto encerrado.');
+        $this->redirect('/projetos/' . $projetoId);
     }
+
+    // ---------- Requisição AJAX? ----------
+    $isAjax = (isset($_SERVER['HTTP_X_REQUESTED_WITH'])
+        && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+
+    // ---------- Critério específico (opcional) ----------
+    $criterioIdUnico = (int) ($_POST['criterio_id'] ?? 0);
+
+    $this->criterio->atualizarBloqueios($projetoId);
+    $cfg = $this->cfg->garantir($projetoId);
+
+    $todosCriterios = array_filter(
+        $this->criterio->listarPorProjeto($projetoId),
+        fn($c) => $c['tipo_avaliacao'] === 'pares'
+    );
+
+    // Se veio critério único, filtra só ele
+    if ($criterioIdUnico > 0) {
+        $todosCriterios = array_filter(
+            $todosCriterios,
+            fn($c) => (int) $c['id'] === $criterioIdUnico
+        );
+    }
+
+    $pdo     = Database::getConnection();
+    $turmaId = (int) $projeto['turma_id'];
+
+    // Só colegas que dividem grupo com quem avalia (e que seguem ativos na turma)
+    $stmt = $pdo->prepare("SELECT usuario_id FROM turma_usuarios WHERE turma_id = ? AND ativo = 1");
+    $stmt->execute([$turmaId]);
+    $alunosDaTurma = array_values(array_intersect(
+        array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN)),
+        $this->colegasDeGrupo($projetoId, (int) $u['id'])
+    ));
+
+    $salvos   = 0;
+    $pulados  = 0;
+    $mudancas = [];
+
+    foreach ($todosCriterios as $c) {
+        if ($c['bloqueado']) continue;
+
+        $cid   = (int) $c['id'];
+        $linha = $_POST['aval'][$cid] ?? [];
+
+        foreach ($linha as $alunoId => $dados) {
+            $alunoId = (int) $alunoId;
+
+            // Não pode se autoavaliar
+            if ($alunoId === (int) $u['id']) continue;
+            // Precisa ser colega de grupo, ativo na turma
+            if (!in_array($alunoId, $alunosDaTurma, true)) continue;
+
+            $just = trim($dados['justificativa'] ?? '');
+            $nota = $this->lerNota((array) $dados, $cfg);
+
+            // Célula vazia — apaga se existia
+            if ($nota === null) {
+                $this->aval->deletar($cid, $alunoId, (int) $u['id'], 'par');
+                continue;
+            }
+
+            // Justificativa obrigatória APENAS para R e I (conceito já conferido pelo valor)
+            if (in_array($nota['conceito'], ['R', 'I'], true) && $just === '') {
+                $pulados++;
+                continue;
+            }
+
+            if ($this->aval->upsert($cid, $alunoId, (int) $u['id'], 'par', $nota['conceito'], $nota['valor'], $just)) {
+                $mudancas[$alunoId] = ($mudancas[$alunoId] ?? 0) + 1;
+            }
+            $salvos++;
+        }
+    }
+
+    // ---------- Auditoria ----------
+    $this->audit->registrar('avaliacao_pares_salva', 'avaliacoes', $projetoId, null, [
+        'avaliador_id' => $u['id'],
+        'criterio_id'  => $criterioIdUnico ?: null,
+        'total'        => $salvos,
+        'pulados'      => $pulados,
+    ]);
+
+    // ---------- Notificações (sem nota e sem autor: o aluno não vê quem avaliou) ----------
+    $this->notificarAvaliados($projetoId, $mudancas, 'avaliação por pares');
+
+    // ---------- Resposta ----------
+    $msg = "Avaliações salvas ({$salvos}).";
+    if ($pulados > 0) {
+        $msg .= " {$pulados} linha(s) ignorada(s) por falta de justificativa em R ou I.";
+    }
+
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'ok'       => true,
+            'salvos'   => $salvos,
+            'pulados'  => $pulados,
+            'mensagem' => $msg,
+        ]);
+        exit;
+    }
+
+    $this->flash($msg, 'sucesso');
+    $this->redirect('/projetos/' . $projetoId . '/avaliacoes/pares');
+}
 
     // ============ AUTOAVALIAÇÃO ============
 
@@ -695,22 +708,14 @@ class AvaliacaoController
             if ($c['bloqueado']) continue;
             $cid = (int) $c['id'];
             $dados = $_POST['aval'][$cid] ?? [];
-            $conceito = $dados['conceito'] ?? '';
-            $valor    = (float) str_replace(',', '.', $dados['valor'] ?? '');
+            $nota = $this->lerNota((array) $dados, $cfg);
 
-            if ($conceito === '' && $valor == 0.0) {
+            if ($nota === null) {
                 $this->aval->deletar($cid, (int) $u['id'], (int) $u['id'], 'auto');
                 continue;
             }
 
-            if (!in_array($conceito, ['I','R','B','MB'], true)) {
-                $conceito = NotaService::conceitoPorValor($valor, $cfg);
-            }
-            if ($valor <= 0) {
-                $valor = NotaService::valorPadraoPorConceito($conceito, $cfg);
-            }
-
-            $this->aval->upsert($cid, (int) $u['id'], (int) $u['id'], 'auto', $conceito, $valor);
+            $this->aval->upsert($cid, (int) $u['id'], (int) $u['id'], 'auto', $nota['conceito'], $nota['valor']);
             $salvos++;
         }
 
@@ -789,6 +794,11 @@ class AvaliacaoController
             fn($c) => $c['tipo_avaliacao'] === 'coletiva'
         );
 
+        // Só grupos deste projeto podem receber nota coletiva
+        $stG = Database::getConnection()->prepare("SELECT id FROM grupos WHERE projeto_id = ?");
+        $stG->execute([$projetoId]);
+        $gruposDoProjeto = array_map('intval', $stG->fetchAll(PDO::FETCH_COLUMN));
+
         $salvos = 0;
         foreach ($criterios as $c) {
             if ($c['bloqueado']) continue;
@@ -796,23 +806,13 @@ class AvaliacaoController
             $linha = $_POST['aval'][$cid] ?? [];
             foreach ($linha as $grupoId => $dados) {
                 $grupoId = (int) $grupoId;
-                $conceito = $dados['conceito'] ?? '';
-                $valor    = (float) str_replace(',', '.', $dados['valor'] ?? '');
-                $just     = trim($dados['justificativa'] ?? '') ?: null;
+                if (!in_array($grupoId, $gruposDoProjeto, true)) continue;
+                $just = trim($dados['justificativa'] ?? '') ?: null;
 
-                if ($conceito === '' && $valor == 0.0) {
-                    // remove? Deixa para simplificar — só não salva
-                    continue;
-                }
+                $nota = $this->lerNota((array) $dados, $cfg);
+                if ($nota === null) continue;
 
-                if (!in_array($conceito, ['I','R','B','MB'], true)) {
-                    $conceito = NotaService::conceitoPorValor($valor, $cfg);
-                }
-                if ($valor <= 0) {
-                    $valor = NotaService::valorPadraoPorConceito($conceito, $cfg);
-                }
-
-                $this->coletiva->upsert($cid, $grupoId, (int) $u['id'], $conceito, $valor, $just);
+                $this->coletiva->upsert($cid, $grupoId, (int) $u['id'], $nota['conceito'], $nota['valor'], $just);
                 $salvos++;
             }
         }
@@ -820,38 +820,208 @@ class AvaliacaoController
         $this->audit->registrar('avaliacao_coletiva_salva', 'avaliacoes_coletivas', $projetoId, null,
             ['avaliador_id' => $u['id'], 'total' => $salvos]);
 
-                // Notifica todos os membros dos grupos avaliados
+        // Notifica os membros dos grupos que receberam nota
         $pdo = Database::getConnection();
         $alunosNotificar = [];
         foreach ($criterios as $c) {
             if ($c['bloqueado']) continue;
-            $cid = (int) $c['id'];
-            $linha = $_POST['aval'][$cid] ?? [];
-            foreach ($linha as $grupoId => $dados) {
-                if (($dados['conceito'] ?? '') === '' && ((float) ($dados['valor'] ?? 0)) <= 0) continue;
-
-                $stmt = $pdo->prepare("
-                    SELECT usuario_id FROM grupo_alunos
-                    WHERE grupo_id = ? AND saiu_em IS NULL
-                ");
+            foreach (($_POST['aval'][(int) $c['id']] ?? []) as $grupoId => $dados) {
+                if (!in_array((int) $grupoId, $gruposDoProjeto, true) || $this->lerNota((array) $dados, $cfg) === null) continue;
+                $stmt = $pdo->prepare("SELECT usuario_id FROM grupo_alunos WHERE grupo_id = ? AND saiu_em IS NULL");
                 $stmt->execute([(int) $grupoId]);
                 foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $uid) {
-                    $alunosNotificar[(int) $uid] = [
-                        'conceito' => $dados['conceito'] ?? '',
-                        'valor'    => $dados['valor'] ?? 0,
-                    ];
+                    $alunosNotificar[(int) $uid] = ($alunosNotificar[(int) $uid] ?? 0) + 1;
                 }
             }
         }
-        if (!empty($alunosNotificar)) {
-            $this->notificarAvaliados($projetoId, $alunosNotificar, 'Nota coletiva');
-        }
+        $this->notificarAvaliados($projetoId, $alunosNotificar, 'nota coletiva do grupo');
 
         $this->flash("Avaliações coletivas salvas ({$salvos}).", 'sucesso');
         $this->redirect('/projetos/' . $projetoId . '/avaliacoes/coletiva');
     }
 
+        // ============ PAINEL DE AVALIAÇÕES DO ALUNO ============
+
+    public function indexAluno(int $projetoId)
+    {
+        $projeto = $this->projeto->porId($projetoId);
+        if (!$projeto) { $this->flash('Projeto não encontrado.'); $this->redirect('/turmas'); }
+
+        $u = $_SESSION['usuario'];
+        $this->exigirAcesso($projeto);
+
+        $this->criterio->atualizarBloqueios($projetoId);
+
+        // Critérios abertos que o aluno pode responder
+        $criterios = array_filter(
+            $this->criterio->listarPorProjeto($projetoId),
+            fn($c) => !$c['bloqueado']
+        );
+
+        $pdo = Database::getConnection();
+
+        // Colegas de grupo que seguem ativos na turma (quem o aluno deve avaliar)
+        $stA = $pdo->prepare("SELECT usuario_id FROM turma_usuarios WHERE turma_id = ? AND ativo = 1");
+        $stA->execute([(int) $projeto['turma_id']]);
+        $colegasGrupo = array_values(array_intersect(
+            $this->colegasDeGrupo((int) $projeto['id'], (int) $u['id']),
+            array_map('intval', $stA->fetchAll(PDO::FETCH_COLUMN))
+        ));
+
+        // Para cada critério, decidir se o aluno tem pendência
+        $pendencias = [];
+        foreach ($criterios as $c) {
+            $tipo = $c['tipo_avaliacao'];
+            $cid  = (int) $c['id'];
+            $pend = null;
+
+            if ($tipo === 'pares') {
+                // Conta os colegas DE GRUPO (ativos na turma) que ainda não avaliou
+                $stmt = $pdo->prepare("
+                    SELECT a.aluno_id FROM avaliacoes a
+                    WHERE a.criterio_id = ? AND a.avaliador_id = ? AND a.tipo = 'par'
+                ");
+                $stmt->execute([$cid, (int) $u['id']]);
+                $jaAvaliados = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+                $faltaPares  = count(array_diff($colegasGrupo, $jaAvaliados));
+                $pend = $faltaPares > 0 ? "{$faltaPares} colega(s) faltando" : null;
+
+            } elseif ($tipo === 'autoavaliacao') {
+                $stmt = $pdo->prepare("
+                    SELECT 1 FROM avaliacoes
+                    WHERE criterio_id = ? AND aluno_id = ? AND tipo = 'auto'
+                    LIMIT 1
+                ");
+                $stmt->execute([$cid, (int) $u['id']]);
+                if (!$stmt->fetchColumn()) $pend = 'Você ainda não se avaliou';
+            }
+
+            $pendencias[$cid] = $pend;
+        }
+
+        // Boletim parcial
+        $boletim = $this->nota->boletimDoAluno($projetoId, (int) $u['id']);
+
+        $this->render('avaliacoes/index_aluno', [
+            'projeto'    => $projeto,
+            'criterios'  => array_values($criterios),
+            'pendencias' => $pendencias,
+            'boletim'    => $boletim,
+        ]);
+    }
+
+    // ============ BOLETIM PARCIAL ============
+
+    public function parcial(int $projetoId)
+    {
+        $projeto = $this->projeto->porId($projetoId);
+        if (!$projeto) { $this->flash('Projeto não encontrado.'); $this->redirect('/turmas'); }
+
+        $u = $_SESSION['usuario'];
+        $this->exigirAcesso($projeto);
+
+        $alunoId = (int) ($_GET['aluno_id'] ?? $u['id']);
+
+        if (!$this->podeVerBoletimParcial($projetoId, $alunoId)) {
+            http_response_code(403);
+            exit('Sem permissão para ver este boletim.');
+        }
+
+        $aluno   = (new Usuario())->findById($alunoId);
+        if (!$aluno) { $this->flash('Aluno não encontrado.'); $this->redirect('/projetos/' . $projetoId); }
+
+        // Sempre em tempo real (mesmo se encerrado — o oficial é o snapshot)
+        $boletim = $this->nota->boletimDoAluno($projetoId, $alunoId);
+        $cfg     = $this->cfg->garantir($projetoId);
+
+        // Conta critérios ainda em aberto
+        $this->criterio->atualizarBloqueios($projetoId);
+        $criterios = $this->criterio->listarPorProjeto($projetoId);
+        $abertos   = array_filter($criterios, fn($c) => !$c['bloqueado']);
+        $bloqueados = array_filter($criterios, fn($c) => $c['bloqueado']);
+
+        $this->render('avaliacoes/parcial', [
+            'projeto'    => $projeto,
+            'aluno'      => $aluno,
+            'boletim'    => $boletim,
+            'cfg'        => $cfg,
+            'abertos'    => count($abertos),
+            'bloqueados' => count($bloqueados),
+            'souEu'      => $alunoId === (int) $u['id'],
+        ]);
+    }
+
+    private function podeVerBoletimParcial(int $projetoId, int $alvoId): bool
+    {
+        $u = $_SESSION['usuario'] ?? null;
+        if (!$u) return false;
+        if ((int) $u['id'] === $alvoId) return true;
+        if ($u['tipo'] === 'master')    return true;
+
+        $projeto = $this->projeto->porId($projetoId);
+        if (!$projeto) return false;
+
+        if ($this->tu->ehRepresentante((int) $projeto['turma_id'], (int) $u['id'])) return true;
+
+        // Diretor segue a regra de visibilidade do projeto
+        $cfg = $this->cfg->garantir($projetoId);
+        $pdo = Database::getConnection();
+
+        $stmt = $pdo->prepare("
+            SELECT 1 FROM grupo_diretores gd
+            INNER JOIN grupos g ON g.id = gd.grupo_id
+            WHERE g.projeto_id = ? AND gd.usuario_id = ? AND gd.ativo = 1
+            LIMIT 1
+        ");
+        $stmt->execute([$projetoId, (int) $u['id']]);
+        $souDiretor = (bool) $stmt->fetchColumn();
+
+        $regra = $souDiretor ? $cfg['visibilidade_diretor'] : $cfg['visibilidade_aluno'];
+
+        if ($regra === 'turma') {
+            $stmt = $pdo->prepare("
+                SELECT 1 FROM turma_usuarios
+                WHERE turma_id = ? AND usuario_id = ? AND ativo = 1 LIMIT 1
+            ");
+            $stmt->execute([(int) $projeto['turma_id'], $alvoId]);
+            return (bool) $stmt->fetchColumn();
+        }
+
+        if ($regra === 'grupo') {
+            $stmt = $pdo->prepare("
+                SELECT 1
+                FROM grupo_alunos ga1
+                INNER JOIN grupo_alunos ga2 ON ga2.grupo_id = ga1.grupo_id
+                INNER JOIN grupos g ON g.id = ga1.grupo_id
+                WHERE g.projeto_id = ? AND ga1.usuario_id = ? AND ga2.usuario_id = ?
+                  AND ga1.saiu_em IS NULL AND ga2.saiu_em IS NULL
+                LIMIT 1
+            ");
+            $stmt->execute([$projetoId, (int) $u['id'], $alvoId]);
+            return (bool) $stmt->fetchColumn();
+        }
+
+        return false;
+    }
+
     // ============ HELPERS ============
+
+    /**
+     * IDs dos colegas que dividem pelo menos um grupo ativo com o usuário neste projeto.
+     * Regra: na avaliação por pares, cada aluno avalia só quem trabalhou com ele.
+     */
+    private function colegasDeGrupo(int $projetoId, int $usuarioId): array
+    {
+        $stmt = Database::getConnection()->prepare("
+            SELECT DISTINCT outro.usuario_id
+            FROM grupo_alunos eu
+            INNER JOIN grupos g          ON g.id = eu.grupo_id AND g.projeto_id = ?
+            INNER JOIN grupo_alunos outro ON outro.grupo_id = eu.grupo_id AND outro.saiu_em IS NULL
+            WHERE eu.usuario_id = ? AND eu.saiu_em IS NULL AND outro.usuario_id != ?
+        ");
+        $stmt->execute([$projetoId, $usuarioId, $usuarioId]);
+        return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    }
 
     private function temDiretorAtivoNoProjeto(int $projetoId, int $usuarioId): bool
     {
@@ -886,6 +1056,27 @@ class AvaliacaoController
     {
         header('Location: ' . App::getBasePath() . $path);
         exit;
+    }
+
+    /**
+     * Lê uma célula de nota do formulário. Retorna null se estiver vazia;
+     * senão ['conceito', 'valor'] validados. O valor digitado manda (0 a 100,
+     * inclusive zero); sem valor, usa o valor padrão do conceito escolhido.
+     */
+    private function lerNota(array $dados, array $cfg): ?array
+    {
+        $conceito = strtoupper(trim((string) ($dados['conceito'] ?? '')));
+        $bruto    = trim(str_replace(',', '.', (string) ($dados['valor'] ?? '')));
+        $temValor = $bruto !== '' && is_numeric($bruto);
+        $temConc  = in_array($conceito, ['I', 'R', 'B', 'MB'], true);
+
+        if (!$temValor && !$temConc) return null;
+
+        if ($temValor) {
+            $valor = max(0.0, min(100.0, (float) $bruto));
+            return ['conceito' => NotaService::conceitoPorValor($valor, $cfg), 'valor' => $valor];
+        }
+        return ['conceito' => $conceito, 'valor' => NotaService::valorPadraoPorConceito($conceito, $cfg)];
     }
 
     private function flash(string $msg, string $tipo = 'erro'): void

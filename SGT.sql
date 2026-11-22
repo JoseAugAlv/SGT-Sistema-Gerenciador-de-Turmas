@@ -1,8 +1,21 @@
+-- =====================================================================
+-- SGT — Migração do banco antigo (if0_40632539_sgtjose) para o novo schema
+-- COM ALTERAÇÕES: etapas novas, atas/relatórios simplificados, Atuação com membros
+-- Cole ESTE arquivo inteiro no phpMyAdmin e execute.
+-- ATENÇÃO: apaga o banco sgt por completo.
+-- =====================================================================
+
+DROP DATABASE IF EXISTS sgt;
+CREATE DATABASE sgt CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE sgt;
+
+SET NAMES utf8mb4;
+SET time_zone = '+00:00';
+SET FOREIGN_KEY_CHECKS = 0;
 
 -- =====================================================================
 -- 1. USUÁRIOS E AUTENTICAÇÃO
 -- =====================================================================
-
 CREATE TABLE usuarios (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nome VARCHAR(150) NOT NULL,
@@ -50,9 +63,8 @@ CREATE TABLE preferencias_usuario (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =====================================================================
--- 2. TURMAS E PAPÉIS (N:N)
+-- 2. TURMAS E PAPÉIS
 -- =====================================================================
-
 CREATE TABLE turmas (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nome VARCHAR(150) NOT NULL,
@@ -60,6 +72,8 @@ CREATE TABLE turmas (
   codigo_interno VARCHAR(100) DEFAULT NULL,
   cor_primaria VARCHAR(20) DEFAULT '#3498db',
   cor_secundaria VARCHAR(20) DEFAULT '#2ecc71',
+  cor_personalizada TINYINT(1) NOT NULL DEFAULT 0,  -- 1 = faixa da turma usa cor_primaria em vez da cor do tema
+  logo VARCHAR(255) DEFAULT NULL,                  -- caminho em public/ (uploads/turmas/...)
   bloqueada TINYINT(1) NOT NULL DEFAULT 0,
   bloqueada_motivo VARCHAR(255) DEFAULT NULL,
   bloqueada_em DATETIME DEFAULT NULL,
@@ -70,8 +84,6 @@ CREATE TABLE turmas (
   INDEX idx_turmas_codigo (codigo_acesso)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Limite de no máximo 2 linhas com papel='representante' e ativo=1 por turma_id é
--- validado na aplicação (não há constraint de banco para isso) — ver 1.1 e 14.6.
 CREATE TABLE turma_usuarios (
   id INT AUTO_INCREMENT PRIMARY KEY,
   turma_id INT NOT NULL,
@@ -90,9 +102,29 @@ CREATE TABLE turma_usuarios (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =====================================================================
--- 3. PROJETOS E ETAPAS
+-- 3. CURSOS E PERÍODOS
 -- =====================================================================
+CREATE TABLE cursos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nome VARCHAR(100) NOT NULL,
+  sigla VARCHAR(20) NOT NULL UNIQUE,
+  ativo TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE periodos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nome VARCHAR(50) NOT NULL,
+  sigla VARCHAR(20) NOT NULL UNIQUE,
+  ativo TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =====================================================================
+-- 4. PROJETOS E ETAPAS
+-- =====================================================================
 CREATE TABLE projetos (
   id INT AUTO_INCREMENT PRIMARY KEY,
   turma_id INT NOT NULL,
@@ -126,9 +158,8 @@ CREATE TABLE projeto_etapas (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =====================================================================
--- 4. GRUPOS (com histórico de diretores)
+-- 5. GRUPOS
 -- =====================================================================
-
 CREATE TABLE grupos (
   id INT AUTO_INCREMENT PRIMARY KEY,
   projeto_id INT NOT NULL,
@@ -153,8 +184,6 @@ CREATE TABLE grupo_alunos (
   INDEX idx_ga_usuario (usuario_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- usuario_id usa ON DELETE SET NULL (em vez de CASCADE) para preservar o histórico de quem
--- foi diretor de cada grupo (exigido em 5.3) mesmo que o usuário seja removido via LGPD.
 CREATE TABLE grupo_diretores (
   id INT AUTO_INCREMENT PRIMARY KEY,
   grupo_id INT NOT NULL,
@@ -174,9 +203,8 @@ CREATE TABLE grupo_diretores (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =====================================================================
--- 5. CRITÉRIOS (tipo por critério + etapa opcional)
+-- 6. CRITÉRIOS
 -- =====================================================================
-
 CREATE TABLE criterios (
   id INT AUTO_INCREMENT PRIMARY KEY,
   projeto_id INT NOT NULL,
@@ -184,16 +212,10 @@ CREATE TABLE criterios (
   nome VARCHAR(200) NOT NULL,
   descricao TEXT DEFAULT NULL,
   peso DECIMAL(5,2) NOT NULL DEFAULT 1.00,
-  tipo_avaliacao ENUM(
-    'diretor',
-    'representante',
-    'pares',
-    'autoavaliacao',
-    'coletiva',
-    'misto'
-  ) NOT NULL DEFAULT 'diretor',
+  tipo_avaliacao ENUM('diretor','representante','pares','autoavaliacao','coletiva','misto') NOT NULL DEFAULT 'diretor',
   aplicavel_a ENUM('todos','apenas_diretores','apenas_representantes') DEFAULT 'todos',
   prazo_avaliacao DATETIME DEFAULT NULL,
+  obrigatorio TINYINT(1) NOT NULL DEFAULT 0,  -- aluno precisa preencher antes do prazo (só pares/autoavaliação)
   bloqueado TINYINT(1) DEFAULT 0,
   reaberto_por INT DEFAULT NULL,
   reaberto_em DATETIME DEFAULT NULL,
@@ -207,10 +229,26 @@ CREATE TABLE criterios (
   INDEX idx_crit_tipo (tipo_avaliacao)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =====================================================================
--- 6. CONFIGURAÇÃO DE CONCEITOS (por projeto)
--- =====================================================================
+-- Desconto na nota final do aluno que não preencheu um critério obrigatório.
+-- Pontos na escala 0–100, subtraídos da média ponderada do projeto.
+CREATE TABLE descontos_nota (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  criterio_id INT NOT NULL,
+  aluno_id INT NOT NULL,
+  pontos DECIMAL(5,2) NOT NULL,
+  motivo VARCHAR(255) NOT NULL,
+  aplicado_por INT DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_desconto (criterio_id, aluno_id),
+  FOREIGN KEY (criterio_id) REFERENCES criterios(id) ON DELETE CASCADE,
+  FOREIGN KEY (aluno_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  FOREIGN KEY (aplicado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
+  INDEX idx_desc_aluno (aluno_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- =====================================================================
+-- 7. CONFIGURAÇÃO DE CONCEITO
+-- =====================================================================
 CREATE TABLE configuracoes_conceito (
   id INT AUTO_INCREMENT PRIMARY KEY,
   projeto_id INT NOT NULL UNIQUE,
@@ -228,9 +266,8 @@ CREATE TABLE configuracoes_conceito (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =====================================================================
--- 7. AVALIAÇÕES
+-- 8. AVALIAÇÕES
 -- =====================================================================
-
 CREATE TABLE avaliacoes (
   id INT AUTO_INCREMENT PRIMARY KEY,
   criterio_id INT NOT NULL,
@@ -306,13 +343,8 @@ CREATE TABLE boletins_snapshot (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =====================================================================
--- 8. ATAS E REGISTROS
+-- 9. ATAS E REGISTROS
 -- =====================================================================
-
--- diretor_id e representante_id são NULLable e usam ON DELETE SET NULL (em vez de CASCADE)
--- para que a exclusão LGPD de um usuário não apague a ata inteira (e com ela, os registros
--- de outros alunos que participaram). A obrigatoriedade de preencher os dois no momento da
--- criação (8.1) é validada na aplicação, não no banco.
 CREATE TABLE atas (
   id INT AUTO_INCREMENT PRIMARY KEY,
   titulo VARCHAR(200) NOT NULL,
@@ -325,6 +357,7 @@ CREATE TABLE atas (
   horario_inicio TIME DEFAULT NULL,
   horario_fim TIME DEFAULT NULL,
   status ENUM('pendente','preenchida','revisada') DEFAULT 'pendente',
+  preenchimento ENUM('diretor','grupo') NOT NULL DEFAULT 'diretor',  -- quem preenche: só o diretor ou todo o grupo
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (grupo_id) REFERENCES grupos(id) ON DELETE CASCADE,
@@ -384,7 +417,7 @@ CREATE TABLE relatorios_ata (
   id INT AUTO_INCREMENT PRIMARY KEY,
   ata_id INT NOT NULL,
   usuario_id INT NOT NULL,
-  tipo_usuario ENUM('representante','diretor') NOT NULL,
+  tipo_usuario ENUM('representante','diretor','aluno') NOT NULL,
   titulo VARCHAR(200) DEFAULT NULL,
   conteudo TEXT NOT NULL,
   tipo_relatorio ENUM('ocorrencia','decisao','encaminhamento','observacao') DEFAULT 'ocorrencia',
@@ -406,9 +439,8 @@ CREATE TABLE participantes_relatorio (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =====================================================================
--- 9. MATERIAIS
+-- 10. MATERIAIS
 -- =====================================================================
-
 CREATE TABLE materiais (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nome VARCHAR(150) NOT NULL,
@@ -439,9 +471,8 @@ CREATE TABLE movimentacoes_materiais (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =====================================================================
--- 10. ALERTAS E NOTIFICAÇÕES
+-- 11. ALERTAS E NOTIFICAÇÕES
 -- =====================================================================
-
 CREATE TABLE alertas (
   id INT AUTO_INCREMENT PRIMARY KEY,
   autor_id INT NOT NULL,
@@ -482,9 +513,8 @@ CREATE TABLE notificacoes (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =====================================================================
--- 11. LOGS E AUDITORIA
+-- 12. LOGS E AUDITORIA
 -- =====================================================================
-
 CREATE TABLE log_sistema (
   id INT AUTO_INCREMENT PRIMARY KEY,
   acao VARCHAR(100) NOT NULL,
@@ -520,9 +550,8 @@ CREATE TABLE auditoria_log (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =====================================================================
--- 12. LGPD — SOLICITAÇÕES
+-- 13. LGPD
 -- =====================================================================
-
 CREATE TABLE lgpd_solicitacoes (
   id INT AUTO_INCREMENT PRIMARY KEY,
   usuario_id INT NOT NULL,
@@ -539,26 +568,474 @@ CREATE TABLE lgpd_solicitacoes (
   INDEX idx_lgpd_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- =====================================================================
+-- 14. SOLICITAÇÕES DE MATERIAIS
+-- =====================================================================
+CREATE TABLE solicitacoes_materiais (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  projeto_id INT NOT NULL,
+  turma_id INT NOT NULL,
+  solicitante_id INT NOT NULL,
+  nome_material VARCHAR(150) NOT NULL,
+  quantidade DECIMAL(10,2) NOT NULL,
+  unidade VARCHAR(50) DEFAULT NULL,
+  justificativa TEXT DEFAULT NULL,
+  preco_estimado DECIMAL(10,2) DEFAULT NULL,
+  status ENUM('pendente','aprovada','comprada','recusada','cancelada') DEFAULT 'pendente',
+  material_id INT DEFAULT NULL,
+  aprovado_por INT DEFAULT NULL,
+  aprovado_em DATETIME DEFAULT NULL,
+  comprado_por INT DEFAULT NULL,
+  comprado_em DATETIME DEFAULT NULL,
+  motivo_recusa TEXT DEFAULT NULL,
+  recusado_por INT DEFAULT NULL,
+  recusado_em DATETIME DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (projeto_id) REFERENCES projetos(id) ON DELETE CASCADE,
+  FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE,
+  FOREIGN KEY (solicitante_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  FOREIGN KEY (material_id) REFERENCES materiais(id) ON DELETE SET NULL,
+  FOREIGN KEY (aprovado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
+  FOREIGN KEY (comprado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
+  FOREIGN KEY (recusado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
+  INDEX idx_sm_projeto (projeto_id),
+  INDEX idx_sm_status (status),
+  INDEX idx_sm_solicitante (solicitante_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================================
+-- USUÁRIOS — emails corrigidos com .com
+-- Senha de TODOS: Teste@1234
+-- =====================================================================
+SET @hash := '$2y$12$fgT/IQ/9F6/IgBBRj7HFWeZAxkchkDobGHs8UdZ8LT6K0pBm3Z2f.';
+
+INSERT INTO usuarios (id, nome, email, senha, tipo, email_confirmado, primeiro_login, ativo, lgpd_aceito, lgpd_data, created_at) VALUES
+(1,  'Jose',                                     'jose@adm.com',                          @hash, 'master', 1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(2,  'Ana Clara Rocha Pereira Da Silva',         'ana@email.com',                         @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(3,  'Andrey Gois Dos Santos De Sousa',          'andrey@email.com',                      @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(4,  'Arthur Bueno Santos',                      'arthur@email.com',                      @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(5,  'Artur Alves Da Silva',                     'artur@email.com',                       @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(6,  'Caio Vinicius Tomaz Teles',                'caio@email.com',                        @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(7,  'Carlos Eduardo Queiroz Leite',             'carlos@email.com',                      @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(8,  'Eduardo Henrique Da Silva Aguado',         'eduardo@email.com',                     @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(9,  'Fabricio Da Silva Bernardo',               'fabricio@email.com',                    @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(10, 'Fernanda Pessoa Bezerra',                  'fernanda@email.com',                    @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(11, 'Filipe Teixeira Lopes',                    'filipe@email.com',                      @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(12, 'Gabriel Nunes De Sousa',                   'gabriel@email.com',                     @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(13, 'Gabrielly Da Silva Bispo',                 'gabrielly@email.com',                   @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(14, 'Graziela Nascimento Souza',                'graziela@email.com',                    @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(15, 'Guilherme De Almeida Lori',                'guilherme@email.com',                   @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(16, 'Gustavo Gomes Galdino',                    'gustavo@email.com',                     @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(17, 'Gustavo Henrique Dos Santos Lisboa',       'gustavoh@email.com',                    @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(18, 'Heloiza Do Nascimento Pinto',              'heloiza@email.com',                     @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(19, 'Jose Augusto Alves Da Silva De Melo',      'joseaugusto@email.com',                 @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(20, 'Julia Dias Lima',                          'julia@email.com',                       @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(21, 'Julia Dionisio Cunha',                     'juliadc@email.com',                     @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(23, 'Lais Bispo Moura',                         'lais@email.com',                        @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(24, 'Lara Fernanda Silva Dos Santos',           'lara@email.com',                        @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(25, 'Laura Donario De Oliveira',                'laura@email.com',                       @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(26, 'Lucas Bezerra Filho',                      'lucas@email.com',                       @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(27, 'Luiz Henrique Paulista Teixeira Da Silva', 'luiz@email.com',                        @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(28, 'Maria Eduarda Cantos Cavalcante',          'maria@email.com',                       @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(29, 'Matheus Oliveira De Abreu',                'matheus@email.com',                     @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(30, 'Melissa Santos Raimundo',                  'melissa@email.com',                     @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(31, 'Miguel Guimarães Costa',                   'miguel@email.com',                      @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(32, 'Nicole Barbosa Dias',                      'nicole@email.com',                      @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(33, 'Otavio Prezotto Costa',                    'otavio@email.com',                      @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(34, 'Pedro Henrique De Souza Costa',            'pedro@email.com',                       @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(35, 'Pietra Gonçalves Grossi',                  'pietra@email.com',                      @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(36, 'Ryan Fyllipo Da Silva Pinto',              'ryan@email.com',                        @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(37, 'Samuel Bryan Viana Batista',               'samuelb@email.com',                     @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(38, 'Samuel Pacheco Gomes Da Silva',            'samuelp@email.com',                     @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(39, 'Tauane Vitória Da Conceição Araujo',       'tauane@email.com',                      @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(40, 'Tony Bonilha Vieira',                      'tony@email.com',                        @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(41, 'Victor Hugo Zaguine Da Costa',             'victorh@email.com',                     @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(42, 'Victor Markstauffer Dias Rufino',          'victorm@email.com',                     @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-02-19 03:35:13'),
+(46, 'Carol',                                    'carol@aluno.edu',                       @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-03-28 23:24:20'),
+(47, 'Maria Eduarda Alves dos Santos',           'mariaeduardaalvesdossantos@aluno.edu',  @hash, 'aluno',  1, 0, 1, 1, NOW(), '2026-04-23 12:14:28');
+
+-- Preferências padrão para todos
+INSERT IGNORE INTO preferencias_usuario (usuario_id) SELECT id FROM usuarios;
+
+-- ---------------------------------------------------------------------
+-- CURSOS E PERÍODOS
+-- ---------------------------------------------------------------------
+INSERT INTO cursos (nome, sigla) VALUES
+('Informática', 'INFO'),
+('Administração', 'ADM'),
+('Enfermagem', 'ENF'),
+('Edificações', 'EDF');
+
+INSERT INTO periodos (nome, sigla) VALUES
+('Manhã', 'MANHA'),
+('Tarde', 'TARDE'),
+('Noite', 'NOITE'),
+('Integral', 'INT');
+
+-- ---------------------------------------------------------------------
+-- TURMA
+-- ---------------------------------------------------------------------
+INSERT INTO turmas (id, nome, codigo_acesso, codigo_interno, cor_primaria, cor_secundaria) VALUES
+(1, '231-3ANO-INFO-M', 'TUX26', '231-3ANO-INFO-M', '#3498db', '#141414');
+
+-- ---------------------------------------------------------------------
+-- TURMA_USUARIOS
+-- ---------------------------------------------------------------------
+INSERT INTO turma_usuarios (turma_id, usuario_id, papel, ativo) VALUES
+(1, 2,  'aluno',         1),
+(1, 3,  'aluno',         1),
+(1, 4,  'aluno',         1),
+(1, 5,  'aluno',         1),
+(1, 6,  'aluno',         1),
+(1, 7,  'aluno',         1),
+(1, 8,  'aluno',         1),
+(1, 9,  'aluno',         1),
+(1, 10, 'aluno',         1),
+(1, 11, 'aluno',         1),
+(1, 12, 'aluno',         1),
+(1, 13, 'aluno',         1),
+(1, 14, 'aluno',         1),
+(1, 15, 'aluno',         1),
+(1, 16, 'aluno',         1),
+(1, 17, 'aluno',         1),
+(1, 18, 'aluno',         1),
+(1, 19, 'representante', 1),
+(1, 20, 'aluno',         1),
+(1, 21, 'aluno',         1),
+(1, 23, 'aluno',         1),
+(1, 24, 'aluno',         1),
+(1, 25, 'aluno',         1),
+(1, 26, 'aluno',         1),
+(1, 27, 'aluno',         1),
+(1, 28, 'aluno',         1),
+(1, 29, 'aluno',         1),
+(1, 30, 'aluno',         1),
+(1, 31, 'aluno',         1),
+(1, 32, 'aluno',         1),
+(1, 33, 'aluno',         1),
+(1, 34, 'aluno',         1),
+(1, 35, 'aluno',         1),
+(1, 36, 'aluno',         1),
+(1, 37, 'aluno',         1),
+(1, 38, 'aluno',         1),
+(1, 39, 'aluno',         1),
+(1, 40, 'aluno',         1),
+(1, 41, 'aluno',         1),
+(1, 42, 'aluno',         1),
+(1, 47, 'aluno',         1);
+
+-- ---------------------------------------------------------------------
+-- PROJETO
+-- ---------------------------------------------------------------------
+INSERT INTO projetos (id, turma_id, nome, descricao, prazo, modo_avaliacao, created_at) VALUES
+(3, 1, 'Semana Paulo Freire 2026', '', '2026-05-29', 'etapa', '2026-03-08 22:30:05');
+
+-- ---------------------------------------------------------------------
+-- ETAPAS NOVAS (5 etapas temáticas)
+-- ---------------------------------------------------------------------
+INSERT INTO projeto_etapas (id, projeto_id, nome, descricao, data_inicio, data_fim, ordem) VALUES
+(1, 3, 'Pesquisa elementos do país', 'Levantamento de referências culturais, históricas e visuais do país retratado.', '2026-03-01', '2026-03-20', 1),
+(2, 3, 'Produção do roteiro base', 'Escrita e revisão do roteiro principal da peça.', '2026-03-21', '2026-04-10', 2),
+(3, 3, 'Planejamento cenário e produção de falas no mesmo tempo', 'Definição do cenário em paralelo com a produção das falas.', '2026-04-11', '2026-04-30', 3),
+(4, 3, 'Ensaios e melhorias', 'Ensaios gerais e ajustes finais nas cenas, figurinos e sonoplastia.', '2026-05-01', '2026-05-20', 4),
+(5, 3, 'Apresentação', 'Ensaio geral e apresentação final para a comunidade escolar.', '2026-05-21', '2026-05-29', 5);
+
+-- ---------------------------------------------------------------------
+-- CONFIGURAÇÃO DE CONCEITO
+-- ---------------------------------------------------------------------
+INSERT INTO configuracoes_conceito (projeto_id, limite_i_max, limite_r_min, limite_r_max, limite_b_min, limite_b_max, limite_mb_min) VALUES
+(3, 49, 50, 69, 70, 84, 85);
+
+-- ---------------------------------------------------------------------
+-- GRUPOS
+-- ---------------------------------------------------------------------
+INSERT INTO grupos (id, projeto_id, nome, modo_avaliacao_grupo, modo_avaliacao_por) VALUES
+(5,  3, 'Cenário',      'individual', 'diretor'),
+(7,  3, 'Logística',    'individual', 'diretor'),
+(8,  3, 'Roteiro',      'individual', 'diretor'),
+(10, 3, 'Atuação',      'individual', 'diretor'),
+(11, 3, 'Sonoplastia',  'individual', 'diretor'),
+(12, 3, 'Figurino',     'individual', 'diretor'),
+(13, 3, 'Coreografia',  'individual', 'diretor');
+
+-- ---------------------------------------------------------------------
+-- GRUPO_ALUNOS
+-- Inclui os 10 membros do grupo Atuação (id = 10)
+-- ---------------------------------------------------------------------
+INSERT INTO grupo_alunos (grupo_id, usuario_id) VALUES
+(5, 2), (12, 2), (13, 2),
+(5, 3),
+(13, 4),
+(5, 5),
+(11, 6),
+(5, 7),
+(8, 8),
+(12, 9),
+(12, 10),
+(5, 11),
+(7, 12), (13, 12),
+(13, 13),
+(5, 14),
+(13, 15),
+(5, 16),
+(5, 17),
+(12, 18),
+(8, 19), (11, 19), (13, 19),
+(12, 20), (13, 20),
+(8, 21), (12, 21),
+(12, 23),
+(5, 24), (13, 24),
+(5, 25),
+(13, 26),
+(13, 27),
+(8, 28), (13, 28),
+(5, 29),
+(11, 31),
+(13, 32),
+(7, 33), (11, 33), (13, 33),
+(13, 34),
+(8, 35), (13, 35),
+(7, 36),
+(5, 37), (7, 37),
+(5, 38), (7, 38),
+(5, 39),
+(5, 40), (8, 40),
+(7, 41),
+(13, 42),
+-- GRUPO ATUAÇÃO (10)
+(10, 4),   -- Arthur Bueno Santos
+(10, 8),   -- Eduardo Henrique Da Silva Aguado
+(10, 11),  -- Filipe Teixeira Lopes
+(10, 12),  -- Gabriel Nunes De Sousa
+(10, 16),  -- Gustavo Gomes Galdino
+(10, 19),  -- Jose Augusto Alves Da Silva De Melo
+(10, 20),  -- Julia Dias Lima
+(10, 27),  -- Luiz Henrique Paulista Teixeira Da Silva
+(10, 47),  -- Maria Eduarda Alves dos Santos
+(10, 40);  -- Tony Bonilha Vieira
+
+-- ---------------------------------------------------------------------
+-- GRUPO_DIRETORES
+-- Tony Bonilha Vieira é diretor ativo do grupo Atuação (10)
+-- ---------------------------------------------------------------------
+INSERT INTO grupo_diretores (grupo_id, usuario_id, ativo, nomeado_por, nomeado_em) VALUES
+(12, 2,  1, 1, NOW()),
+(11, 6,  1, 1, NOW()),
+(11, 13, 1, 1, NOW()),
+(13, 20, 1, 1, NOW()),
+(5,  24, 1, 1, NOW()),
+(5,  25, 1, 1, NOW()),
+(8,  28, 1, 1, NOW()),
+(13, 32, 1, 1, NOW()),
+(7,  33, 1, 1, NOW()),
+(10, 40, 1, 1, NOW());
+
+-- =====================================================================
+-- CRITÉRIOS — Semana Paulo Freire 2026 (projeto_id = 3)
+-- =====================================================================
+INSERT INTO criterios (id, projeto_id, etapa_id, nome, descricao, peso, tipo_avaliacao, aplicavel_a, prazo_avaliacao, bloqueado, created_at) VALUES
+(11, 3, NULL, '1.1 Engajamento ativo nas tarefas do grupo',
+ 'Este subcritério avalia a participação ativa do aluno nas atividades propostas pelo seu grupo, incluindo reuniões, planejamentos e execuções.
+
+Espera-se que o aluno:
+• Participe das discussões e contribua com ideias
+• Esteja presente nas reuniões do grupo
+• Colabore com a execução das tarefas definidas
+• Demonstre interesse e iniciativa nas atividades
+
+A avaliação será realizada pelos diretores do grupo, com base no acompanhamento contínuo das atividades e, quando necessário, apoiada pelos registros em atas.
+
+Observação: caso o aluno avaliado seja um diretor, sua nota neste critério será atribuída pelos representantes.',
+ 1.00, 'diretor', 'todos', NULL, 0, '2026-02-19 03:35:13'),
+
+(12, 3, NULL, '1.2 Presença e comprometimento nas ações SPF.',
+ 'Este subcritério avalia se o aluno executa corretamente as funções que lhe foram atribuídas durante as ações práticas da Semana Paulo Freire.
+
+Espera-se que o aluno:
+• Cumpra as tarefas designadas dentro do prazo e da forma combinada
+• Siga orientações dos diretores e representantes
+• Atue de forma responsável durante a execução das atividades
+• Não prejudique o andamento do grupo ou de outras equipes
+
+A avaliação será realizada pelos diretores em conjunto com os representantes, podendo ser fundamentada por registros em atas e relatórios.',
+ 2.00, 'misto', 'todos', NULL, 0, '2026-02-19 03:35:13'),
+
+(13, 3, NULL, '1.3 Cumprimento da organização.',
+ 'Este subcritério avalia a responsabilidade do aluno em relação ao uso, organização e conservação dos espaços e materiais utilizados durante a SPF.
+
+Espera-se que o aluno:
+• Mantenha os espaços limpos e organizados após as atividades
+• Utilize os materiais de forma adequada
+• Evite danos a materiais próprios ou de outras turmas
+• Colabore com a organização geral do ambiente
+
+A avaliação será realizada pelos diretores em conjunto com os representantes.',
+ 1.00, 'representante', 'todos', NULL, 0, '2026-02-19 03:35:13'),
+
+(14, 3, NULL, '1.4 Presença e constância nas atividades.',
+ 'Este subcritério avalia a frequência e a participação do aluno nas atividades ao longo de todo o processo da SPF.
+
+A análise será baseada nos registros de atas, considerando:
+• Presença nas reuniões e atividades
+• Frequência de participação ao longo do projeto
+• Constância no envolvimento com o grupo
+
+A pontuação será atribuída com base em dados objetivos registrados no sistema.',
+ 1.00, 'misto', 'todos', NULL, 0, '2026-02-19 03:35:13'),
+
+(15, 3, NULL, '2.1 Cumprimento de prazos.',
+ 'Este subcritério avalia a capacidade do aluno de respeitar os prazos definidos para entrega de tarefas e participação nas atividades do projeto.
+
+Espera-se que o aluno:
+• Entregue suas tarefas dentro dos prazos estabelecidos
+• Compareça nos horários definidos para reuniões e atividades
+• Comunique previamente qualquer impossibilidade de cumprimento de prazo
+• Demonstre responsabilidade na gestão do seu tempo dentro do projeto
+
+A avaliação será realizada pelos representantes, com base no acompanhamento das atividades e nos registros em atas e relatórios.',
+ 1.00, 'representante', 'todos', NULL, 0, '2026-02-19 03:35:13'),
+
+(16, 3, NULL, '2.2 Responsabilidade na execução de tarefas.',
+ 'Este subcritério avalia o comprometimento do aluno com as tarefas que lhe foram atribuídas, considerando a qualidade e a responsabilidade na execução.
+
+Espera-se que o aluno:
+• Assuma suas responsabilidades dentro do grupo
+• Execute as tarefas com qualidade e dentro do esperado
+• Não dependa excessivamente de outros colegas para cumprir suas obrigações
+• Demonstre autonomia na realização das atividades
+
+A avaliação será realizada pelos diretores, podendo ser fundamentada por registros em atas e relatórios.',
+ 1.00, 'diretor', 'todos', NULL, 0, '2026-02-19 03:35:13'),
+
+(17, 3, NULL, '2.3 Participação respeito nas decisões e organização.',
+ 'Este subcritério avalia o envolvimento do aluno nos processos de planejamento, tomada de decisão e organização do projeto.
+
+Espera-se que o aluno:
+• Participe das discussões e decisões do grupo
+• Não atrapalhe o andamento do projeto
+• Respeite as decisões coletivas estabelecidas
+• Contribua para a organização das atividades
+• Evite tomar decisões individuais que possam prejudicar o grupo
+
+A avaliação será realizada pelos diretores.',
+ 1.00, 'representante', 'todos', NULL, 0, '2026-02-19 03:35:13'),
+
+(18, 3, NULL, '3.1 Boa comunicação e respeito.',
+ 'Este subcritério avalia o comportamento do aluno em relação à convivência com os demais colegas durante as atividades da SPF.
+
+A avaliação será realizada por meio de formulário, no qual os alunos deverão avaliar individualmente cada colega, considerando:
+• Respeito nas interações
+• Postura durante as atividades
+• Forma de comunicação com o grupo
+• Ocorrência de conflitos ou desentendimentos
+
+Caso tenha ocorrido alguma forma de desrespeito, o ocorrido deverá ser informado no formulário, juntamente com a respectiva menção atribuída ao aluno (I, R, B ou MB).',
+ 1.00, 'pares', 'todos', NULL, 0, '2026-02-19 03:35:13'),
+
+(19, 3, NULL, '3.2 Avaliação de desempenho.',
+ 'Este subcritério avalia o desempenho individual do aluno nas ações da Semana Paulo Freire, com base na percepção dos colegas.
+
+A avaliação será realizada no mesmo formulário, onde os alunos deverão atribuir uma menção (I, R, B ou MB) para cada colega, considerando:
+• Participação nas atividades
+• Qualidade das contribuições
+• Comprometimento com o grupo',
+ 1.00, 'pares', 'todos', NULL, 0, '2026-02-19 03:35:13');
+
+-- Confirma a soma dos pesos (deve ser 10.00)
+SELECT
+    COUNT(*) AS total_criterios,
+    SUM(peso) AS soma_pesos
+FROM criterios
+WHERE projeto_id = 3;
+
+-- ---------------------------------------------------------------------
+-- ATAS SIMPLIFICADAS (3 atas)
+-- ---------------------------------------------------------------------
+INSERT INTO atas (id, titulo, descricao, grupo_id, diretor_id, representante_id, data_ata, prazo_preenchimento, status, created_at, updated_at) VALUES
+(34, 'Reunião de planejamento inicial', 'Primeira reunião do grupo para alinhar tema e divisão de tarefas.', 5,  24, 19, '2026-03-15', '2026-03-20', 'revisada',   '2026-03-15 19:00:00', '2026-03-18 10:00:00'),
+(35, 'Ensaio de cena e coreografia',    'Ensaio do primeiro ato com marcação de coreografia.',                13, 20, 19, '2026-04-12', '2026-04-18', 'preenchida', '2026-04-12 14:00:00', '2026-04-14 16:30:00'),
+(36, 'Ajustes finais de roteiro',       'Revisão do roteiro final e ajustes de fala.',                        8,  28, 19, '2026-04-25', '2026-04-30', 'pendente',   '2026-04-25 15:00:00', '2026-04-25 15:00:00');
+
+-- ---------------------------------------------------------------------
+-- ATIVIDADES DAS ATAS (3 atividades, uma por ata)
+-- ---------------------------------------------------------------------
+INSERT INTO atividades_ata (id, ata_id, nome, descricao, autor_id, created_at) VALUES
+(15, 34, 'Definição do tema e divisão de tarefas',
+ 'O grupo se reuniu para escolher o tema principal da peça e dividir as primeiras tarefas entre os membros. Ficou definido que cada integrante trará referências visuais até a próxima reunião.', 25, '2026-03-15 20:30:00'),
+
+(19, 35, 'Coreografia flamenco (primeira dança)',
+ 'Iniciamos a marcação da coreografia de flamenco com os casais principais. Ajustamos as posições e os tempos de entrada e saída de cena.', 20, '2026-04-12 16:45:00'),
+
+(18, 36, 'Revisão do roteiro final',
+ 'Ajuste fino das falas do ato 3 e alinhamento do final da peça com a trilha sonora. Uma integrante ficou responsável pela consolidação do texto.', 28, '2026-04-25 17:20:00');
+
+-- ---------------------------------------------------------------------
+-- PARTICIPANTES DAS ATIVIDADES (18 registros)
+-- ---------------------------------------------------------------------
+INSERT INTO participantes_atividade (id, atividade_id, usuario_id, tipo_participacao, created_at) VALUES
+-- Ata 34 — Grupo Cenário (5)
+(54, 15, 24, 'responsavel', '2026-03-15 20:30:00'),
+(55, 15, 25, 'colaborador', '2026-03-15 20:30:00'),
+(56, 15, 38, 'colaborador', '2026-03-15 20:30:00'),
+(57, 15, 20, 'colaborador', '2026-03-15 20:30:00'),
+(58, 15, 35, 'colaborador', '2026-03-15 20:30:00'),
+
+-- Ata 35 — Grupo Coreografia (13)
+(72, 19, 20, 'responsavel', '2026-04-12 16:45:00'),
+(73, 19, 32, 'colaborador', '2026-04-12 16:45:00'),
+(74, 19, 2,  'colaborador', '2026-04-12 16:45:00'),
+(75, 19, 4,  'colaborador', '2026-04-12 16:45:00'),
+
+-- Ata 36 — Grupo Roteiro (8)
+(63, 18, 28, 'responsavel', '2026-04-25 17:20:00'),
+(64, 18, 8,  'colaborador', '2026-04-25 17:20:00'),
+(65, 18, 35, 'colaborador', '2026-04-25 17:20:00'),
+(66, 18, 40, 'colaborador', '2026-04-25 17:20:00'),
+(67, 18, 20, 'colaborador', '2026-04-25 17:20:00'),
+(68, 18, 24, 'colaborador', '2026-04-25 17:20:00'),
+(69, 18, 32, 'colaborador', '2026-04-25 17:20:00'),
+(70, 18, 12, 'colaborador', '2026-04-25 17:20:00'),
+(71, 18, 13, 'colaborador', '2026-04-25 17:20:00');
+
+-- ---------------------------------------------------------------------
+-- RELATÓRIOS DE ATA (2 relatórios)
+-- ---------------------------------------------------------------------
+INSERT INTO relatorios_ata (id, ata_id, usuario_id, tipo_usuario, titulo, conteudo, tipo_relatorio, tema, created_at) VALUES
+(1, 34, 24, 'diretor', 'Alinhamento de expectativas',
+ 'O grupo mostrou boa participação na discussão do tema. Ficou claro que precisamos melhorar a comunicação sobre prazos de entrega.', 'decisao', 'proatividade', '2026-03-15 21:00:00'),
+
+(2, 35, 20, 'diretor', 'Dificuldade com a coreografia',
+ 'Dois integrantes tiveram dificuldade em acompanhar os movimentos. Ficou combinado um ensaio extra antes da próxima reunião.', 'observacao', 'dificuldade_tecnica', '2026-04-12 17:30:00');
+
+-- ---------------------------------------------------------------------
+-- PARTICIPANTES DE RELATÓRIO (5 registros)
+-- ---------------------------------------------------------------------
+INSERT INTO participantes_relatorio (relatorio_id, usuario_id) VALUES
+(1, 24),
+(1, 25),
+(1, 38),
+(2, 20),
+(2, 32);
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- =====================================================================
--- SEED — MASTER INICIAL
+-- VERIFICAÇÃO
 -- =====================================================================
--- Senha padrão: admin123
--- (hash bcrypt abaixo — troque no primeiro login)
-
-INSERT INTO usuarios (nome, email, senha, tipo, email_confirmado, primeiro_login, ativo, lgpd_aceito, lgpd_data)
-VALUES (
-  'Master',
-  'master@adm.com',
-  '$2y$12$abcdefghijklmnopqrstuvABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
-  'master',
-  1,
-  1,
-  1,
-  1,
-  NOW()
-);
-
-INSERT INTO preferencias_usuario (usuario_id, receber_email, receber_email_prazos, receber_email_alertas, receber_email_avaliacoes)
-VALUES (1, 1, 1, 1, 1);
+SELECT 'usuarios'            AS tabela, COUNT(*) AS total FROM usuarios
+UNION ALL SELECT 'turmas',              COUNT(*) FROM turmas
+UNION ALL SELECT 'turma_usuarios',      COUNT(*) FROM turma_usuarios
+UNION ALL SELECT 'cursos',              COUNT(*) FROM cursos
+UNION ALL SELECT 'periodos',            COUNT(*) FROM periodos
+UNION ALL SELECT 'projetos',            COUNT(*) FROM projetos
+UNION ALL SELECT 'projeto_etapas',      COUNT(*) FROM projeto_etapas
+UNION ALL SELECT 'criterios',           COUNT(*) FROM criterios
+UNION ALL SELECT 'grupos',              COUNT(*) FROM grupos
+UNION ALL SELECT 'grupo_alunos',        COUNT(*) FROM grupo_alunos
+UNION ALL SELECT 'grupo_diretores',     COUNT(*) FROM grupo_diretores
+UNION ALL SELECT 'atas',                COUNT(*) FROM atas
+UNION ALL SELECT 'atividades_ata',      COUNT(*) FROM atividades_ata
+UNION ALL SELECT 'participantes_atv',   COUNT(*) FROM participantes_atividade
+UNION ALL SELECT 'relatorios_ata',      COUNT(*) FROM relatorios_ata
+UNION ALL SELECT 'participantes_rel',   COUNT(*) FROM participantes_relatorio;

@@ -1,74 +1,96 @@
 <?php
-require_once __DIR__ . '/../layouts/header.php';
-require_once __DIR__ . '/../layouts/nav.php';
-require_once __DIR__ . '/../layouts/flashes.php';
+$tituloPagina    = 'Entrar — ' . App::getName();
+$authSideTitle   = 'Bem-vindo de volta.';
+$authSideSubtitle = 'Acesse sua conta para continuar.';
+
+require_once __DIR__ . '/../layouts/auth_header.php';
 ?>
 
-<h1>Entrar</h1>
+<div class="auth-header">
+    <h1>Entrar</h1>
+    <p>Informe suas credenciais para acessar o sistema.</p>
+</div>
 
-<form method="POST" action="<?= $basePath ?>/login">
+<form method="POST" action="<?= $basePath ?>/login" class="auth-form" autocomplete="on">
     <?= ViewHelper::csrfField() ?>
 
-    <p>
-        <label>Email<br>
-            <input type="email" name="email" required autofocus>
-        </label>
-    </p>
-    <p>
-        <label>Senha<br>
-            <input type="password" name="senha" required>
-        </label>
-    </p>
-    <p>
-        <button type="submit"><i class="fas fa-right-to-bracket"></i> Entrar</button>
-    </p>
+    <div class="auth-field">
+        <label for="login-email">Email <span class="obrigatorio">*</span></label>
+        <input type="email" id="login-email" name="email"
+               placeholder="seu@email.com" required autofocus
+               autocomplete="email">
+    </div>
+
+    <div class="auth-field">
+        <label for="login-senha">Senha <span class="obrigatorio">*</span></label>
+        <div class="auth-password-wrap">
+            <input type="password" id="login-senha" name="senha"
+                   placeholder="Sua senha" required
+                   autocomplete="current-password">
+            <button type="button" class="auth-password-toggle" aria-label="Mostrar senha">
+                <i class="fas fa-eye"></i>
+            </button>
+        </div>
+    </div>
+
+    <button type="submit" class="auth-submit">
+        <i class="fas fa-right-to-bracket"></i> Entrar
+    </button>
 </form>
 
-<p><a href="<?= $basePath ?>/auth/esqueci-senha"><i class="fas fa-key"></i> Esqueci minha senha</a></p>
-<p>Não tem conta? <a href="<?= $basePath ?>/login/cadastrar">Cadastre-se</a></p>
+<div class="auth-links">
+    <a href="<?= $basePath ?>/auth/esqueci-senha">
+        <i class="fas fa-key"></i> Esqueci minha senha
+    </a>
+    <span>Não tem conta? <a href="<?= $basePath ?>/login/cadastrar">Cadastre-se</a></span>
+</div>
 
 <?php if (App::get('APP_ENV') === 'development'): ?>
-    <hr>
-    <fieldset>
-        <legend><i class="fas fa-flask"></i> Dev — preenchimento rápido</legend>
-        <p>Estes botões só aparecem em <code>APP_ENV=development</code>. Senha de todos: <code>Teste@1234</code></p>
-
+    <div class="auth-dev">
+        <div class="auth-dev-header">
+            <i class="fas fa-flask"></i> Dev — preenchimento rápido
+        </div>
         <p>
-            <button type="button" onclick="devFill('master@adm.com', 'Teste@1234')">
+            Senha de todos: <code>Teste@1234</code><br>
+            <small style="opacity:.75;">Usuários reais da turma 231-3ANO-INFO-M.</small>
+        </p>
+
+        <div class="auth-dev-buttons">
+            <button type="button" class="auth-dev-btn" onclick="devFill('jose@adm.com')">
                 <i class="fas fa-user-shield"></i> Master
             </button>
 
-            <button type="button" onclick="devFill('rep@teste.com', 'Teste@1234')">
-                <i class="fas fa-user-tie"></i> Representante (turma Info2026)
+            <button type="button" class="auth-dev-btn" onclick="devFill('joseaugusto@email.com')">
+                <i class="fas fa-user-tie"></i> Representante
             </button>
 
-            <button type="button" onclick="devFill('diretor@teste.com', 'Teste@1234')">
-                <i class="fas fa-crown"></i> Diretor (Grupo Alpha)
-            </button>
-        </p>
-
-        <p>
-            <button type="button" onclick="devFill('membro@teste.com', 'Teste@1234')">
-                <i class="fas fa-user-graduate"></i> Aluno comum (no grupo)
+            <button type="button" class="auth-dev-btn" onclick="devFill('ana@email.com')">
+                <i class="fas fa-crown"></i> Diretor
             </button>
 
-            <button type="button" onclick="devFill('aluno.com@teste.com', 'Teste@1234')">
-                <i class="fas fa-user"></i> Aluno (turma, sem grupo)
+            <button type="button" class="auth-dev-btn" onclick="devFill('andrey@email.com')">
+                <i class="fas fa-user-graduate"></i> Aluno (grupo)
             </button>
 
-            <button type="button" onclick="devFill('aluno.sem@teste.com', 'Teste@1234')">
-                <i class="fas fa-user-slash"></i> Aluno sem turma
+            <button type="button" class="auth-dev-btn" onclick="devFill('melissa@email.com')">
+                <i class="fas fa-user"></i> Aluno (turma)
             </button>
-        </p>
-    </fieldset>
+
+            <button type="button" class="auth-dev-btn" onclick="devFill('carol@aluno.edu')">
+                <i class="fas fa-user-slash"></i> Aluno (sem turma)
+            </button>
+        </div>
+    </div>
 
     <script>
-        function devFill(email, senha) {
-            document.querySelector('input[name="email"]').value = email;
-            document.querySelector('input[name="senha"]').value = senha;
-            document.querySelector('input[name="senha"]').focus();
+        function devFill(email) {
+            var emailInput = document.getElementById('login-email');
+            var senhaInput = document.getElementById('login-senha');
+            emailInput.value = email;
+            senhaInput.value = 'Teste@1234';
+            senhaInput.focus();
         }
     </script>
 <?php endif; ?>
 
-<?php require_once __DIR__ . '/../layouts/footer.php'; ?>
+<?php require_once __DIR__ . '/../layouts/auth_footer.php'; ?>

@@ -1,0 +1,427 @@
+/* ============================================================
+   CRITÉRIOS — estilos específicos
+   Carregado em /projetos/*/criterios e /criterios/*
+   ============================================================ */
+
+/* ---------- Resumo da soma de pesos ---------- */
+.crit-resumo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 14px 16px;
+    background: var(--surface-2);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    font-size: 13px;
+}
+
+.crit-resumo-label {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.crit-resumo-valor {
+    font-size: 18px;
+    font-weight: 750;
+    letter-spacing: -.5px;
+}
+
+.crit-resumo-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+}
+
+.crit-resumo-status.incompleto {
+    background: rgba(245, 166, 72, .15);
+    color: #d48b1c;
+}
+.crit-resumo-status.completo {
+    background: rgba(57, 184, 137, .15);
+    color: #29946e;
+}
+.crit-resumo-status.excedido {
+    background: rgba(228, 109, 120, .15);
+    color: var(--red);
+}
+
+.crit-resumo-valor.incompleto { color: #d48b1c; }
+.crit-resumo-valor.completo   { color: #29946e; }
+.crit-resumo-valor.excedido   { color: var(--red); }
+
+/* ---------- Grid de cards de critério ---------- */
+.crit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.crit-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 200px;
+}
+
+.crit-card .panel-header { margin-bottom: 4px; }
+.crit-card .panel-header h2 {
+    font-size: 15px;
+    line-height: 1.35;
+    margin-bottom: 4px;
+    word-break: break-word;
+}
+.crit-card .panel-header p {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.crit-card .status-line {
+    border-top: 1px solid var(--border);
+    padding: 8px 0;
+    margin: 0;
+    font-size: 12px;
+}
+.crit-card .status-line:last-of-type { border-bottom: 0; }
+
+.crit-card .crit-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+}
+
+/* Tags pequenas (tipo + aplicável) */
+.crit-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--surface-2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+}
+.crit-tag.tipo-diretor        { background: rgba(60, 142, 234, .12);  color: var(--blue);    border-color: transparent; }
+.crit-tag.tipo-representante  { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); border-color: transparent; }
+.crit-tag.tipo-pares          { background: rgba(57, 184, 137, .12);  color: #29946e;        border-color: transparent; }
+.crit-tag.tipo-autoavaliacao  { background: rgba(245, 166, 72, .12);  color: #d48b1c;        border-color: transparent; }
+.crit-tag.tipo-coletiva       { background: rgba(228, 109, 120, .12); color: var(--red);     border-color: transparent; }
+.crit-tag.tipo-misto          { background: rgba(139, 92, 246, .12);  color: #8b5cf6;        border-color: transparent; }
+
+.crit-tag.apenas_diretores       { background: rgba(245, 166, 72, .12);  color: #d48b1c; border-color: transparent; }
+.crit-tag.apenas_representantes  { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); border-color: transparent; }
+
+/* Ações no rodapé do card */
+.crit-card .crit-acoes {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+/* ---------- Painel de detalhe (modal ou inline) ---------- */
+.crit-detalhes {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.crit-detalhe-linha {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+}
+.crit-detalhe-linha:last-child { border-bottom: 0; }
+.crit-detalhe-linha .label {
+    color: var(--muted);
+    font-weight: 600;
+    flex-shrink: 0;
+}
+.crit-detalhe-linha .valor {
+    color: var(--text);
+    text-align: right;
+    word-break: break-word;
+}
+
+/* ---------- Bloco de "Como funciona cada tipo" ---------- */
+.tipos-lista {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.tipo-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    border-left: 4px solid var(--border-strong);
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+.tipo-item strong { color: var(--text); }
+.tipo-item code {
+    background: var(--surface-2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.9em;
+}
+
+.tipo-item.t-diretor        { border-left-color: var(--blue); }
+.tipo-item.t-representante  { border-left-color: var(--primary); }
+.tipo-item.t-pares          { border-left-color: var(--green); }
+.tipo-item.t-autoavaliacao  { border-left-color: var(--orange); }
+.tipo-item.t-coletiva       { border-left-color: var(--red); }
+.tipo-item.t-misto          { border-left-color: #8b5cf6; }
+
+/* ---------- Bloco de reabertura ---------- */
+.crit-reabrir-info {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: rgba(245, 166, 72, .12);
+    border-left: 3px solid var(--orange);
+    color: #d48b1c;
+    font-size: 12.5px;
+    line-height: 1.55;
+    margin-bottom: 16px;
+}
+.crit-reabrir-info i {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+.crit-reabrir-info strong { color: var(--text); }
+
+/* ---------- Bloco de aviso de exclusão com arquivamento ---------- */
+.crit-arquivamento-info {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: rgba(228, 109, 120, .1);
+    border-left: 3px solid var(--red);
+    color: var(--red);
+    font-size: 12.5px;
+    line-height: 1.55;
+    margin: 14px 0;
+}
+.crit-arquivamento-info i { flex-shrink: 0; margin-top: 2px; }
+.crit-arquivamento-info strong { color: var(--text); }
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 800px) {
+    .crit-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .crit-card { min-height: 0; }
+    .crit-resumo { flex-direction: column; align-items: flex-start; }
+    .crit-detalhe-linha { flex-direction: column; gap: 4px; }
+    .crit-detalhe-linha .valor { text-align: left; }
+    .crit-card .crit-acoes { flex-direction: column; align-items: stretch; }
+    .crit-card .crit-acoes .button { width: 100%; }
+}
+/* ============================================================
+   MODAL DE DETALHES DO CRITÉRIO
+   ============================================================ */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .5);
+    z-index: 9000;
+    padding: 2rem;
+    overflow-y: auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    animation: modalFadeIn .18s ease;
+}
+
+.modal-overlay[hidden] { display: none !important; }
+
+@keyframes modalFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.modal-box {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    max-width: 640px;
+    width: 100%;
+    margin: 2rem auto;
+    padding: 26px 28px 22px;
+    border-radius: var(--radius);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .28);
+    position: relative;
+    animation: modalSlideUp .22s ease;
+}
+
+@keyframes modalSlideUp {
+    from { transform: translateY(12px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 17px;
+    letter-spacing: -.3px;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.modal-close {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 8px;
+    line-height: 1;
+    transition: .15s;
+    flex-shrink: 0;
+}
+.modal-close:hover {
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+/* Bloqueia scroll do body quando o modal está aberto */
+body.modal-open {
+    overflow: hidden;
+}
+
+/* Mobile */
+@media (max-width: 800px) {
+    .modal-overlay { padding: 12px; }
+    .modal-box {
+        margin: 12px auto;
+        padding: 20px 18px 18px;
+        border-radius: 14px;
+    }
+    .modal-header h2 { font-size: 15px; }
+}
+/* ============================================================
+   LISTA DE CRITÉRIOS (visual novo)
+   ============================================================ */
+.crit-numeros .num { font-size: 36px; }
+.grade-celula .crit-de { display: inline; font-size: 16px; color: var(--muted); }
+.crit-barra { display: block; height: 6px; margin-top: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.crit-barra span { display: block; height: 100%; border-radius: inherit; background: var(--orange); }
+.crit-soma.completo .crit-barra span { background: var(--green); }
+.crit-soma.excedido .crit-barra span { background: var(--red); }
+.crit-soma .crit-soma-txt { font-weight: 700; color: var(--orange); }
+.crit-soma.completo .crit-soma-txt { color: var(--green); }
+.crit-soma.excedido .crit-soma-txt { color: var(--red); }
+
+.lista-criterios li { grid-template-columns: 52px minmax(0, 1fr) auto auto; align-items: start; }
+.lista-criterios li.bloqueado .crit-peso { background: var(--surface-2); color: var(--muted); }
+.crit-peso {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 6px 0; border-radius: 8px;
+    background: var(--primary-soft); color: var(--primary);
+    font-size: 17px;
+}
+.crit-peso small { font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-top: 2px; }
+.crit-tipo { font-weight: 700; }
+.crit-tipo.t-diretor       { color: var(--blue); }
+.crit-tipo.t-representante { color: var(--primary); }
+.crit-tipo.t-pares         { color: var(--green); }
+.crit-tipo.t-autoavaliacao { color: var(--orange); }
+.crit-tipo.t-coletiva      { color: var(--red); }
+.crit-tipo.t-misto         { color: color-mix(in srgb, var(--blue) 50%, var(--primary)); }
+
+.crit-descricao { margin-top: 6px; font-size: 13px; }
+.crit-descricao summary { cursor: pointer; color: var(--primary); font-weight: 600; font-size: 12px; width: fit-content; }
+.crit-descricao p { margin: 8px 0 0; color: var(--muted); line-height: 1.55; max-width: 72ch; }
+
+.crit-status {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border-radius: 99px;
+    font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+.crit-status.aberto { background: color-mix(in srgb, var(--green) 14%, var(--surface)); color: var(--green); }
+.crit-status.fechado { background: var(--surface-2); color: var(--muted); }
+.crit-acoes-linha { display: flex; gap: 6px; align-items: center; }
+
+@media (max-width: 760px) {
+    .lista-criterios li { grid-template-columns: 52px minmax(0, 1fr); }
+    .lista-criterios .crit-status { grid-column: 2; justify-self: start; }
+    .lista-criterios .crit-acoes-linha { grid-column: 1 / -1; }
+    .lista-criterios .crit-acoes-linha .tarefa-acao:not(.perigo) { flex: 1; text-align: center; }
+}
+
+/* Formulário: quanto do peso ainda falta */
+.crit-peso-dica { font-weight: 600; }
+.crit-peso-dica.ok { color: var(--green); }
+.crit-peso-dica.alerta { color: var(--red); }
+@media (max-width: 640px) {
+    .crit-numeros .crit-soma { grid-column: 1 / -1; border-right: 0; border-bottom: 1px solid var(--border); }
+    .crit-numeros .grade-celula:nth-child(2) { border-right: 1px solid var(--border); border-bottom: 0; }
+    .crit-numeros .grade-celula:nth-child(3) { border-right: 0; }
+}
+
+/* Critério obrigatório */
+.crit-obrig-linha { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 6px; font-size: 12px; }
+.crit-obrig-tag { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 99px; background: color-mix(in srgb, var(--orange) 14%, var(--surface)); color: var(--orange); font-weight: 700; }
+.crit-obrig-tag i { font-size: 9px; }
+.crit-obrig-ok { color: var(--green); font-weight: 600; }
+.crit-faltam summary { cursor: pointer; font-weight: 600; color: var(--muted); }
+.crit-faltam p { margin: 6px 0 0; color: var(--muted); line-height: 1.5; max-width: 72ch; }
+.crit-obrigatorio[hidden] { display: none; }
+.crit-faltam summary.txt-alerta { color: var(--red); }
+
+/* Desconto por não preencher critério obrigatório */
+.crit-obrig-linha:has(.crit-faltam[open]) { flex-direction: column; align-items: flex-start; }
+.crit-desc-form { margin-top: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.crit-desc-alunos { display: flex; flex-wrap: wrap; gap: 6px; max-height: 200px; overflow-y: auto; }
+.crit-desc-alunos .participante { font-size: 12px; }
+.crit-desc-acao { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; font-size: 13px; color: var(--text); }
+.crit-desc-acao .field { display: inline-block; width: 80px; margin: 0 4px; padding: 6px 8px; }
+.crit-desc-lista { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.crit-desc-lista li { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 99px; color: var(--text); }
+.crit-desc-lista strong { color: var(--red); }
+.crit-desc-remover { border: 0; background: none; padding: 0; color: var(--muted); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
+.crit-desc-remover:hover { color: var(--red); }
+.crit-desc-acao .txt-mudo { color: var(--muted); font-size: 12px; }
+.crit-desc-lista strong { display: inline; font-size: 12px; }
+.crit-desc-alunos .participante { padding: 4px 10px; min-height: 0; }

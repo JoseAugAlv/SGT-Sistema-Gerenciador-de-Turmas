@@ -13,7 +13,10 @@ class AtividadeAta extends Model
     public function listarPorAta(int $ataId): array
     {
         $stmt = $this->conn->prepare("
-            SELECT * FROM atividades_ata WHERE ata_id = ? ORDER BY id ASC
+            SELECT at.*, u.nome AS autor_nome
+            FROM atividades_ata at
+            LEFT JOIN usuarios u ON u.id = at.autor_id
+            WHERE at.ata_id = ? ORDER BY at.id ASC
         ");
         $stmt->execute([$ataId]);
         $atividades = $stmt->fetchAll(PDO::FETCH_ASSOC);

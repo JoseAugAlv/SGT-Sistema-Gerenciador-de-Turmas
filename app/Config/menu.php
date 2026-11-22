@@ -52,6 +52,13 @@ return [
             'secao' => 'Visão geral',
         ],
         [
+            'label' => 'Alunos',
+            'url'   => '/alunos',
+            'icon'  => 'fa-solid fa-user-graduate',
+            'roles' => ['master', 'aluno'],
+            'secao' => 'Visão geral',
+        ],
+        [
             'label' => 'Notificações',
             'url'   => '/notificacoes',
             'icon'  => 'fas fa-bell',
@@ -64,6 +71,14 @@ return [
             'url'   => '/projetos',
             'icon'  => 'fa-solid fa-diagram-project',
             'roles' => ['master', 'aluno'],
+            'type'  => 'notif',
+            'secao' => 'Visão geral',
+        ],
+        [
+            'label' => 'Minhas atividades',
+            'url'   => '/minhas-atividades',
+            'icon'  => 'fa-solid fa-clipboard-user',
+            'roles' => ['aluno'],
             'type'  => 'notif',
             'secao' => 'Visão geral',
         ],

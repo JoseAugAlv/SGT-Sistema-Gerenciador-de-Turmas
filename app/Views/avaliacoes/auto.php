@@ -1,99 +1,88 @@
 <?php
+$cssPagina = ['projetos.css', 'avaliacoes.css'];
+
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 require_once __DIR__ . '/../layouts/flashes.php';
+
+$fmt = fn($v) => $v === null || $v === '' ? '' : rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
 ?>
 
-<h1><?= h($projeto['nome']) ?></h1>
-<p>Turma: <a href="<?= $basePath ?>/turmas/<?= (int) $projeto['turma_id'] ?>"><?= h($projeto['turma_nome']) ?></a></p>
+<section class="hero-section">
+    <div>
+        <h1>Autoavaliação</h1>
+        <p class="hero-subtitle">
+            <?= h($projeto['nome']) ?> ·
+            <a href="<?= $basePath ?>/turmas/<?= (int) $projeto['turma_id'] ?>"><?= h($projeto['turma_nome']) ?></a>
+        </p>
+    </div>
+</section>
 
 <?php require __DIR__ . '/../projetos/_nav.php'; ?>
 <?php require __DIR__ . '/_nav.php'; ?>
 
-<h2>Autoavaliação</h2>
-
 <?php if (empty($criterios)): ?>
-    <p>Nenhum critério de autoavaliação aberto.</p>
-    <?php require_once __DIR__ . '/../layouts/footer.php'; return; ?>
-<?php endif; ?>
+    <div class="lista-vazia">
+        <i class="fas fa-user-check"></i>
+        <span>Não há critérios de autoavaliação abertos agora.</span>
+    </div>
+<?php else: ?>
 
-<form method="POST" action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/avaliacoes/auto/salvar">
+<p class="aval-explica">
+    <i class="fas fa-circle-info" aria-hidden="true"></i>
+    <span>Avalie com sinceridade o seu próprio trabalho em cada critério. Escolha um conceito ou digite um valor de 0 a 100.</span>
+</p>
+
+<form method="POST" id="form-avaliacao" class="aval-app aval-app-simples"
+      action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/avaliacoes/auto/salvar"
+      data-i-max="<?= (float) $cfg['limite_i_max'] ?>" data-r-max="<?= (float) $cfg['limite_r_max'] ?>"
+      data-b-max="<?= (float) $cfg['limite_b_max'] ?>" data-chave="aval-auto-<?= (int) $projeto['id'] ?>">
     <?= ViewHelper::csrfField() ?>
 
-    <table border="1" cellpadding="4">
-        <thead>
-            <tr><th>Critério</th><th>Peso</th><th>Conceito</th><th>Valor</th></tr>
-        </thead>
-        <tbody>
-            <?php foreach ($criterios as $c): $cid = (int) $c['id']; ?>
-                <?php $reg = $minhas[$cid] ?? null;
-                      $conc = $reg['conceito'] ?? '';
-                      $val  = $reg['valor_numerico'] ?? ''; ?>
-                <tr>
-                    <td><?= h($c['nome']) ?></td>
-                    <td><?= number_format((float) $c['peso'], 2, ',', '.') ?></td>
-                    <td>
-                        <select data-campo="conceito" name="aval[<?= $cid ?>][conceito]">
-                            <option value="">—</option>
-                            <?php foreach (['I','R','B','MB'] as $op): ?>
-                                <option value="<?= $op ?>" <?= $conc === $op ? 'selected' : '' ?>><?= $op ?></option>
+    <section class="aval-painel" data-criterio="auto">
+        <ul class="aval-lista">
+            <?php foreach ($criterios as $c):
+                $cid  = (int) $c['id'];
+                $reg  = $minhas[$cid] ?? null;
+                $conc = $reg['conceito'] ?? '';
+                $val  = $reg ? $fmt($reg['valor_numerico']) : '';
+            ?>
+                <li class="aval-linha aval-linha-criterio" data-nome="<?= h(mb_strtolower($c['nome'])) ?>">
+                    <span class="aval-crit-texto">
+                        <strong><?= h($c['nome']) ?></strong>
+                        <small>
+                            peso <?= $fmt($c['peso']) ?>
+                            <?php if (!empty($c['prazo_avaliacao'])): ?> · prazo <?= h(date('d/m H:i', strtotime($c['prazo_avaliacao']))) ?><?php endif; ?>
+                        </small>
+                        <?php if (!empty($c['descricao'])): ?>
+                            <details class="aval-descricao"><summary>Ver descrição</summary><p><?= nl2br(h($c['descricao'])) ?></p></details>
+                        <?php endif; ?>
+                    </span>
+                    <span class="aval-nota" data-celula>
+                        <span class="conceito-grupo" role="radiogroup" aria-label="Conceito em <?= h($c['nome']) ?>">
+                            <?php foreach (['I', 'R', 'B', 'MB'] as $op): ?>
+                                <label class="conceito-op c-<?= strtolower($op) ?>">
+                                    <input type="radio" name="aval[<?= $cid ?>][conceito]" value="<?= $op ?>" <?= $conc === $op ? 'checked' : '' ?>>
+                                    <span><?= $op ?></span>
+                                </label>
                             <?php endforeach; ?>
-                        </select>
-                    </td>
-                    <td>
-                        <input type="number" step="0.01" min="0" max="100"
-                               data-campo="valor" name="aval[<?= $cid ?>][valor]"
-                               value="<?= $val !== '' ? number_format((float) $val, 2, '.', '') : '' ?>"
-                               style="width:80px">
-                    </td>
-                </tr>
+                        </span>
+                        <input type="text" inputmode="decimal" class="aval-valor" name="aval[<?= $cid ?>][valor]"
+                               value="<?= h($val) ?>" placeholder="—" maxlength="6" aria-label="Valor de 0 a 100 em <?= h($c['nome']) ?>">
+                        <button type="button" class="aval-limpar" data-limpar title="Tirar nota" aria-label="Tirar nota de <?= h($c['nome']) ?>"><i class="fas fa-xmark"></i></button>
+                    </span>
+                </li>
             <?php endforeach; ?>
-        </tbody>
-    </table>
+        </ul>
+    </section>
 
-    <p><button type="submit"><i class="fas fa-save"></i> Salvar</button></p>
+    <div class="aval-barra-salvar">
+        <span class="aval-status" data-status aria-live="polite">Nenhuma alteração</span>
+        <button type="submit" class="button button-primary"><i class="fas fa-check"></i> Salvar autoavaliação</button>
+    </div>
 </form>
 
-<script>
-const CFG = {
-    iMax:  <?= (int) $cfg['limite_i_max'] ?>,
-    rMin:  <?= (int) $cfg['limite_r_min'] ?>,
-    rMax:  <?= (int) $cfg['limite_r_max'] ?>,
-    bMin:  <?= (int) $cfg['limite_b_min'] ?>,
-    bMax:  <?= (int) $cfg['limite_b_max'] ?>,
-    mbMin: <?= (int) $cfg['limite_mb_min'] ?>,
-};
-function valorPorConceito(c) {
-    switch (c) {
-        case 'I':  return CFG.iMax;
-        case 'R':  return Math.round((CFG.rMin + CFG.rMax) / 2);
-        case 'B':  return Math.round((CFG.bMin + CFG.bMax) / 2);
-        case 'MB': return CFG.mbMin;
-    }
-    return '';
-}
-function conceitoPorValor(v) {
-    v = parseFloat(v);
-    if (isNaN(v)) return '';
-    if (v <= CFG.iMax) return 'I';
-    if (v <= CFG.rMax) return 'R';
-    if (v <= CFG.bMax) return 'B';
-    return 'MB';
-}
-document.addEventListener('change', e => {
-    if (e.target.matches('[data-campo="conceito"]')) {
-        const td = e.target.closest('td');
-        const inp = td.parentElement.querySelector('[data-campo="valor"]');
-        if (inp) inp.value = e.target.value ? valorPorConceito(e.target.value) : '';
-    }
-});
-document.addEventListener('input', e => {
-    if (e.target.matches('[data-campo="valor"]')) {
-        const td = e.target.closest('td');
-        const sel = td.parentElement.querySelector('[data-campo="conceito"]');
-        if (sel) sel.value = e.target.value ? conceitoPorValor(e.target.value) : '';
-    }
-});
-</script>
+<script src="<?= ViewHelper::asset('js/avaliacao.js') ?>"></script>
+<?php endif; ?>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

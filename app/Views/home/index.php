@@ -1,447 +1,367 @@
 <?php
+$cssPagina = 'home.css';
+
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 require_once __DIR__ . '/../layouts/flashes.php';
 
 $primeiroNome = explode(' ', trim($usuario['nome']))[0];
 
-$diasSemana = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-$meses      = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-$agora      = new DateTime();
-$dataLonga  = $diasSemana[(int) $agora->format('w')] . ', ' . $agora->format('d') . ' de ' . $meses[(int) $agora->format('n') - 1] . ' de ' . $agora->format('Y');
+// ---------- Turma em destaque (faixa "camiseta") ----------
+$turmaFoco = null;
+if (!$isMaster && !empty($minhasTurmas)) {
+    foreach ($minhasTurmas as $t) {
+        if (($t['meu_papel'] ?? '') === 'representante') { $turmaFoco = $t; break; }
+    }
+    $turmaFoco = $turmaFoco ?? $minhasTurmas[0];
+}
+
+$papelLabel = [
+    'representante' => 'você é representante',
+    'aluno'         => 'você é aluno',
+];
+
+// ---------- Item mais urgente (uma única placa por tela) ----------
+$urgente = null;
+foreach ($prazos as $p) {
+    if ($p['dias'] <= 3) { $urgente = $p; break; }
+}
+$alertaUrgente = null;
+if (!$urgente) {
+    foreach ($alertas as $a) {
+        if (!empty($a['urgente'])) { $alertaUrgente = $a; break; }
+    }
+}
+
+$mesesCurtos = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+
+// ---------- Projeto em foco e central de ações (por papel) ----------
+$projetoFoco = null;
+foreach ($projetos as $p) {
+    if ($turmaFoco && (int) $p['turma_id'] === (int) $turmaFoco['id']) { $projetoFoco = $p; break; }
+}
+$souRepFoco = $turmaFoco && ($turmaFoco['meu_papel'] ?? '') === 'representante';
+
+$acoes = [];
+if ($projetoFoco) {
+    $pp = $basePath . '/projetos/' . (int) $projetoFoco['id'];
+    if ($souRepFoco) {
+        $acoes = [
+            ['fas fa-clipboard-check', 'Avaliar turma',  $pp . '/avaliacoes/representante', 'Lançar notas dos critérios'],
+            ['fas fa-file-signature',  'Atas',           $pp . '/atas',                     'Criar e validar reuniões'],
+            ['fas fa-list-check',      'Critérios',      $pp . '/criterios',                'Pesos, prazos e tipos'],
+            ['fas fa-people-group',    'Grupos',         $pp . '/grupos',                   'Membros e diretores'],
+            ['fas fa-box-open',        'Materiais',      $pp . '/materiais',                'Estoque e solicitações'],
+            ['fas fa-chart-column',    'Relatórios',     $pp . '/relatorios',               'Boletins, PDF e Excel'],
+        ];
+    } else {
+        $acoes = [
+            ['fas fa-star-half-stroke', 'Minhas notas',    $pp . '/avaliacoes/minhas',   'Como estou sendo avaliado'],
+            ['fas fa-user-group',       'Avaliar colegas', $pp . '/avaliacoes/pares',    'Avaliação por pares'],
+            ['fas fa-user-check',       'Autoavaliação',   $pp . '/avaliacoes/auto',     'Avalie o seu trabalho'],
+            ['fas fa-file-lines',       'Atas',            $pp . '/atas',                'Reuniões do seu grupo'],
+            ['fas fa-box-open',         'Pedir material',  $pp . '/materiais/solicitar', 'Solicitar ao representante'],
+            ['fas fa-file-pdf',         'Meu boletim',     $pp . '/relatorios/boletim',  'Ver e baixar em PDF'],
+        ];
+        if ($souDiretorEmAlgumGrupo) {
+            array_unshift($acoes, ['fas fa-crown', 'Avaliar meu grupo', $pp . '/avaliacoes/diretor', 'Você é diretor']);
+            array_pop($acoes);
+        }
+    }
+}
+$acoesTurma = [];
+if ($turmaFoco && $souRepFoco) {
+    $tt = $basePath . '/turmas/' . (int) $turmaFoco['id'];
+    $acoesTurma = [
+        ['fas fa-bullhorn',  'Novo aviso', $tt . '/alertas/criar'],
+        ['fas fa-user-plus', 'Alunos',     $basePath . '/alunos'],
+        ['fas fa-palette',   'Identidade', $tt . '/identidade'],
+    ];
+}
 ?>
 
 <!-- ============================================================ -->
-<!-- HERO                                                          -->
+<!-- FAIXA DA TURMA                                                -->
 <!-- ============================================================ -->
-<section class="hero-section">
-    <div>
-        <div class="eyebrow">
-            <span class="status-dot"></span>
-            <?= h($dataLonga) ?>
-        </div>
-        <h1>Olá, <?= h($primeiroNome) ?></h1>
-        <p class="hero-subtitle">
-            <?php if ($isMaster): ?>
-                Acompanhe o sistema em um só lugar.
-            <?php elseif ($souRepEmAlgumaTurma): ?>
-                Aqui está o que está acontecendo nas suas turmas hoje.
-            <?php elseif ($souDiretorEmAlgumGrupo): ?>
-                Veja as pendências e o desempenho dos seus grupos.
+<section class="turma-faixa" style="<?= $turmaFoco ? h(ViewHelper::estiloTurma($turmaFoco)) : '' ?>">
+    <?php if ($turmaFoco): ?>
+        <div class="turma-logo">
+            <?php if (!empty($turmaFoco['logo'])): ?>
+                <img src="<?= h(ViewHelper::asset($turmaFoco['logo'])) ?>" alt="Logo da turma">
             <?php else: ?>
-                Veja suas turmas, avaliações e alertas.
+                <i class="fas fa-shield-halved" aria-hidden="true"></i>
             <?php endif; ?>
-        </p>
-    </div>
-
-    <div class="hero-actions">
-        <?php if ($isMaster): ?>
-            <a class="button button-secondary" href="<?= $basePath ?>/master">
-                <i class="fas fa-gauge"></i> Painel Master
-            </a>
-            <a class="button button-primary" href="<?= $basePath ?>/turmas/criar">
-                <i class="fas fa-plus"></i> Nova turma
-            </a>
-        <?php elseif ($souRepEmAlgumaTurma): ?>
-            <a class="button button-secondary" href="<?= $basePath ?>/turmas">
-                <i class="fas fa-users"></i> Minhas turmas
-            </a>
-            <a class="button button-primary" href="<?= $basePath ?>/notificacoes">
-                <i class="fas fa-bell"></i> Notificações
-                <?php if ($naoLidas > 0): ?>(<?= $naoLidas ?>)<?php endif; ?>
-            </a>
-        <?php else: ?>
-            <a class="button button-secondary" href="<?= $basePath ?>/turmas">
-                <i class="fas fa-users"></i> Minhas turmas
-            </a>
-            <a class="button button-primary" href="<?= $basePath ?>/notificacoes">
-                <i class="fas fa-bell"></i> Notificações
-                <?php if ($naoLidas > 0): ?>(<?= $naoLidas ?>)<?php endif; ?>
-            </a>
-        <?php endif; ?>
-    </div>
+        </div>
+        <div class="turma-sigla num"><?= h(ViewHelper::siglaTurma($turmaFoco['nome'])) ?></div>
+        <div class="turma-meta">
+            <strong><?= h($turmaFoco['nome']) ?></strong>
+            <span>
+                <?= h($papelLabel[$turmaFoco['meu_papel'] ?? 'aluno'] ?? 'você participa') ?>
+                <?php if (count($minhasTurmas) > 1): ?> · <?= count($minhasTurmas) ?> turmas<?php endif; ?>
+            </span>
+        </div>
+        <a class="turma-abrir" href="<?= $basePath ?>/turmas/<?= (int) $turmaFoco['id'] ?>" aria-label="Abrir turma <?= h($turmaFoco['nome']) ?>">
+            <i class="fas fa-chevron-right"></i>
+        </a>
+    <?php else: ?>
+        <div class="turma-meta">
+            <strong class="turma-ola">Olá, <?= h($primeiroNome) ?></strong>
+            <span><?= $isMaster ? 'Administração do sistema · ' . count($minhasTurmas) . ' turmas' : 'Você ainda não está em nenhuma turma' ?></span>
+        </div>
+    <?php endif; ?>
 </section>
 
-<!-- ============================================================ -->
-<!-- ALERTAS (destaque)                                            -->
-<!-- ============================================================ -->
-<?php if (!empty($alertas)): ?>
-    <section class="panel" style="margin-bottom:16px; border-left:4px solid <?= $alertas[0]['urgente'] ? 'var(--red)' : 'var(--primary)' ?>;">
-        <div class="panel-header">
-            <div>
-                <h2><i class="fas fa-bullhorn"></i> Alertas recentes</h2>
-                <p>Avisos enviados para as suas turmas.</p>
-            </div>
-            <?php foreach ($minhasTurmas as $t): ?>
-                <a class="text-link" href="<?= $basePath ?>/turmas/<?= (int) $t['id'] ?>/alertas">Ver todos <span>→</span></a>
-                <?php break; ?>
-            <?php endforeach; ?>
-        </div>
+<div class="painel-grid">
+<div class="painel-main">
 
-        <?php foreach ($alertas as $a): ?>
-            <div class="activity-item">
-                <div class="activity-icon <?= $a['urgente'] ? 'orange' : 'purple' ?>">
-                    <i class="fas fa-bullhorn"></i>
-                </div>
-                <div style="flex:1;">
-                    <strong>
-                        <?php if ($a['urgente']): ?>
-                            <span class="badge badge-red">URGENTE</span>
-                        <?php endif; ?>
-                        <?= h($a['titulo']) ?>
-                    </strong>
-                    <span>
-                        <?= h($a['turma_nome_ctx']) ?>
-                        • por <?= h($a['autor_nome'] ?? '—') ?>
-                        • <?= h($a['created_at']) ?>
-                    </span>
-                    <p style="margin:6px 0 0; color:var(--text); font-size:12px;">
-                        <?= nl2br(h($a['mensagem'])) ?>
-                    </p>
-                </div>
-            </div>
-        <?php endforeach; ?>
-    </section>
+<!-- ============================================================ -->
+<!-- ITEM URGENTE                                                  -->
+<!-- ============================================================ -->
+<?php if ($urgente): $dtU = new DateTime($urgente['prazo']); ?>
+    <a class="placa-urgente" href="<?= $basePath ?>/projetos/<?= (int) $urgente['projeto_id'] ?>">
+        <div>
+            <strong><?= $urgente['tipo'] === 'criterio' ? 'Critério' : 'Projeto' ?> “<?= h($urgente['titulo']) ?>” <?= $urgente['dias'] <= 0 ? 'fecha hoje' : 'fecha em ' . (int) $urgente['dias'] . ' dia(s)' ?></strong>
+            <span><?= h($urgente['contexto']) ?></span>
+        </div>
+        <div class="placa-prazo">
+            <span class="num"><?= $urgente['dias'] <= 0 ? h($dtU->format('H:i')) : h($dtU->format('d/m')) ?></span>
+            <small>prazo</small>
+        </div>
+    </a>
+<?php elseif ($alertaUrgente): ?>
+    <a class="placa-urgente" href="<?= $basePath ?>/notificacoes">
+        <div>
+            <strong><?= h($alertaUrgente['titulo']) ?></strong>
+            <span><?= h($alertaUrgente['turma_nome_ctx']) ?> · aviso urgente</span>
+        </div>
+        <div class="placa-prazo"><i class="fas fa-bullhorn"></i></div>
+    </a>
 <?php endif; ?>
 
 <!-- ============================================================ -->
-<!-- ESTATÍSTICAS                                                  -->
+<!-- NÚMEROS                                                       -->
 <!-- ============================================================ -->
-<section class="stats-grid" aria-label="Resumo">
-    <?php foreach ($stats as $s): ?>
-        <article class="stat-card">
-            <div class="stat-top">
-                <span class="stat-label"><?= h($s['label']) ?></span>
-                <span class="stat-icon <?= h($s['cor']) ?>"><i class="<?= h($s['icon']) ?>"></i></span>
-            </div>
-            <div class="stat-value"><?= (int) $s['valor'] ?></div>
-            <div class="stat-foot"><span><?= h($s['foot']) ?></span></div>
-        </article>
+<section class="grade-numeros" aria-label="Resumo">
+    <?php foreach (array_slice($stats, 0, 4) as $s): ?>
+        <div class="grade-celula">
+            <span class="num"><?= str_pad((string) (int) $s['valor'], 2, '0', STR_PAD_LEFT) ?></span>
+            <small><?= h(mb_strtolower($s['label'])) ?></small>
+        </div>
     <?php endforeach; ?>
 </section>
 
 <!-- ============================================================ -->
-<!-- PROJETOS EM ANDAMENTO + ATIVIDADE                             -->
+<!-- CENTRAL DE AÇÕES                                              -->
 <!-- ============================================================ -->
-<section class="content-grid two-thirds">
-
-    <article class="panel">
-        <div class="panel-header">
-            <div>
-                <h2>Projetos em andamento</h2>
-                <p>Acompanhe o progresso dos projetos das suas turmas.</p>
-            </div>
+<?php if ($acoes): ?>
+    <section class="central-acoes" aria-labelledby="acoes-titulo">
+        <div class="bloco-titulo">
+            <h2 id="acoes-titulo">Ações</h2>
+            <a href="<?= $basePath ?>/projetos/<?= (int) $projetoFoco['id'] ?>" class="bloco-link">
+                <?= h($projetoFoco['nome']) ?> <i class="fas fa-arrow-right"></i>
+            </a>
         </div>
-
-        <?php if (empty($projetos)): ?>
-            <p style="color:var(--muted);">Nenhum projeto em andamento.</p>
-        <?php else: ?>
-            <div class="project-list">
-                <?php
-                $cores = ['coral', 'lilac', 'mint'];
-                foreach ($projetos as $i => $p):
-                    $cor = $cores[$i % 3];
-                ?>
-                    <a class="project-row" href="<?= $basePath ?>/projetos/<?= (int) $p['id'] ?>" style="text-decoration:none;">
-                        <div class="project-logo <?= $cor ?>"><?= h($p['sigla']) ?></div>
-                        <div class="project-info">
-                            <strong><?= h($p['nome']) ?></strong>
-                            <span><?= h($p['turma_nome']) ?> • <?= (int) $p['total_grupos'] ?> grupo(s) • <?= (int) $p['total_criterios'] ?> critério(s)</span>
-                            <div class="progress-line"><i style="width:<?= (int) $p['progresso'] ?>%"></i></div>
-                        </div>
-                        <div class="project-meta">
-                            <strong><?= (int) $p['progresso'] ?>%</strong>
-                            <span>
-                                <?php if ($p['dias_restantes'] === null): ?>
-                                    sem prazo
-                                <?php elseif ($p['dias_restantes'] < 0): ?>
-                                    atrasado
-                                <?php elseif ($p['dias_restantes'] === 0): ?>
-                                    hoje
-                                <?php else: ?>
-                                    em <?= (int) $p['dias_restantes'] ?> dia(s)
-                                <?php endif; ?>
-                            </span>
-                        </div>
-                        <span class="row-arrow"><i class="fas fa-chevron-right"></i></span>
-                    </a>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
-    </article>
-
-    <article class="panel">
-        <div class="panel-header">
-            <div>
-                <h2>Atividade recente</h2>
-                <p><?= $isMaster ? 'Últimas ações no sistema.' : 'Suas notificações recentes.' ?></p>
-            </div>
-        </div>
-
-        <?php if (empty($atividade)): ?>
-            <p style="color:var(--muted);">Nada por aqui ainda.</p>
-        <?php else: ?>
-            <div class="activity-list">
-                <?php foreach ($atividade as $a): ?>
-                    <div class="activity-item">
-                        <div class="activity-icon <?= h($a['cor']) ?>">
-                            <i class="<?= h($a['icon']) ?>"></i>
-                        </div>
-                        <div>
-                            <strong><?= h($a['titulo']) ?></strong>
-                            <span><?= h($a['texto']) ?></span>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
-
-        <a class="activity-footer" href="<?= $basePath ?>/notificacoes">
-            Ver histórico completo <span>→</span>
-        </a>
-    </article>
-
-</section>
-
-<!-- ============================================================ -->
-<!-- PRAZOS + PAPÉIS                                               -->
-<!-- ============================================================ -->
-<section class="content-grid two-thirds">
-
-    <article class="panel">
-        <div class="panel-header">
-            <div>
-                <h2>Próximos prazos</h2>
-                <p>Critérios e projetos que vencem em até 30 dias.</p>
-            </div>
-        </div>
-
-        <?php if (empty($prazos)): ?>
-            <p style="color:var(--muted);">Nenhum prazo nos próximos 30 dias.</p>
-        <?php else: ?>
-            <div class="deadline-list">
-                <?php foreach ($prazos as $p): ?>
-                    <div class="deadline-item">
-                        <div class="date-box <?= $p['dias'] <= 3 ? 'urgent' : '' ?>">
-                            <strong><?= h($p['dia']) ?></strong>
-                            <span><?= h($p['mes']) ?></span>
-                        </div>
-                        <div>
-                            <strong><?= h($p['titulo']) ?></strong>
-                            <span>
-                                <?= $p['tipo'] === 'criterio' ? 'Critério' : 'Projeto' ?>
-                                • <?= h($p['contexto']) ?>
-                            </span>
-                        </div>
-                        <span class="badge <?= h($p['badge']) ?>">
-                            <?php if ($p['dias'] <= 0): ?>
-                                hoje
-                            <?php else: ?>
-                                <?= (int) $p['dias'] ?> dia(s)
-                            <?php endif; ?>
-                        </span>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
-    </article>
-
-    <article class="panel">
-        <div class="panel-header">
-            <div>
-                <h2>Distribuição de papéis</h2>
-                <p>Nas suas turmas.</p>
-            </div>
-        </div>
-
-        <?php
-        $total = max(1, (int) $papeis['total']); // evita divisão por zero
-        $pctAlunos    = round($papeis['alunos']    / $total * 100);
-        $pctDiretores = round($papeis['diretores'] / $total * 100);
-        $pctReps      = round($papeis['reps']      / $total * 100);
-
-        // Conic gradient dinâmico
-        $c1 = $pctAlunos;
-        $c2 = $pctAlunos + $pctDiretores;
-        $c3 = 100;
-        ?>
-        <div class="donut-area">
-            <div class="donut" style="background: conic-gradient(
-                var(--blue) 0 <?= $c1 ?>%,
-                var(--primary) <?= $c1 ?>% <?= $c2 ?>%,
-                var(--orange) <?= $c2 ?>% 100%
-            );">
-                <div>
-                    <strong><?= (int) $papeis['total'] ?></strong>
-                    <span>pessoas</span>
-                </div>
-            </div>
-            <div class="role-legend">
-                <span><i class="legend-dot blue-dot"></i><strong><?= (int) $papeis['alunos'] ?></strong> Alunos</span>
-                <span><i class="legend-dot purple-dot"></i><strong><?= (int) $papeis['diretores'] ?></strong> Diretores</span>
-                <span><i class="legend-dot orange-dot"></i><strong><?= (int) $papeis['reps'] ?></strong> Representantes</span>
-            </div>
-        </div>
-    </article>
-
-</section>
-
-<!-- ============================================================ -->
-<!-- MINHAS TURMAS                                                 -->
-<!-- ============================================================ -->
-<section class="section-heading">
-    <div>
-        <div class="eyebrow">
-            <?= $isMaster ? 'Visão geral' : 'Onde você participa' ?>
-        </div>
-        <h2>Minhas turmas</h2>
-        <p>
-            <?php if (empty($minhasTurmas)): ?>
-                Você ainda não está em nenhuma turma.
-            <?php else: ?>
-                Você participa de <?= count($minhasTurmas) ?> turma(s).
-            <?php endif; ?>
-        </p>
-    </div>
-
-    <?php if (!$isMaster): ?>
-        <a class="button button-secondary" href="<?= $basePath ?>/turmas/entrar">
-            <i class="fas fa-right-to-bracket"></i> Entrar com código
-        </a>
-    <?php else: ?>
-        <a class="button button-primary" href="<?= $basePath ?>/turmas/criar">
-            <i class="fas fa-plus"></i> Nova turma
-        </a>
-    <?php endif; ?>
-</section>
-
-<?php if (!empty($minhasTurmas)): ?>
-    <section class="component-grid">
-        <?php foreach (array_slice($minhasTurmas, 0, 6) as $t): ?>
-            <article class="panel">
-                <div class="panel-header">
-                    <div>
-                        <h2><?= h($t['nome']) ?></h2>
-                        <p>Código: <code><?= h($t['codigo_acesso']) ?></code></p>
-                    </div>
-                    <?php if (!empty($t['bloqueada'])): ?>
-                        <span class="badge badge-red">Bloqueada</span>
-                    <?php else: ?>
-                        <span class="badge badge-green">Ativa</span>
-                    <?php endif; ?>
-                </div>
-
-                <?php if ($isMaster): ?>
-                    <div class="status-line">
-                        <strong><?= (int) ($t['total_alunos'] ?? 0) ?></strong>
-                        <span>aluno(s) ativo(s)</span>
-                    </div>
-                    <div class="status-line">
-                        <strong><?= (int) ($t['total_reps'] ?? 0) ?>/2</strong>
-                        <span>representante(s)</span>
-                    </div>
-                <?php else: ?>
-                    <div class="status-line">
-                        <span class="badge badge-gray"><?= h($t['meu_papel'] ?? 'aluno') ?></span>
-                        <span>seu papel nesta turma</span>
-                    </div>
-                <?php endif; ?>
-
-                <a class="button button-primary full-width" href="<?= $basePath ?>/turmas/<?= (int) $t['id'] ?>">
-                    <i class="fas fa-arrow-right"></i> Abrir turma
+        <div class="acoes-grade">
+            <?php foreach ($acoes as [$icone, $rotulo, $url, $dica]): ?>
+                <a class="acao" href="<?= h($url) ?>">
+                    <span class="acao-icone"><i class="<?= $icone ?>"></i></span>
+                    <span class="acao-texto"><strong><?= h($rotulo) ?></strong><small><?= h($dica) ?></small></span>
                 </a>
-            </article>
-        <?php endforeach; ?>
+            <?php endforeach; ?>
+        </div>
+        <?php if ($acoesTurma): ?>
+            <div class="acoes-turma">
+                <?php foreach ($acoesTurma as [$icone, $rotulo, $url]): ?>
+                    <a href="<?= h($url) ?>"><i class="<?= $icone ?>"></i> <?= h($rotulo) ?></a>
+                <?php endforeach; ?>
+                <button type="button" class="copiar-codigo" data-codigo="<?= h($turmaFoco['codigo_acesso']) ?>">
+                    <i class="fas fa-copy"></i> Código <code><?= h($turmaFoco['codigo_acesso']) ?></code>
+                </button>
+            </div>
+        <?php endif; ?>
     </section>
-<?php else: ?>
-    <section class="panel" style="text-align:center; padding:36px 20px;">
-        <h2 style="margin-bottom:8px;">Você ainda não está em nenhuma turma</h2>
-        <p style="color:var(--muted); max-width:480px; margin:0 auto 18px;">
-            Peça o código de acesso da turma para o professor ou representante e entre
-            usando o botão abaixo.
-        </p>
-        <a class="button button-primary" href="<?= $basePath ?>/turmas/entrar">
-            <i class="fas fa-right-to-bracket"></i> Entrar em uma turma
-        </a>
+<?php elseif ($turmaFoco): ?>
+    <section class="central-acoes">
+        <div class="lista-vazia">
+            <i class="fas fa-diagram-project"></i>
+            <span>Nenhum projeto aberto nesta turma. <a href="<?= $basePath ?>/projetos?turma_id=<?= (int) $turmaFoco['id'] ?>">Ver projetos</a></span>
+        </div>
     </section>
 <?php endif; ?>
 
 <!-- ============================================================ -->
-<!-- ATALHOS RÁPIDOS                                               -->
+<!-- PARA FAZER                                                    -->
 <!-- ============================================================ -->
-<section class="section-heading" style="margin-top:32px;">
-    <div>
-        <h2>Atalhos rápidos</h2>
-        <p>Ações frequentes.</p>
-    </div>
+<section class="para-fazer">
+    <div class="bloco-titulo"><h2>Para fazer</h2></div>
+    <?php if (!empty($criteriosPendentes)): ?>
+        <ul class="lista-tarefas mb-12">
+            <?php foreach ($criteriosPendentes as $cp): $semNenhum = (int) $cp['total'] === 0; ?>
+                <li>
+                    <span class="tarefa-icone urgente"><i class="fas fa-list-check"></i></span>
+                    <div class="tarefa-info">
+                        <strong><?= $semNenhum ? 'Crie os critérios de “' . h($cp['nome']) . '”' : 'Ajuste os pesos de “' . h($cp['nome']) . '”' ?></strong>
+                        <small><?= h($cp['turma_nome']) ?> · <?= $semNenhum
+                            ? 'sem critérios, a turma não pode ser avaliada'
+                            : 'os pesos somam ' . number_format((float) $cp['soma'], 2, ',', '.') . ' de 10' ?></small>
+                    </div>
+                    <a class="tarefa-acao" href="<?= $basePath ?>/projetos/<?= (int) $cp['id'] ?>/criterios<?= $semNenhum ? '/criar' : '' ?>"><?= $semNenhum ? 'Criar' : 'Ajustar' ?></a>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    <?php endif; ?>
+    <?php if (empty($prazos) && empty($criteriosPendentes)): ?>
+        <div class="lista-vazia">
+            <i class="fas fa-circle-check"></i>
+            <span>Nada vencendo nos próximos 30 dias.</span>
+        </div>
+    <?php elseif (!empty($prazos)): ?>
+        <ul class="lista-tarefas">
+            <?php foreach (array_slice($prazos, 0, 5) as $p): $dtP = new DateTime($p['prazo']); ?>
+                <li>
+                    <span class="tarefa-data num"><?= h($dtP->format('d')) ?><small><?= $mesesCurtos[(int) $dtP->format('n') - 1] ?></small></span>
+                    <div class="tarefa-info">
+                        <strong><?= h($p['titulo']) ?></strong>
+                        <small><?= $p['tipo'] === 'criterio' ? (!empty($p['obrigatorio']) ? '<span class="txt-alerta">Critério obrigatório</span>' : 'Critério') : 'Projeto' ?> · <?= h($p['contexto']) ?> · <?= $p['dias'] <= 0 ? 'hoje' : 'em ' . (int) $p['dias'] . ' dia(s)' ?></small>
+                    </div>
+                    <a class="tarefa-acao" href="<?= $basePath ?>/projetos/<?= (int) $p['projeto_id'] ?>">Ver</a>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    <?php endif; ?>
 </section>
 
-<section class="panel">
-    <div class="shortcut-grid">
-        <?php if ($isMaster): ?>
-            <a href="<?= $basePath ?>/turmas/criar">
-                <span class="shortcut-icon blue"><i class="fas fa-plus"></i></span>
-                <strong>Nova turma</strong>
-                <small>Criar turma com código de acesso</small>
-            </a>
-            <a href="<?= $basePath ?>/configuracoes/turmas">
-                <span class="shortcut-icon purple"><i class="fas fa-cog"></i></span>
-                <strong>Cursos e períodos</strong>
-                <small>Configurações de turma</small>
-            </a>
-            <a href="<?= $basePath ?>/master/auditoria">
-                <span class="shortcut-icon orange"><i class="fas fa-clipboard-list"></i></span>
-                <strong>Auditoria</strong>
-                <small>Histórico de ações</small>
-            </a>
-            <a href="<?= $basePath ?>/master/backup">
-                <span class="shortcut-icon green"><i class="fas fa-database"></i></span>
-                <strong>Backup</strong>
-                <small>Gerar cópia do banco</small>
-            </a>
-        <?php elseif ($souRepEmAlgumaTurma): ?>
-            <a href="<?= $basePath ?>/turmas/entrar">
-                <span class="shortcut-icon blue"><i class="fas fa-right-to-bracket"></i></span>
-                <strong>Entrar em turma</strong>
-                <small>Usar um código de acesso</small>
-            </a>
-            <a href="<?= $basePath ?>/notificacoes">
-                <span class="shortcut-icon purple"><i class="fas fa-bell"></i></span>
-                <strong>Notificações</strong>
-                <small><?= $naoLidas ?> não lida(s)</small>
-            </a>
-            <a href="<?= $basePath ?>/user">
-                <span class="shortcut-icon orange"><i class="fas fa-user"></i></span>
-                <strong>Minha conta</strong>
-                <small>Perfil e senha</small>
-            </a>
-            <a href="<?= $basePath ?>/lgpd/meus-direitos">
-                <span class="shortcut-icon green"><i class="fas fa-shield-halved"></i></span>
-                <strong>LGPD</strong>
-                <small>Exportar ou excluir dados</small>
-            </a>
-        <?php else: ?>
-            <a href="<?= $basePath ?>/turmas">
-                <span class="shortcut-icon blue"><i class="fas fa-users"></i></span>
-                <strong>Minhas turmas</strong>
-                <small>Ver onde participo</small>
-            </a>
-            <a href="<?= $basePath ?>/notificacoes">
-                <span class="shortcut-icon purple"><i class="fas fa-bell"></i></span>
-                <strong>Notificações</strong>
-                <small><?= $naoLidas ?> não lida(s)</small>
-            </a>
-            <a href="<?= $basePath ?>/user">
-                <span class="shortcut-icon orange"><i class="fas fa-user"></i></span>
-                <strong>Minha conta</strong>
-                <small>Perfil e senha</small>
-            </a>
-            <a href="<?= $basePath ?>/lgpd/meus-direitos">
-                <span class="shortcut-icon green"><i class="fas fa-shield-halved"></i></span>
-                <strong>LGPD</strong>
-                <small>Exportar ou excluir dados</small>
-            </a>
-        <?php endif; ?>
+<!-- ============================================================ -->
+<!-- PROJETOS                                                      -->
+<!-- ============================================================ -->
+<section class="para-fazer">
+    <div class="bloco-titulo">
+        <h2>Projetos em andamento</h2>
+        <a class="bloco-link" href="<?= $basePath ?>/projetos">Todos <i class="fas fa-arrow-right"></i></a>
     </div>
+    <?php if (empty($projetos)): ?>
+        <div class="lista-vazia"><i class="fas fa-diagram-project"></i><span>Nenhum projeto em andamento.</span></div>
+    <?php else: ?>
+        <ul class="lista-tarefas">
+            <?php foreach ($projetos as $p): ?>
+                <li>
+                    <span class="tarefa-icone"><i class="fas fa-diagram-project"></i></span>
+                    <div class="tarefa-info">
+                        <strong><?= h($p['nome']) ?></strong>
+                        <small>
+                            <?= h($p['turma_nome']) ?> · <?= (int) $p['total_grupos'] ?> grupo(s) · <?= (int) $p['total_criterios'] ?> critério(s) ·
+                            <?php if ($p['dias_restantes'] === null): ?>sem prazo
+                            <?php elseif ($p['dias_restantes'] < 0): ?><span class="txt-alerta">prazo vencido</span>
+                            <?php elseif ($p['dias_restantes'] === 0): ?>vence hoje
+                            <?php else: ?>vence em <?= (int) $p['dias_restantes'] ?> dia(s)<?php endif; ?>
+                        </small>
+                    </div>
+                    <a class="tarefa-acao" href="<?= $basePath ?>/projetos/<?= (int) $p['id'] ?>">Abrir</a>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    <?php endif; ?>
 </section>
+
+</div><!-- /.painel-main -->
+
+<aside class="painel-lado">
+
+    <!-- AVISOS -->
+    <section class="para-fazer">
+        <div class="bloco-titulo">
+            <h2>Avisos</h2>
+            <a class="bloco-link" href="<?= $basePath ?>/notificacoes">
+                <?= (int) $naoLidas > 0 ? (int) $naoLidas . ' não lida(s)' : 'Ver todos' ?> <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        <?php if (empty($alertas) && empty($atividade)): ?>
+            <div class="lista-vazia"><i class="fas fa-bell-slash"></i><span>Nenhum aviso por enquanto.</span></div>
+        <?php else: ?>
+            <ul class="lista-tarefas lista-compacta">
+                <?php foreach ($alertas as $a): ?>
+                    <li>
+                        <span class="tarefa-icone <?= $a['urgente'] ? 'urgente' : '' ?>"><i class="fas fa-bullhorn"></i></span>
+                        <div class="tarefa-info">
+                            <strong><?= h($a['titulo']) ?></strong>
+                            <small><?= h($a['turma_nome_ctx']) ?> · por <?= h($a['autor_nome'] ?? '—') ?></small>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+                <?php foreach (array_slice($atividade, 0, max(0, 5 - count($alertas))) as $a): ?>
+                    <li>
+                        <span class="tarefa-icone"><i class="<?= h($a['icon']) ?>"></i></span>
+                        <div class="tarefa-info">
+                            <strong><?= h($a['titulo']) ?></strong>
+                            <small><?= h($a['texto']) ?></small>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    </section>
+
+    <!-- MINHAS TURMAS -->
+    <section class="para-fazer">
+        <div class="bloco-titulo">
+            <h2><?= $isMaster ? 'Turmas' : 'Minhas turmas' ?></h2>
+            <?php if ($isMaster): ?>
+                <a class="bloco-link" href="<?= $basePath ?>/turmas/criar"><i class="fas fa-plus"></i> Nova</a>
+            <?php else: ?>
+                <a class="bloco-link" href="<?= $basePath ?>/turmas/entrar"><i class="fas fa-right-to-bracket"></i> Entrar com código</a>
+            <?php endif; ?>
+        </div>
+        <?php if (empty($minhasTurmas)): ?>
+            <div class="lista-vazia"><i class="fas fa-users"></i><span>Peça o código da turma ao representante e entre por “Entrar com código”.</span></div>
+        <?php else: ?>
+            <ul class="lista-tarefas lista-compacta">
+                <?php foreach (array_slice($minhasTurmas, 0, 6) as $t): ?>
+                    <li>
+                        <span class="mini-sigla num" style="<?= h(ViewHelper::estiloTurma($t)) ?>"><?= h(ViewHelper::siglaTurma($t['nome'])) ?></span>
+                        <div class="tarefa-info">
+                            <strong><?= h($t['nome']) ?></strong>
+                            <small>
+                                <?php if ($isMaster): ?><?= (int) ($t['total_alunos'] ?? 0) ?> aluno(s) · <?= (int) ($t['total_reps'] ?? 0) ?>/2 rep.
+                                <?php else: ?><?= h($t['meu_papel'] ?? 'aluno') ?><?php endif; ?>
+                                <?php if (!empty($t['bloqueada'])): ?> · <span class="txt-alerta">bloqueada</span><?php endif; ?>
+                            </small>
+                        </div>
+                        <a class="tarefa-acao" href="<?= $basePath ?>/turmas/<?= (int) $t['id'] ?>">Abrir</a>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+            <?php if (count($minhasTurmas) > 6): ?>
+                <a class="bloco-link mais" href="<?= $basePath ?>/turmas">Ver as <?= count($minhasTurmas) ?> turmas <i class="fas fa-arrow-right"></i></a>
+            <?php endif; ?>
+        <?php endif; ?>
+    </section>
+
+    <?php if ((int) $papeis['total'] > 0): ?>
+        <!-- PESSOAS -->
+        <section class="para-fazer">
+            <div class="bloco-titulo"><h2>Pessoas</h2></div>
+            <div class="grade-numeros grade-pessoas">
+                <div class="grade-celula"><span class="num"><?= (int) $papeis['alunos'] ?></span><small>alunos</small></div>
+                <div class="grade-celula"><span class="num"><?= (int) $papeis['diretores'] ?></span><small>diretores</small></div>
+                <div class="grade-celula"><span class="num"><?= (int) $papeis['reps'] ?></span><small>representantes</small></div>
+            </div>
+        </section>
+    <?php endif; ?>
+
+</aside>
+</div><!-- /.painel-grid -->
+
+<script>
+document.querySelectorAll('.copiar-codigo').forEach(function (b) {
+    b.addEventListener('click', function () {
+        var original = b.innerHTML;
+        var feito = function () {
+            b.innerHTML = '<i class="fas fa-check"></i> Código copiado';
+            setTimeout(function () { b.innerHTML = original; }, 1800);
+        };
+        if (navigator.clipboard) navigator.clipboard.writeText(b.dataset.codigo).then(feito); else feito();
+    });
+});
+</script>
+
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

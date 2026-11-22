@@ -43,17 +43,23 @@ class Avaliacao extends Model
         float $valor,
         ?string $justificativa = null,
         ?int $editadoPor = null
-    ): void {
+    ): bool {
         $existente = $this->porChave($criterioId, $alunoId, $avaliadorId, $tipo);
 
         if ($existente) {
+            // Nada mudou: não regrava (preserva editado_em e evita notificação repetida)
+            if ($existente['conceito'] === $conceito
+                && abs((float) $existente['valor_numerico'] - $valor) < 0.005
+                && (string) ($existente['justificativa'] ?? '') === (string) ($justificativa ?? '')) {
+                return false;
+            }
             $this->conn->prepare("
                 UPDATE avaliacoes
                 SET conceito = ?, valor_numerico = ?, justificativa = ?,
                     editado_por = ?, editado_em = NOW()
                 WHERE id = ?
-            ")->execute([$conceito, $valor, $justificativa, $editadoPor, $existente['id']]);
-            return;
+            ")->execute([$conceito, $valor, $justificativa, $editadoPor ?? $avaliadorId, $existente['id']]);
+            return true;
         }
 
         $this->conn->prepare("
@@ -61,6 +67,20 @@ class Avaliacao extends Model
                 (criterio_id, aluno_id, avaliador_id, tipo, conceito, valor_numerico, justificativa)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ")->execute([$criterioId, $alunoId, $avaliadorId, $tipo, $conceito, $valor, $justificativa]);
+        return true;
+    }
+
+    /**
+     * Remove as avaliações do avaliador só nos critérios ainda abertos do projeto
+     * (usado no "Limpar e salvar": critérios bloqueados ficam intactos).
+     */
+    public function deletarDoAvaliadorEmCriteriosAbertos(int $projetoId, int $avaliadorId): void
+    {
+        $this->conn->prepare("
+            DELETE a FROM avaliacoes a
+            INNER JOIN criterios c ON c.id = a.criterio_id
+            WHERE c.projeto_id = ? AND a.avaliador_id = ? AND c.bloqueado = 0
+        ")->execute([$projetoId, $avaliadorId]);
     }
 
     public function deletar(

@@ -1,9 +1,11 @@
 <?php
+$cssPagina = ['projetos.css', 'avaliacoes.css'];
+
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 require_once __DIR__ . '/../layouts/flashes.php';
 
-// Mapa de valores já salvos: [cid][alunoId] => linha
+// Valores já salvos por este avaliador: [cid][alunoId]
 $mapa = [];
 foreach ($minhasAvaliacoes as $cid => $linhas) {
     foreach ($linhas as $l) {
@@ -11,211 +13,185 @@ foreach ($minhasAvaliacoes as $cid => $linhas) {
     }
 }
 
-// Remove critérios bloqueados da exibição
-$critTodos     = array_values(array_filter($critTodos,     fn($c) => !$c['bloqueado']));
-$critDiretores = array_values(array_filter($critDiretores, fn($c) => !$c['bloqueado']));
-$critRepresent = array_values(array_filter($critRepresent, fn($c) => !$c['bloqueado']));
+// Critérios abertos, na ordem: todos → apenas diretores → apenas representantes
+$abertos = fn($lista) => array_values(array_filter($lista, fn($c) => !$c['bloqueado']));
+$criterios = array_merge($abertos($critTodos), $abertos($critDiretores), $abertos($critRepresent));
+// Os que esta pessoa avalia vêm primeiro; os de leitura ficam no fim da lista
+usort($criterios, fn($a, $b) => (int) empty($editaveis[(int) $a['id']]) <=> (int) empty($editaveis[(int) $b['id']]));
 
-$temCrit = !empty($critTodos) || !empty($critDiretores) || !empty($critRepresent);
+$tipoLabel = [
+    'representante' => 'Representante', 'misto' => 'Misto (diretores + representantes)',
+    'diretor' => 'Diretores', 'pares' => 'Pares', 'autoavaliacao' => 'Autoavaliação',
+];
+$aplicavelLabel = ['apenas_diretores' => 'só diretores', 'apenas_representantes' => 'só representantes'];
+
+$fmt = fn($v) => $v === null || $v === '' ? '' : rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
+$conceitoDe = fn($v) => $v === null ? '' : NotaService::conceitoPorValor((float) $v, $cfg);
 ?>
 
-<h1><?= h($projeto['nome']) ?></h1>
-<p>Turma: <a href="<?= $basePath ?>/turmas/<?= (int) $projeto['turma_id'] ?>"><?= h($projeto['turma_nome']) ?></a>
-   — <?= $projeto['encerrado'] ? 'Encerrado' : 'Em andamento' ?>
-</p>
+<section class="hero-section">
+    <div>
+        <h1><?= h($projeto['nome']) ?></h1>
+        <p class="hero-subtitle">
+            <a href="<?= $basePath ?>/turmas/<?= (int) $projeto['turma_id'] ?>"><?= h($projeto['turma_nome']) ?></a>
+            · <?= count($alunos) ?> alunos · <?= count($criterios) ?> critério(s) aberto(s)
+        </p>
+    </div>
+</section>
 
 <?php require __DIR__ . '/../projetos/_nav.php'; ?>
 <?php require __DIR__ . '/_nav.php'; ?>
 
-<h2>Avaliação em massa — Representante</h2>
-
-<p><small>
-    <i class="fas fa-info-circle"></i>
-    <span style="background:#dbeafe;padding:2px 6px">Azul</span>: todos os alunos.
-    <span style="background:#fed7aa;padding:2px 6px">Laranja</span>: apenas diretores.
-    <span style="background:#d1fae5;padding:2px 6px">Verde</span>: apenas representantes.
-</small></p>
-
-<?php if (!$temCrit): ?>
-    <p><strong>Nenhum critério aberto para avaliação.</strong></p>
-    <?php require_once __DIR__ . '/../layouts/footer.php'; return; ?>
+<?php if ($projeto['encerrado']): ?>
+    <div class="flash flash-aviso"><i class="fas fa-lock"></i><div class="flash-texto"><strong>Projeto encerrado</strong><span>Não é possível salvar novas avaliações.</span></div></div>
 <?php endif; ?>
 
-<form method="POST" action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/avaliacoes/representante/salvar" id="form-bulk">
+<?php if (empty($criterios)): ?>
+    <div class="lista-vazia">
+        <i class="fas fa-clipboard-check"></i>
+        <span>Nenhum critério aberto para avaliar agora. Critérios com prazo vencido ficam bloqueados.</span>
+    </div>
+<?php else: ?>
+
+<form method="POST" id="form-avaliacao" class="aval-app"
+      action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/avaliacoes/representante/salvar"
+      data-i-max="<?= (float) $cfg['limite_i_max'] ?>" data-r-max="<?= (float) $cfg['limite_r_max'] ?>"
+      data-b-max="<?= (float) $cfg['limite_b_max'] ?>" data-chave="aval-rep-<?= (int) $projeto['id'] ?>">
     <?= ViewHelper::csrfField() ?>
 
-    <fieldset>
-        <legend><i class="fas fa-bolt"></i> Preenchimento rápido</legend>
-
-        <p>
-            <strong>Por conceito:</strong>
-            <button type="button" onclick="preencherTodosConceito('MB')">Todos MB</button>
-            <button type="button" onclick="preencherTodosConceito('B')">Todos B</button>
-            <button type="button" onclick="preencherTodosConceito('R')">Todos R</button>
-            <button type="button" onclick="preencherTodosConceito('I')">Todos I</button>
-            <button type="button" onclick="limparTudo()">Limpar tudo</button>
-        </p>
-
-        <p>
-            <strong>Por valor:</strong>
-            <?php foreach ([100, 95, 90, 85, 80, 70, 60, 50, 25, 0] as $v): ?>
-                <button type="button" onclick="preencherTodosValor(<?= $v ?>)"><?= $v ?></button>
+    <!-- ============ CRITÉRIOS ============ -->
+    <aside class="aval-criterios" aria-label="Critérios">
+        <h2>Critérios</h2>
+        <div class="aval-criterios-lista" role="tablist">
+            <?php foreach ($criterios as $i => $c): $cid = (int) $c['id']; $edita = !empty($editaveis[$cid]); ?>
+                <button type="button" role="tab" class="aval-crit-btn" id="tab-<?= $cid ?>"
+                        data-alvo="<?= $cid ?>" aria-controls="painel-<?= $cid ?>" aria-selected="<?= $i === 0 ? 'true' : 'false' ?>">
+                    <span class="aval-crit-nome"><?= h($c['nome']) ?></span>
+                    <span class="aval-crit-meta">
+                        <?php if ($edita): ?>
+                            <span class="aval-progresso" data-progresso="<?= $cid ?>">0/<?= count($alunos) ?></span>
+                        <?php else: ?>
+                            <span class="aval-leitura"><i class="fas fa-eye"></i> leitura</span>
+                        <?php endif; ?>
+                        <span>peso <?= $fmt($c['peso']) ?></span>
+                    </span>
+                    <?php if ($edita): ?><span class="aval-barra"><i data-barra="<?= $cid ?>"></i></span><?php endif; ?>
+                </button>
             <?php endforeach; ?>
-        </p>
+        </div>
+    </aside>
 
-        <p>
-            <label>
-                <input type="checkbox" name="limpar_antes" value="1">
-                <strong>Limpar e Salvar</strong> — apaga todas as suas avaliações deste projeto antes de salvar
-            </label>
-        </p>
-    </fieldset>
+    <!-- ============ ALUNOS DO CRITÉRIO ============ -->
+    <div class="aval-area">
+        <?php foreach ($criterios as $i => $c):
+            $cid = (int) $c['id'];
+            $edita = !empty($editaveis[$cid]);
+        ?>
+            <section class="aval-painel" id="painel-<?= $cid ?>" role="tabpanel" aria-labelledby="tab-<?= $cid ?>"
+                     data-criterio="<?= $cid ?>" <?= $i === 0 ? '' : 'hidden' ?>>
 
-    <table border="1" cellpadding="4" id="tabela-aval">
-        <thead>
-            <tr>
-                <th>Aluno</th>
-                <?php foreach ($critTodos     as $c): ?>
-                    <th style="background:#dbeafe"><?= h($c['nome']) ?><br>
-                        <small>peso <?= number_format((float) $c['peso'], 2, ',', '.') ?></small>
-                    </th>
-                <?php endforeach; ?>
-                <?php foreach ($critDiretores as $c): ?>
-                    <th style="background:#fed7aa"><?= h($c['nome']) ?><br>
-                        <small>peso <?= number_format((float) $c['peso'], 2, ',', '.') ?></small>
-                    </th>
-                <?php endforeach; ?>
-                <?php foreach ($critRepresent as $c): ?>
-                    <th style="background:#d1fae5"><?= h($c['nome']) ?><br>
-                        <small>peso <?= number_format((float) $c['peso'], 2, ',', '.') ?></small>
-                    </th>
-                <?php endforeach; ?>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($alunos as $a): $aid = (int) $a['id']; ?>
-                <tr>
-                    <td><?= h($a['nome']) ?> <small>(<?= h($a['papel']) ?>)</small></td>
+                <header class="aval-painel-topo">
+                    <div>
+                        <h2><?= h($c['nome']) ?></h2>
+                        <p>
+                            Avaliado por: <?= h($tipoLabel[$c['tipo_avaliacao']] ?? $c['tipo_avaliacao']) ?>
+                            <?php if (isset($aplicavelLabel[$c['aplicavel_a']])): ?> · <?= $aplicavelLabel[$c['aplicavel_a']] ?><?php endif; ?>
+                            <?php if (!empty($c['prazo_avaliacao'])): ?> · prazo <?= h(date('d/m H:i', strtotime($c['prazo_avaliacao']))) ?><?php endif; ?>
+                        </p>
+                    </div>
+                    <?php if (!empty($c['descricao'])): ?>
+                        <details class="aval-descricao"><summary>Ver descrição</summary><p><?= nl2br(h($c['descricao'])) ?></p></details>
+                    <?php endif; ?>
+                </header>
 
-                    <?php foreach (array_merge($critTodos, $critDiretores, $critRepresent) as $c): ?>
-                        <?php
-                        $cid = (int) $c['id'];
-                        $reg = $mapa[$cid][$aid] ?? null;
-                        $conc = $reg['conceito'] ?? '';
-                        $val  = $reg['valor_numerico'] ?? '';
-                        ?>
-                        <td>
-                            <select data-campo="conceito"
-                                    name="aval[<?= $cid ?>][<?= $aid ?>][conceito]">
-                                <option value="">—</option>
-                                <?php foreach (['I','R','B','MB'] as $op): ?>
-                                    <option value="<?= $op ?>" <?= $conc === $op ? 'selected' : '' ?>><?= $op ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <input type="number" step="0.01" min="0" max="100"
-                                   data-campo="valor"
-                                   name="aval[<?= $cid ?>][<?= $aid ?>][valor]"
-                                   value="<?= $val !== '' ? number_format((float) $val, 2, '.', '') : '' ?>"
-                                   style="width:70px">
-                        </td>
+                <?php if ($edita): ?>
+                    <div class="aval-ferramentas">
+                        <label class="aval-busca">
+                            <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+                            <input type="search" placeholder="Buscar aluno" data-busca-aluno aria-label="Buscar aluno">
+                        </label>
+                        <div class="aval-preencher" role="group" aria-label="Preencher quem está sem nota">
+                            <span>Sem nota recebem:</span>
+                            <?php foreach (['MB', 'B', 'R', 'I'] as $op): ?>
+                                <button type="button" class="conceito-chip c-<?= strtolower($op) ?>" data-preencher="<?= $op ?>"><?= $op ?></button>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <p class="aval-aviso-leitura">
+                        <i class="fas fa-eye"></i>
+                        Este critério é avaliado por <?= h(mb_strtolower($tipoLabel[$c['tipo_avaliacao']] ?? '')) ?>. Você vê aqui a nota calculada, sem editar.
+                    </p>
+                <?php endif; ?>
+
+                <ul class="aval-lista">
+                    <?php foreach ($alunos as $a):
+                        $aid  = (int) $a['id'];
+                        $ini  = mb_strtoupper(mb_substr($a['nome'], 0, 1));
+                    ?>
+                        <li class="aval-linha" data-nome="<?= h(mb_strtolower($a['nome'])) ?>">
+                            <span class="aval-aluno">
+                                <span class="avatar avatar-blue" aria-hidden="true"><?= h($ini) ?></span>
+                                <span><strong><?= h($a['nome']) ?></strong><?php if ($a['papel'] === 'representante'): ?><small>representante</small><?php endif; ?></span>
+                            </span>
+
+                            <?php if ($edita):
+                                $reg  = $mapa[$cid][$aid] ?? null;
+                                $conc = $reg['conceito'] ?? '';
+                                $val  = $reg ? $fmt($reg['valor_numerico']) : '';
+                                $nome = "aval[{$cid}][{$aid}]";
+                            ?>
+                                <span class="aval-nota" data-celula>
+                                    <span class="conceito-grupo" role="radiogroup" aria-label="Conceito de <?= h($a['nome']) ?>">
+                                        <?php foreach (['I', 'R', 'B', 'MB'] as $op): ?>
+                                            <label class="conceito-op c-<?= strtolower($op) ?>">
+                                                <input type="radio" name="<?= $nome ?>[conceito]" value="<?= $op ?>" <?= $conc === $op ? 'checked' : '' ?>>
+                                                <span><?= $op ?></span>
+                                            </label>
+                                        <?php endforeach; ?>
+                                    </span>
+                                    <input type="text" inputmode="decimal" class="aval-valor" name="<?= $nome ?>[valor]"
+                                           value="<?= h($val) ?>" placeholder="—" maxlength="6" aria-label="Valor de 0 a 100 de <?= h($a['nome']) ?>">
+                                    <button type="button" class="aval-limpar" data-limpar title="Tirar nota" aria-label="Tirar nota de <?= h($a['nome']) ?>"><i class="fas fa-xmark"></i></button>
+                                </span>
+                            <?php else:
+                                $n = $notasLeitura[$cid][$aid] ?? null;
+                                $cc = $conceitoDe($n);
+                            ?>
+                                <span class="aval-nota-leitura">
+                                    <?php if ($n === null): ?>
+                                        <span class="txt-mudo">sem nota</span>
+                                    <?php else: ?>
+                                        <span class="conceito-chip c-<?= strtolower($cc) ?>"><?= $cc ?></span>
+                                        <span class="num"><?= $fmt(round($n, 2)) ?></span>
+                                    <?php endif; ?>
+                                </span>
+                            <?php endif; ?>
+                        </li>
                     <?php endforeach; ?>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+                </ul>
+                <p class="aval-sem-resultado" hidden>Nenhum aluno com esse nome.</p>
+            </section>
+        <?php endforeach; ?>
+    </div>
 
-    <p><button type="submit"><i class="fas fa-save"></i> Salvar avaliações</button></p>
+    <!-- ============ BARRA DE SALVAR ============ -->
+    <div class="aval-barra-salvar">
+        <span class="aval-status" data-status aria-live="polite">Nenhuma alteração</span>
+        <details class="aval-perigo">
+            <summary>Mais opções</summary>
+            <label class="check-line">
+                <input type="checkbox" name="limpar_antes" value="1" data-limpar-antes>
+                <span><strong>Limpar e salvar:</strong> apaga as suas notas dos critérios abertos antes de salvar o que está na tela.</span>
+            </label>
+        </details>
+        <button type="submit" class="button button-primary" <?= $projeto['encerrado'] ? 'disabled' : '' ?>>
+            <i class="fas fa-check"></i> Salvar avaliações
+        </button>
+    </div>
 </form>
 
-<script>
-// ============================================================
-// Configuração do projeto (limites de conceito)
-// ============================================================
-const CFG = {
-    iMax:  <?= (int) $cfg['limite_i_max'] ?>,
-    rMin:  <?= (int) $cfg['limite_r_min'] ?>,
-    rMax:  <?= (int) $cfg['limite_r_max'] ?>,
-    bMin:  <?= (int) $cfg['limite_b_min'] ?>,
-    bMax:  <?= (int) $cfg['limite_b_max'] ?>,
-    mbMin: <?= (int) $cfg['limite_mb_min'] ?>,
-};
-
-function valorPorConceito(c) {
-    switch (c) {
-        case 'I':  return CFG.iMax;
-        case 'R':  return Math.round((CFG.rMin + CFG.rMax) / 2);
-        case 'B':  return Math.round((CFG.bMin + CFG.bMax) / 2);
-        case 'MB': return CFG.mbMin;
-    }
-    return '';
-}
-
-function conceitoPorValor(v) {
-    v = parseFloat(v);
-    if (isNaN(v)) return '';
-    if (v <= CFG.iMax) return 'I';
-    if (v <= CFG.rMax) return 'R';
-    if (v <= CFG.bMax) return 'B';
-    return 'MB';
-}
-
-// ============================================================
-// Sincronização bidirecional
-// ============================================================
-function aplicarConceito(select) {
-    const td = select.closest('td');
-    const input = td.querySelector('[data-campo="valor"]');
-    if (!input) return;
-
-    if (select.value === '') {
-        input.value = '';
-        return;
-    }
-    input.value = valorPorConceito(select.value);
-}
-
-function aplicarValor(input) {
-    const td = input.closest('td');
-    const select = td.querySelector('[data-campo="conceito"]');
-    if (!select) return;
-
-    const v = input.value.trim();
-    if (v === '') {
-        select.value = '';
-        return;
-    }
-    select.value = conceitoPorValor(v);
-}
-
-document.addEventListener('change', function(e) {
-    if (e.target.matches('[data-campo="conceito"]')) aplicarConceito(e.target);
-});
-document.addEventListener('input', function(e) {
-    if (e.target.matches('[data-campo="valor"]')) aplicarValor(e.target);
-});
-
-// ============================================================
-// Preenchimento rápido
-// ============================================================
-function preencherTodosConceito(c) {
-    document.querySelectorAll('[data-campo="conceito"]').forEach(function(sel) {
-        sel.value = c;
-        aplicarConceito(sel);
-    });
-}
-
-function preencherTodosValor(v) {
-    document.querySelectorAll('[data-campo="valor"]').forEach(function(inp) {
-        inp.value = v;
-        aplicarValor(inp);
-    });
-}
-
-function limparTudo() {
-    if (!confirm('Limpar todas as células do formulário? (só limpa a tela, sem salvar)')) return;
-    document.querySelectorAll('[data-campo="conceito"]').forEach(function(sel) { sel.value = ''; });
-    document.querySelectorAll('[data-campo="valor"]').forEach(function(inp) { inp.value = ''; });
-}
-</script>
+<script src="<?= ViewHelper::asset('js/avaliacao.js') ?>"></script>
+<?php endif; ?>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

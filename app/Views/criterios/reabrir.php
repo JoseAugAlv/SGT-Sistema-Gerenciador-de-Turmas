@@ -1,34 +1,71 @@
 <?php
+$cssPagina = ['projetos.css', 'criterios.css'];
+
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 require_once __DIR__ . '/../layouts/flashes.php';
 ?>
 
-<h1><?= h($projeto['nome']) ?></h1>
-<p>Turma: <a href="<?= $basePath ?>/turmas/<?= (int) $projeto['turma_id'] ?>"><?= h($projeto['turma_nome']) ?></a></p>
+<section class="hero-section">
+    <div>
+        <div class="eyebrow">
+            <span class="status-dot"></span>
+            Reabrir critério
+        </div>
+        <h1><?= h($criterio['nome']) ?></h1>
+        <p class="hero-subtitle">
+            Projeto: <a href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>"><?= h($projeto['nome']) ?></a>
+        </p>
+    </div>
+    <div class="hero-actions">
+        <a class="button button-ghost" href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/criterios">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+</section>
 
 <?php require __DIR__ . '/../projetos/_nav.php'; ?>
 
-<h2>Reabrir Critério</h2>
-
-<p>Critério: <strong><?= h($criterio['nome']) ?></strong></p>
-<p>Prazo anterior: <?= h($criterio['prazo_avaliacao'] ?? '—') ?></p>
-<p>Reaberto anteriormente em: <?= h($criterio['reaberto_em'] ?? '—') ?></p>
-
-<p>
+<div class="crit-reabrir-info">
     <i class="fas fa-info-circle"></i>
-    É obrigatório informar um novo prazo no futuro. Sem ele, o critério voltaria a ser bloqueado na próxima leitura.
-</p>
+    <div>
+        <strong>Novo prazo é obrigatório</strong>
+        <p class="mb-0">
+            É preciso informar uma nova data/hora futura. Sem isso, o critério voltaria a ficar bloqueado no próximo acesso.
+        </p>
+    </div>
+</div>
 
-<form method="POST" action="<?= $basePath ?>/criterios/<?= (int) $criterio['id'] ?>/reabrir">
+<section class="panel mb-16">
+    <div class="crit-detalhes">
+        <div class="crit-detalhe-linha">
+            <span class="label">Status atual</span>
+            <span class="valor"><?= $criterio['bloqueado'] ? 'Bloqueado' : 'Aberto' ?></span>
+        </div>
+        <div class="crit-detalhe-linha">
+            <span class="label">Prazo anterior</span>
+            <span class="valor"><?= ViewHelper::data($criterio['prazo_avaliacao'] ?? null, true) ?></span>
+        </div>
+        <div class="crit-detalhe-linha">
+            <span class="label">Reaberto anteriormente em</span>
+            <span class="valor"><?= ViewHelper::data($criterio['reaberto_em'] ?? null, true) ?></span>
+        </div>
+    </div>
+</section>
+
+<form method="POST" action="<?= $basePath ?>/criterios/<?= (int) $criterio['id'] ?>/reabrir" class="panel">
     <?= ViewHelper::csrfField() ?>
 
-    <p><label>Novo prazo de avaliação *<br>
-        <input type="datetime-local" name="novo_prazo" required autofocus></label></p>
+    <label class="field-label">Novo prazo de avaliação *</label>
+    <input type="datetime-local" name="novo_prazo" class="field" min="<?= date('Y-m-d\TH:i') ?>" required autofocus>
 
-    <p>
-        <button type="submit"><i class="fas fa-rotate"></i> Reabrir</button>
-        <a href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/criterios">Cancelar</a>
+    <p class="mt-20">
+        <button type="submit" class="button button-primary">
+            <i class="fas fa-rotate"></i> Reabrir critério
+        </button>
+        <a class="button button-ghost" href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/criterios">
+            Cancelar
+        </a>
     </p>
 </form>
 

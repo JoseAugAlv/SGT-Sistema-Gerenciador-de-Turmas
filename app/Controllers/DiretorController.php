@@ -30,6 +30,190 @@ class DiretorController
         $this->audit   = new Auditoria();
     }
 
+        // ============ LISTA DE GRUPOS QUE DIRIJO ============
+
+    public function index()
+    {
+        $u = $_SESSION['usuario'];
+        $pdo = Database::getConnection();
+
+        $stmt = $pdo->prepare("
+            SELECT g.id, g.nome AS grupo_nome,
+                   p.id AS projeto_id, p.nome AS projeto_nome, p.encerrado,
+                   t.id AS turma_id, t.nome AS turma_nome
+            FROM grupo_diretores gd
+            INNER JOIN grupos g ON g.id = gd.grupo_id
+            INNER JOIN projetos p ON p.id = g.projeto_id
+            INNER JOIN turmas t ON t.id = p.turma_id
+            WHERE gd.usuario_id = ? AND gd.ativo = 1
+            ORDER BY p.nome ASC, g.nome ASC
+        ");
+        $stmt->execute([(int) $u['id']]);
+        $grupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $this->render('diretores/index', ['grupos' => $grupos]);
+    }
+
+    // ============ PROMOVER (view alternativa de nomeação) ============
+
+    public function promover(int $grupoId)
+    {
+        $grupo = $this->grupo->porId($grupoId);
+        if (!$grupo) { $this->flash('Grupo não encontrado.'); $this->redirect('/turmas'); }
+
+        $projeto = $this->projeto->porId((int) $grupo['projeto_id']);
+        $this->exigirPodeEditarProjeto($projeto);
+
+        $diretores = $this->diretor->listarAtivos($grupoId);
+        $membros   = $this->membro->listarAtivos($grupoId);
+
+        $this->render('diretores/promover', [
+            'grupo'     => $grupo,
+            'projeto'   => $projeto,
+            'diretores' => $diretores,
+            'membros'   => $membros,
+        ]);
+    }
+
+    // ============ TROCAR (remover + nomear no mesmo fluxo) ============
+
+    public function trocarForm(int $grupoId)
+    {
+        $grupo = $this->grupo->porId($grupoId);
+        if (!$grupo) { $this->flash('Grupo não encontrado.'); $this->redirect('/turmas'); }
+
+        $projeto = $this->projeto->porId((int) $grupo['projeto_id']);
+        $this->exigirPodeEditarProjeto($projeto);
+
+        $diretores = $this->diretor->listarAtivos($grupoId);
+        $membros   = $this->membro->listarAtivos($grupoId);
+
+        $this->render('diretores/trocar', [
+            'grupo'     => $grupo,
+            'projeto'   => $projeto,
+            'diretores' => $diretores,
+            'membros'   => $membros,
+        ]);
+    }
+
+    public function trocar(int $grupoId)
+    {
+        $grupo = $this->grupo->porId($grupoId);
+        if (!$grupo) { $this->flash('Grupo não encontrado.'); $this->redirect('/turmas'); }
+
+        $projeto = $this->projeto->porId((int) $grupo['projeto_id']);
+        $this->exigirPodeEditarProjeto($projeto);
+        CsrfMiddleware::validate();
+
+        if ($projeto['encerrado']) {
+            $this->flash('Projeto encerrado.');
+            $this->redirect('/grupos/' . $grupoId . '/diretores');
+        }
+
+        $saiId   = (int) ($_POST['sai_id'] ?? 0);
+        $entraId = (int) ($_POST['entra_id'] ?? 0);
+
+        $erros = [];
+        if (!$saiId)   $erros[] = 'Selecione o diretor que sai.';
+        if (!$entraId) $erros[] = 'Selecione o novo diretor.';
+        if ($saiId === $entraId) $erros[] = 'O diretor que sai e o que entra devem ser diferentes.';
+
+        if (!$this->diretor->ehDiretorAtivo($grupoId, $saiId)) {
+            $erros[] = 'O diretor que sai não está ativo neste grupo.';
+        }
+        if (!$this->membro->estaAtivo($grupoId, $entraId)) {
+            $erros[] = 'O novo diretor precisa ser membro ativo do grupo.';
+        }
+        if ($this->diretor->ehDiretorAtivo($grupoId, $entraId)) {
+            $erros[] = 'O novo diretor já é diretor ativo deste grupo.';
+        }
+
+        if ($erros) {
+            $this->flash(implode(' | ', $erros));
+            $this->redirect('/grupos/' . $grupoId . '/diretores/trocar');
+        }
+
+        $meuId = (int) $_SESSION['usuario']['id'];
+
+        // 1. Remove o antigo
+        $this->diretor->remover($grupoId, $saiId, $meuId);
+
+        // 2. Nomeia o novo
+        $this->diretor->nomear($grupoId, $entraId, $meuId);
+
+        // 3. Reatribui atas pendentes
+        $totalReatribuidas = $this->diretor->reatribuirAtasPendentes($grupoId, $saiId);
+
+        $this->audit->registrar('diretor_trocado', 'grupo_diretores', $grupoId,
+            ['sai_id' => $saiId, 'entra_id' => $entraId, 'por' => $meuId],
+            ['atas_reatribuidas' => $totalReatribuidas]);
+
+        $msg = 'Diretor trocado.';
+        if ($totalReatribuidas > 0) {
+            $msg .= " {$totalReatribuidas} ata(s) pendente(s) foram reatribuídas.";
+        }
+        $this->flash($msg, 'sucesso');
+        $this->redirect('/grupos/' . $grupoId . '/diretores');
+    }
+
+    // ============ ALOCAR VÁRIOS MEMBROS DE UMA VEZ ============
+
+    public function alocarForm(int $grupoId)
+    {
+        $grupo = $this->grupo->porId($grupoId);
+        if (!$grupo) { $this->flash('Grupo não encontrado.'); $this->redirect('/turmas'); }
+
+        $projeto = $this->projeto->porId((int) $grupo['projeto_id']);
+        $this->exigirPodeEditarProjeto($projeto);
+
+        $candidatos = $this->membro->candidatosNaTurma($grupoId, (int) $projeto['turma_id']);
+        $membros    = $this->membro->listarAtivos($grupoId);
+
+        $this->render('diretores/alocar', [
+            'grupo'      => $grupo,
+            'projeto'    => $projeto,
+            'candidatos' => $candidatos,
+            'membros'    => $membros,
+        ]);
+    }
+
+    public function alocar(int $grupoId)
+    {
+        $grupo = $this->grupo->porId($grupoId);
+        if (!$grupo) { $this->flash('Grupo não encontrado.'); $this->redirect('/turmas'); }
+
+        $projeto = $this->projeto->porId((int) $grupo['projeto_id']);
+        $this->exigirPodeEditarProjeto($projeto);
+        CsrfMiddleware::validate();
+
+        if ($projeto['encerrado']) {
+            $this->flash('Projeto encerrado.');
+            $this->redirect('/grupos/' . $grupoId);
+        }
+
+        $usuarioIds = array_map('intval', $_POST['usuarios'] ?? []);
+
+        if (empty($usuarioIds)) {
+            $this->flash('Selecione ao menos um aluno.');
+            $this->redirect('/grupos/' . $grupoId . '/diretores/alocar');
+        }
+
+        $adicionados = 0;
+        foreach ($usuarioIds as $uid) {
+            if (!$this->tu->estaAtivo((int) $projeto['turma_id'], $uid)) continue;
+            if ($this->membro->estaAtivo($grupoId, $uid)) continue;
+
+            $this->membro->adicionar($grupoId, $uid);
+            $adicionados++;
+        }
+
+        $this->audit->registrar('grupo_alocacao_massa', 'grupo_alunos', $grupoId, null,
+            ['total' => $adicionados, 'usuarios' => $usuarioIds]);
+
+        $this->flash("{$adicionados} aluno(s) adicionado(s).", 'sucesso');
+        $this->redirect('/grupos/' . $grupoId);
+    }
+
     public function gerenciar(int $grupoId)
     {
         $grupo = $this->grupo->porId($grupoId);

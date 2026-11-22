@@ -34,61 +34,147 @@ class RelatorioController
     // ============ BOLETIM INDIVIDUAL ============
 
     public function boletimAluno(int $projetoId)
-    {
-        $projeto = $this->projeto->porId($projetoId);
-        if (!$projeto) { $this->flash('Projeto não encontrado.'); $this->redirect('/turmas'); }
+{
+    $projeto = $this->projeto->porId($projetoId);
+    if (!$projeto) { $this->flash('Projeto não encontrado.'); $this->redirect('/turmas'); }
 
-        $u = $_SESSION['usuario'];
-        $this->exigirAcesso($projeto);
+    $u = $_SESSION['usuario'];
+    $this->exigirAcesso($projeto);
 
-        $alunoId = (int) ($_GET['aluno_id'] ?? $u['id']);
+    $alunoId = (int) ($_GET['aluno_id'] ?? $u['id']);
 
-        if (!$this->podeVerBoletimDe($projetoId, $alunoId)) {
-            http_response_code(403);
-            exit('Você não tem permissão para ver este boletim.');
-        }
-
-        $aluno = $this->usuario->findById($alunoId);
-        if (!$aluno) { $this->flash('Aluno não encontrado.'); $this->redirect('/projetos/' . $projetoId); }
-
-        $boletim = $this->snap->boletimEfetivo($projetoId, $alunoId);
-        $cfg     = $this->cfg->garantir($projetoId);
-
-        $souMaster = $u['tipo'] === 'master';
-        $souRep    = $this->tu->ehRepresentante((int) $projeto['turma_id'], (int) $u['id']);
-
-        $this->render('relatorios/boletim_aluno', [
-            'projeto'  => $projeto,
-            'aluno'    => $aluno,
-            'boletim'  => $boletim,
-            'cfg'      => $cfg,
-            'isMaster' => $souMaster,
-            'isRep'    => $souRep,
-            'souEu'    => $alunoId === (int) $u['id'],
-        ]);
+    if (!$this->podeVerBoletimDe($projetoId, $alunoId)) {
+        http_response_code(403);
+        exit('Você não tem permissão para ver este boletim.');
     }
+
+    $aluno = $this->usuario->findById($alunoId);
+    if (!$aluno) { $this->flash('Aluno não encontrado.'); $this->redirect('/projetos/' . $projetoId); }
+
+    $boletim = $this->snap->boletimEfetivo($projetoId, $alunoId);
+    $cfg     = $this->cfg->garantir($projetoId);
+
+    $souMaster = $u['tipo'] === 'master';
+    $souRep    = $this->tu->ehRepresentante((int) $projeto['turma_id'], (int) $u['id']);
+
+    // ---------- Atas em que o aluno participou ----------
+    $pdo  = Database::getConnection();
+    $stmt = $pdo->prepare("
+        SELECT a.id, a.titulo, a.data_ata, a.status,
+               a.horario_inicio, a.horario_fim,
+               g.nome AS grupo_nome,
+               g.id   AS grupo_id,
+               ap.presente,
+               ap.justificativa,
+               u_dir.nome AS diretor_nome
+        FROM ata_participantes ap
+        INNER JOIN atas a ON a.id = ap.ata_id
+        INNER JOIN grupos g ON g.id = a.grupo_id
+        LEFT JOIN usuarios u_dir ON u_dir.id = a.diretor_id
+        WHERE g.projeto_id = ? AND ap.aluno_id = ?
+        ORDER BY a.data_ata DESC, a.id DESC
+    ");
+    $stmt->execute([$projetoId, $alunoId]);
+    $atas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Para cada ata, carrega atividades e relatórios internos
+    $atasDetalhes = [];
+    foreach ($atas as $ata) {
+        $aid = (int) $ata['id'];
+
+        // Atividades
+        $stmt = $pdo->prepare("
+            SELECT aa.id, aa.nome, aa.descricao,
+                   (SELECT COUNT(*) FROM participantes_atividade pa WHERE pa.atividade_id = aa.id) AS total_participantes
+            FROM atividades_ata aa
+            WHERE aa.ata_id = ?
+            ORDER BY aa.id ASC
+        ");
+        $stmt->execute([$aid]);
+        $atividades = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Relatórios internos em que o aluno foi mencionado OU em que participou
+        $stmt = $pdo->prepare("
+            SELECT r.id, r.titulo, r.conteudo, r.tipo_relatorio, r.tema,
+                   r.created_at,
+                   u.nome AS autor_nome,
+                   (SELECT COUNT(*) FROM participantes_relatorio pr WHERE pr.relatorio_id = r.id AND pr.usuario_id = ?) AS mencionado
+            FROM relatorios_ata r
+            INNER JOIN usuarios u ON u.id = r.usuario_id
+            WHERE r.ata_id = ?
+              AND (
+                r.usuario_id = ?
+                OR EXISTS (
+                    SELECT 1 FROM participantes_relatorio pr
+                    WHERE pr.relatorio_id = r.id AND pr.usuario_id = ?
+                )
+              )
+            ORDER BY r.created_at DESC
+        ");
+        $stmt->execute([$alunoId, $aid, $alunoId, $alunoId]);
+        $relatorios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $atasDetalhes[] = [
+            'ata'        => $ata,
+            'atividades' => $atividades,
+            'relatorios' => $relatorios,
+        ];
+    }
+
+    // ---------- Estatísticas de presença ----------
+    $totalAtas     = count($atas);
+    $totalPresente = count(array_filter($atas, fn($a) => $a['presente'] === 'sim'));
+    $totalAusente  = count(array_filter($atas, fn($a) => $a['presente'] === 'nao'));
+    $totalJust     = count(array_filter($atas, fn($a) => $a['presente'] === 'justificado'));
+
+    $this->render('relatorios/boletim_aluno', [
+        'projeto'        => $projeto,
+        'aluno'          => $aluno,
+        'boletim'        => $boletim,
+        'cfg'            => $cfg,
+        'isMaster'       => $souMaster,
+        'isRep'          => $souRep,
+        'souEu'          => $alunoId === (int) $u['id'],
+        'atasDetalhes'   => $atasDetalhes,
+        'totalAtas'      => $totalAtas,
+        'totalPresente'  => $totalPresente,
+        'totalAusente'   => $totalAusente,
+        'totalJust'      => $totalJust,
+    ]);
+}
 
     public function boletimAlunoPdf(int $projetoId)
-    {
-        $projeto = $this->projeto->porId($projetoId);
-        if (!$projeto) { $this->flash('Projeto não encontrado.'); $this->redirect('/turmas'); }
+{
+    $projeto = $this->projeto->porId($projetoId);
+    if (!$projeto) { $this->flash('Projeto não encontrado.'); $this->redirect('/turmas'); }
 
-        $u = $_SESSION['usuario'];
-        $this->exigirAcesso($projeto);
+    $u = $_SESSION['usuario'];
+    $this->exigirAcesso($projeto);
 
-        $alunoId = (int) ($_GET['aluno_id'] ?? $u['id']);
+    $alunoId = (int) ($_GET['aluno_id'] ?? $u['id']);
 
-        if (!$this->podeVerBoletimDe($projetoId, $alunoId)) {
-            http_response_code(403); exit('Sem permissão.');
-        }
-
-        $aluno   = $this->usuario->findById($alunoId);
-        $boletim = $this->snap->boletimEfetivo($projetoId, $alunoId);
-
-        $html = $this->montarBoletimHtml($projeto, $aluno, $boletim, true);
-
-        PdfHelper::gerar($html, 'boletim_' . $aluno['id'] . '.pdf', 'P', 'A4');
+    if (!$this->podeVerBoletimDe($projetoId, $alunoId)) {
+        http_response_code(403); exit('Sem permissão.');
     }
+
+    $aluno   = $this->usuario->findById($alunoId);
+    $boletim = $this->snap->boletimEfetivo($projetoId, $alunoId);
+
+    // Renderiza a view como string HTML puro
+    ob_start();
+    extract([
+        'projeto' => $projeto,
+        'aluno'   => $aluno,
+        'boletim' => $boletim,
+        'basePath' => App::getBasePath(),
+        'appName'  => App::getName(),
+    ]);
+    require __DIR__ . '/../Views/relatorios/boletim_aluno_pdf.php';
+    $html = ob_get_clean();
+
+    PdfHelper::gerar($html, 'boletim_' . $aluno['id'] . '.pdf', 'P', 'A4');
+}
+
 
     // ============ RELATÓRIO GERAL ============
 

@@ -1,0 +1,667 @@
+/* ============================================================
+   RELATÓRIOS — estilos específicos
+   Carregado em /projetos/*/relatorios e /relatorios/*
+   ============================================================ */
+
+/* ---------- Grid de cards de relatório (index) ---------- */
+.relatorios-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.relatorio-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 180px;
+}
+
+.relatorio-card .panel-header { margin-bottom: 4px; }
+.relatorio-card .panel-header h2 {
+    font-size: 15px;
+    line-height: 1.35;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.relatorio-card .panel-header h2 i {
+    color: var(--primary);
+    font-size: 14px;
+}
+.relatorio-card .panel-header p {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin: 0;
+    line-height: 1.55;
+}
+
+.relatorio-card .button.full-width { margin-top: auto; }
+
+/* ---------- Toolbar de exportação ---------- */
+.relatorio-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--surface-2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+}
+.relatorio-toolbar .toolbar-label {
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+    margin-right: 4px;
+}
+.relatorio-toolbar .toolbar-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+/* ---------- Wrapper de tabela larga ---------- */
+.rel-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    margin-bottom: 16px;
+}
+
+.rel-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    margin: 0;
+}
+
+.rel-tabela th,
+.rel-tabela td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.rel-tabela thead th {
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+/* Primeira coluna (aluno/critério) fixa ao rolar horizontal */
+.rel-tabela thead th:first-child,
+.rel-tabela tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    box-shadow: 2px 0 4px -2px rgba(0,0,0,.06);
+}
+.rel-tabela thead th:first-child {
+    background: var(--surface-2);
+    z-index: 4;
+}
+
+.rel-tabela tbody tr { transition: background .15s; }
+.rel-tabela tbody tr:hover { background: var(--surface-2); }
+.rel-tabela tbody tr:hover td:first-child { background: var(--surface-2); }
+.rel-tabela tbody tr:last-child td { border-bottom: 0; }
+
+/* Colunas numéricas alinhadas à direita */
+.rel-tabela .td-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+.rel-tabela .td-center { text-align: center; }
+
+/* Cabeçalho de critério com peso em baixo */
+.rel-tabela thead th .th-criterio {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: center;
+    text-align: center;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--text);
+}
+.rel-tabela thead th .th-criterio small {
+    font-size: 9.5px;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+/* Célula de aluno com avatar */
+.rel-tabela .td-aluno {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 200px;
+}
+.rel-tabela .td-aluno .avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+.rel-tabela .td-aluno-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.rel-tabela .td-aluno-info strong {
+    font-size: 12.5px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.rel-tabela .td-aluno-info small {
+    font-size: 10.5px;
+    color: var(--muted);
+    margin-top: 2px;
+    text-transform: capitalize;
+}
+
+/* Nota vazia */
+.rel-tabela .nota-vazia {
+    color: var(--muted);
+    font-style: italic;
+}
+
+/* Linha de média (tfoot) */
+.rel-tabela tfoot th,
+.rel-tabela tfoot td {
+    background: var(--surface-2);
+    border-top: 2px solid var(--border-strong);
+    border-bottom: 0;
+    font-weight: 700;
+    font-size: 12.5px;
+    color: var(--text);
+    padding: 14px 12px;
+    white-space: nowrap;
+}
+.rel-tabela tfoot .td-media {
+    text-align: right;
+    font-size: 15px;
+    color: var(--primary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Badge de conceito ---------- */
+.conceito-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+}
+.conceito-badge.i  { background: rgba(228, 109, 120, .15); color: var(--red); }
+.conceito-badge.r  { background: rgba(245, 166, 72, .15);  color: #d48b1c; }
+.conceito-badge.b  { background: rgba(60, 142, 234, .15);  color: var(--blue); }
+.conceito-badge.mb { background: rgba(57, 184, 137, .15);  color: #29946e; }
+.conceito-badge.vazio { background: var(--surface-2); color: var(--muted); font-weight: 500; }
+
+/* ---------- Linha de média do boletim individual ---------- */
+.boletim-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    background: var(--surface-2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--border-strong);
+    margin-top: 12px;
+}
+.boletim-footer .media-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+}
+.boletim-footer .media-valor {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 4px;
+}
+.boletim-footer .media-numero {
+    font-size: 28px;
+    font-weight: 750;
+    letter-spacing: -1px;
+    line-height: 1;
+    color: var(--primary);
+}
+.boletim-footer .media-numero.vazio { color: var(--muted); }
+.boletim-footer .media-conceito {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+/* ---------- Aviso de boletim congelado ---------- */
+.boletim-congelado {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: rgba(228, 109, 120, .08);
+    border-left: 4px solid var(--red);
+    color: var(--red);
+    font-size: 12.5px;
+    line-height: 1.55;
+    margin-bottom: 16px;
+}
+.boletim-congelado i { flex-shrink: 0; margin-top: 2px; font-size: 16px; }
+.boletim-congelado strong { color: var(--text); display: block; margin-bottom: 2px; }
+
+/* ---------- Ranking ---------- */
+.ranking-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    counter-reset: ranking;
+}
+
+.ranking-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    transition: border-color .15s;
+}
+.ranking-item:hover { border-color: var(--border-strong); }
+
+.ranking-pos {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-weight: 750;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+.ranking-item:nth-child(1) .ranking-pos {
+    background: rgba(245, 166, 72, .18);
+    color: #d48b1c;
+}
+.ranking-item:nth-child(2) .ranking-pos {
+    background: rgba(60, 142, 234, .15);
+    color: var(--blue);
+}
+.ranking-item:nth-child(3) .ranking-pos {
+    background: rgba(57, 184, 137, .15);
+    color: #29946e;
+}
+
+.ranking-info {
+    flex: 1;
+    min-width: 0;
+}
+.ranking-info strong {
+    display: block;
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ranking-info small {
+    display: block;
+    color: var(--muted);
+    font-size: 10.5px;
+    margin-top: 2px;
+}
+
+.ranking-media {
+    font-size: 15px;
+    font-weight: 750;
+    letter-spacing: -.3px;
+    color: var(--primary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.ranking-media.vazio { color: var(--muted); font-weight: 500; }
+
+/* ---------- Empty state ---------- */
+.rel-empty {
+    text-align: center;
+    padding: 40px 24px;
+}
+.rel-empty .icon-large {
+    font-size: 42px;
+    margin-bottom: 12px;
+    display: block;
+}
+.rel-empty h2 { margin-bottom: 8px; }
+.rel-empty p {
+    color: var(--muted);
+    max-width: 520px;
+    margin: 0 auto 18px;
+}
+
+/* ---------- Legenda de tipos ---------- */
+.rel-legenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border-radius: 8px;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 12px;
+}
+.rel-legenda strong {
+    color: var(--text);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: .5px;
+}
+.rel-legenda .legenda-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 800px) {
+    .relatorios-grid { grid-template-columns: 1fr; gap: 12px; }
+    .relatorio-card { min-height: 0; }
+
+    .relatorio-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .relatorio-toolbar .toolbar-actions {
+        margin-left: 0;
+        width: 100%;
+    }
+    .relatorio-toolbar .toolbar-actions .button { flex: 1; }
+
+    .rel-tabela th,
+    .rel-tabela td { padding: 8px 10px; font-size: 11.5px; }
+
+    .rel-tabela thead th:first-child,
+    .rel-tabela tbody td:first-child {
+        position: static;
+        box-shadow: none;
+        border-right: 0;
+    }
+
+    .boletim-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .boletim-footer .media-conceito { align-items: flex-start; }
+
+    .ranking-item { padding: 10px 12px; }
+}
+
+/* ============================================================
+   ATAS E RELATÓRIOS NO BOLETIM
+   ============================================================ */
+
+/* ---------- Estatísticas de presença ---------- */
+.presenca-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.presenca-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--border-strong);
+}
+.presenca-stat.total     { border-left-color: var(--primary); }
+.presenca-stat.presente  { border-left-color: var(--green); }
+.presenca-stat.justificado { border-left-color: var(--orange); }
+.presenca-stat.ausente   { border-left-color: var(--red); }
+
+.presenca-stat .label {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+}
+.presenca-stat .valor {
+    font-size: 22px;
+    font-weight: 750;
+    letter-spacing: -.5px;
+    line-height: 1;
+    color: var(--text);
+}
+.presenca-stat.presente .valor    { color: #29946e; }
+.presenca-stat.justificado .valor { color: #d48b1c; }
+.presenca-stat.ausente .valor     { color: var(--red); }
+
+/* ---------- Lista de atas no boletim ---------- */
+.atas-boletim-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ata-boletim {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    overflow: hidden;
+    transition: border-color .15s;
+}
+.ata-boletim:hover { border-color: var(--border-strong); }
+
+.ata-boletim.presente    { border-left: 4px solid var(--green); }
+.ata-boletim.ausente     { border-left: 4px solid var(--red); }
+.ata-boletim.justificado { border-left: 4px solid var(--orange); }
+
+.ata-boletim-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+}
+.ata-boletim-header h3 {
+    margin: 0 0 4px;
+    font-size: 14px;
+    color: var(--text);
+    letter-spacing: -.2px;
+}
+.ata-boletim-header .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+}
+.ata-boletim-header .meta i {
+    font-size: 10px;
+    color: var(--muted);
+    margin-right: 2px;
+}
+
+.ata-boletim-body {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.ata-boletim-section-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+    margin-bottom: 8px;
+}
+.ata-boletim-section-title i {
+    color: var(--primary);
+    font-size: 11px;
+}
+
+/* Atividades */
+.ata-boletim-atividades {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.ata-boletim-atividade {
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--surface-2);
+    font-size: 12px;
+    line-height: 1.5;
+}
+.ata-boletim-atividade strong {
+    display: block;
+    font-size: 12.5px;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+.ata-boletim-atividade small {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+/* Relatórios */
+.ata-boletim-relatorios {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.ata-boletim-relatorio {
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--surface-2);
+    border-left: 3px solid var(--border-strong);
+    font-size: 12px;
+    line-height: 1.55;
+}
+.ata-boletim-relatorio.ocorrencia     { border-left-color: var(--orange); }
+.ata-boletim-relatorio.decisao        { border-left-color: var(--primary); }
+.ata-boletim-relatorio.encaminhamento { border-left-color: var(--blue); }
+.ata-boletim-relatorio.observacao     { border-left-color: var(--muted); }
+
+.ata-boletim-relatorio .rel-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: flex-start;
+    margin-bottom: 4px;
+}
+.ata-boletim-relatorio .rel-head strong {
+    font-size: 12.5px;
+    color: var(--text);
+}
+.ata-boletim-relatorio .rel-tipo {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    color: var(--muted);
+    background: var(--surface);
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.ata-boletim-relatorio .rel-conteudo {
+    color: var(--text);
+    margin: 4px 0 6px;
+}
+.ata-boletim-relatorio .rel-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    font-size: 10.5px;
+    color: var(--muted);
+}
+.ata-boletim-relatorio .mencao-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* Vazio */
+.ata-boletim-vazio {
+    text-align: center;
+    padding: 32px 20px;
+    color: var(--muted);
+    font-size: 13px;
+}
+.ata-boletim-vazio i {
+    display: block;
+    font-size: 32px;
+    margin-bottom: 10px;
+    opacity: .5;
+}
+
+/* Responsivo */
+@media (max-width: 800px) {
+    .presenca-stats { grid-template-columns: 1fr 1fr; }
+    .ata-boletim-header { flex-direction: column; }
+    .ata-boletim-relatorio .rel-head { flex-direction: column; }
+    .ata-boletim-relatorio .rel-tipo { align-self: flex-start; }
+}

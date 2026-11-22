@@ -77,6 +77,25 @@ class Ata extends Model
     }
 
     /**
+     * Todas as atas dos grupos em que o usuário é diretor ativo neste projeto
+     * (qualquer diretor do grupo pode preencher; diretor_id é só referência).
+     */
+    public function listarDosGruposDoDiretor(int $projetoId, int $usuarioId): array
+    {
+        $stmt = $this->conn->prepare("
+            SELECT a.*, g.nome AS grupo_nome, u.nome AS diretor_nome
+            FROM atas a
+            INNER JOIN grupos g ON g.id = a.grupo_id
+            INNER JOIN grupo_diretores gd ON gd.grupo_id = g.id AND gd.usuario_id = ? AND gd.ativo = 1
+            LEFT JOIN usuarios u ON u.id = a.diretor_id
+            WHERE g.projeto_id = ?
+            ORDER BY FIELD(a.status, 'pendente', 'preenchida', 'revisada'), a.prazo_preenchimento ASC, a.data_ata DESC
+        ");
+        $stmt->execute([$usuarioId, $projetoId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
      * Atas preenchidas aguardando validação do representante.
      */
     public function listarPreenchidasDoProjeto(int $projetoId): array
@@ -115,10 +134,10 @@ class Ata extends Model
         $stmt = $this->conn->prepare("
             INSERT INTO atas
                 (titulo, descricao, grupo_id, diretor_id, representante_id,
-                 data_ata, prazo_preenchimento, horario_inicio, horario_fim)
+                 data_ata, prazo_preenchimento, horario_inicio, horario_fim, preenchimento)
             VALUES
                 (:titulo, :descricao, :grupo_id, :diretor_id, :representante_id,
-                 :data_ata, :prazo, :hi, :hf)
+                 :data_ata, :prazo, :hi, :hf, :preenchimento)
         ");
         $stmt->execute([
             ':titulo'           => $d['titulo'],
@@ -130,6 +149,7 @@ class Ata extends Model
             ':prazo'            => $d['prazo_preenchimento'] ?? null,
             ':hi'               => $d['horario_inicio'] ?? null,
             ':hf'               => $d['horario_fim'] ?? null,
+            ':preenchimento'    => ($d['preenchimento'] ?? 'diretor') === 'grupo' ? 'grupo' : 'diretor',
         ]);
         return (int) $this->conn->lastInsertId();
     }
@@ -150,6 +170,55 @@ class Ata extends Model
             $d['horario_fim'] ?? null,
             $id,
         ]);
+    }
+
+    public function definirPreenchimento(int $id, string $modo): bool
+    {
+        return $this->conn->prepare("UPDATE atas SET preenchimento = ? WHERE id = ?")
+                          ->execute([$modo === 'grupo' ? 'grupo' : 'diretor', $id]);
+    }
+
+    /**
+     * Atas pendentes abertas ao grupo (modo "grupo") em que o usuário é membro ativo.
+     */
+    public function listarAbertasParaMembro(int $projetoId, int $usuarioId): array
+    {
+        $stmt = $this->conn->prepare("
+            SELECT a.*, g.nome AS grupo_nome, u.nome AS diretor_nome
+            FROM atas a
+            INNER JOIN grupos g ON g.id = a.grupo_id
+            INNER JOIN grupo_alunos ga ON ga.grupo_id = g.id AND ga.usuario_id = ? AND ga.saiu_em IS NULL
+            LEFT JOIN usuarios u ON u.id = a.diretor_id
+            WHERE g.projeto_id = ? AND a.status = 'pendente' AND a.preenchimento = 'grupo'
+            ORDER BY a.prazo_preenchimento ASC, a.data_ata DESC
+        ");
+        $stmt->execute([$usuarioId, $projetoId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Atividades em que o usuário foi mencionado (participante) ou que ele registrou, em todas as turmas.
+     */
+    public function atividadesDoUsuario(int $usuarioId): array
+    {
+        $stmt = $this->conn->prepare("
+            SELECT at.id, at.nome, at.descricao, at.created_at, at.autor_id,
+                   au.nome AS autor_nome,
+                   a.id AS ata_id, a.titulo AS ata_titulo, a.data_ata, a.status AS ata_status,
+                   g.nome AS grupo_nome, p.id AS projeto_id, p.nome AS projeto_nome, t.nome AS turma_nome,
+                   (pa.usuario_id IS NOT NULL) AS mencionado
+            FROM atividades_ata at
+            INNER JOIN atas a     ON a.id = at.ata_id
+            INNER JOIN grupos g   ON g.id = a.grupo_id
+            INNER JOIN projetos p ON p.id = g.projeto_id
+            INNER JOIN turmas t   ON t.id = p.turma_id
+            LEFT JOIN usuarios au ON au.id = at.autor_id
+            LEFT JOIN participantes_atividade pa ON pa.atividade_id = at.id AND pa.usuario_id = ?
+            WHERE pa.usuario_id IS NOT NULL OR at.autor_id = ?
+            ORDER BY a.data_ata DESC, at.created_at DESC
+        ");
+        $stmt->execute([$usuarioId, $usuarioId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function definirStatus(int $id, string $status): bool

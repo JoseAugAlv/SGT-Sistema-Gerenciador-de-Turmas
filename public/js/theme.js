@@ -1,34 +1,42 @@
 // public/js/theme.js
+// Seletor dos três temas do Prumo: light (Claro), dark (Escuro) e misto.
+// A aplicação inicial (antes de pintar) fica no <head> de header.php e auth_header.php.
 
 (function () {
     'use strict';
 
     var STORAGE_KEY = 'sgt-tema';
+    var TEMAS = ['light', 'dark', 'misto'];
     var html = document.documentElement;
 
+    function marcarBotoes(tema) {
+        document.querySelectorAll('[data-tema]').forEach(function (b) {
+            var ativo = b.getAttribute('data-tema') === tema;
+            b.classList.toggle('ativo', ativo);
+            b.setAttribute('aria-pressed', ativo ? 'true' : 'false');
+        });
+    }
+
     function aplicar(tema) {
+        if (TEMAS.indexOf(tema) === -1) tema = 'light';
         html.setAttribute('data-theme', tema);
-        var input = document.getElementById('theme-toggle-input');
-        if (input) input.checked = (tema === 'dark');
+        try { localStorage.setItem(STORAGE_KEY, tema); } catch (e) {}
+        marcarBotoes(tema);
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        var input = document.getElementById('theme-toggle-input');
-        if (!input) return;
+        marcarBotoes(html.getAttribute('data-theme') || 'light');
 
-        input.checked = html.getAttribute('data-theme') === 'dark';
-
-        input.addEventListener('change', function () {
-            var novo = this.checked ? 'dark' : 'light';
-            aplicar(novo);
-            try { localStorage.setItem(STORAGE_KEY, novo); } catch (e) {}
+        document.querySelectorAll('[data-tema]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                aplicar(this.getAttribute('data-tema'));
+            });
         });
     });
 
+    // Atalho antigo: avança para o próximo tema
     window.alternarTema = function () {
-        var atual = html.getAttribute('data-theme') || 'light';
-        var novo  = atual === 'dark' ? 'light' : 'dark';
-        aplicar(novo);
-        try { localStorage.setItem(STORAGE_KEY, novo); } catch (e) {}
+        var atual = TEMAS.indexOf(html.getAttribute('data-theme'));
+        aplicar(TEMAS[(atual + 1) % TEMAS.length]);
     };
 })();

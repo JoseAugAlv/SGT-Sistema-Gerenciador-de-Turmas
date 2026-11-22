@@ -6,7 +6,7 @@ require_once __DIR__ . '/../layouts/nav.php';
 <h1>Sobre o <?= h($appName) ?></h1>
 
 <p>
-    O <strong><?= h($appName) ?></strong> é um Sistema de Gestão de Turmas
+    O <strong><?= h($appName) ?></strong> é um sistema de organização de turmas e grêmios
     desenvolvido para organizar o dia a dia de professores e alunos: turmas,
     projetos, grupos, avaliações, atas e materiais.
 </p>

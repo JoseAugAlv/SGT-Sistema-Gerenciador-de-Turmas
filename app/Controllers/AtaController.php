@@ -41,38 +41,49 @@ class AtaController
 
     // ============ LISTAGEM ============
 
-    public function index(int $projetoId)
-    {
-        $projeto = $this->projeto->porId($projetoId);
-        if (!$projeto) { $this->flash('Projeto não encontrado.'); $this->redirect('/turmas'); }
+public function index(int $projetoId)
+{
+    $projeto = $this->projeto->porId($projetoId);
+    if (!$projeto) { $this->flash('Projeto não encontrado.'); $this->redirect('/turmas'); }
 
-        $u = $_SESSION['usuario'];
-        $this->exigirAcesso($projeto);
+    $u = $_SESSION['usuario'];
+    $this->exigirAcesso($projeto);
 
-        $souMaster = $u['tipo'] === 'master';
-        $souRep    = $this->tu->ehRepresentante((int) $projeto['turma_id'], (int) $u['id']);
+    $souMaster = $u['tipo'] === 'master';
+    $souRep    = $this->tu->ehRepresentante((int) $projeto['turma_id'], (int) $u['id']);
 
-        if ($souMaster || $souRep) {
-            $atas = [
-                'todas'      => $this->ata->listarPorProjeto($projetoId),
-                'pendentes'  => [],
-                'preenchidas'=> $this->ata->listarPreenchidasDoProjeto($projetoId),
-            ];
-            $modo = 'rep';
-        } else {
-            $atas = [
-                'pendentes' => $this->ata->listarPendentesDoDiretor($projetoId, (int) $u['id']),
-                'minhas'    => $this->ata->listarDoParticipante($projetoId, (int) $u['id']),
-            ];
-            $modo = $this->temDiretorAtivoNoProjeto($projetoId, (int) $u['id']) ? 'diretor' : 'aluno';
-        }
-
-        $this->render('atas/index', [
+    if ($souMaster || $souRep) {
+        $this->render('atas/index_rep', [
             'projeto' => $projeto,
-            'modo'    => $modo,
-            'atas'    => $atas,
+            'modo'    => 'rep',
+            'atas'    => [
+                'todas'       => $this->ata->listarPorProjeto($projetoId),
+                'preenchidas' => $this->ata->listarPreenchidasDoProjeto($projetoId),
+            ],
         ]);
+        return;
     }
+
+    if ($this->temDiretorAtivoNoProjeto($projetoId, (int) $u['id'])) {
+        $this->render('atas/index_diretor', [
+            'projeto' => $projeto,
+            'modo'    => 'diretor',
+            'atas'    => [
+                'todas' => $this->ata->listarDosGruposDoDiretor($projetoId, (int) $u['id']),
+            ],
+        ]);
+        return;
+    }
+
+    $this->render('atas/index_aluno', [
+        'projeto' => $projeto,
+        'modo'    => 'aluno',
+        'atas'    => [
+            'minhas'   => $this->ata->listarDoParticipante($projetoId, (int) $u['id']),
+            'abertas'  => $this->ata->listarAbertasParaMembro($projetoId, (int) $u['id']),
+        ],
+    ]);
+}
 
     // ============ CRIAR (REP OU MASTER) ============
 
@@ -192,6 +203,7 @@ class AtaController
 
         // 1) Atualiza a ata original
         $antes = $ata;
+        $this->ata->definirPreenchimento($id, ($_POST['preenchimento'] ?? $ata['preenchimento'] ?? 'diretor'));
         $this->ata->atualizarBasico($id, [
             'titulo'              => $titulo,
             'descricao'           => $descricao,
@@ -324,6 +336,8 @@ class AtaController
         $prazo      = trim($_POST['prazo_preenchimento'] ?? '') ?: null;
         $hi         = trim($_POST['horario_inicio'] ?? '') ?: null;
         $hf         = trim($_POST['horario_fim'] ?? '') ?: null;
+        // Quem preenche: só o diretor ou todos os membros do grupo
+        $preenchimento = ($_POST['preenchimento'] ?? 'diretor') === 'grupo' ? 'grupo' : 'diretor';
 
         $erros = [];
         if (strlen($titulo) < 3)                                    $erros[] = 'Título muito curto.';
@@ -361,6 +375,7 @@ class AtaController
                 'prazo_preenchimento' => $prazo,
                 'horario_inicio'      => $hi,
                 'horario_fim'         => $hf,
+                'preenchimento'       => $preenchimento,
             ]);
 
             $this->audit->registrar('ata_criada', 'atas', $id, null, [
@@ -378,15 +393,28 @@ class AtaController
                 ")->execute([$id, (int) $m['usuario_id']]);
             }
 
-            // Notifica o diretor designado
+            // Avisa quem preenche: o diretor; no modo "grupo", todos os membros
+            $prazoTxt = $prazo ? ' Prazo: ' . date('d/m/Y', strtotime($prazo)) . '.' : '';
             (new Notificacao())->criar(
                 $diretorId,
                 'ata',
                 'Nova ata para preencher',
-                "Você foi designado para preencher a ata '{$titulo}' do grupo '{$grupo['nome']}'." .
-                    ($prazo ? " Prazo: {$prazo}." : ''),
-                '/atas/' . $id
+                "Você é diretor do grupo '{$grupo['nome']}': preencha a ata '{$titulo}'.{$prazoTxt}",
+                '/atas/' . $id . '/preencher'
             );
+            if ($preenchimento === 'grupo') {
+                $outros = array_values(array_filter(
+                    array_map(fn($m) => (int) $m['usuario_id'], $membros),
+                    fn($uid) => $uid !== $diretorId
+                ));
+                (new Notificacao())->criarParaVarios(
+                    $outros,
+                    'ata',
+                    'Ata aberta para o grupo',
+                    "Registre o que você fez na ata '{$titulo}' do grupo '{$grupo['nome']}'.{$prazoTxt}",
+                    '/atas/' . $id . '/preencher'
+                );
+            }
 
             $idsCriados[] = $id;
             $criadas++;
@@ -429,6 +457,19 @@ class AtaController
         $membros = $this->membro->listarAtivos((int) $ata['grupo_id']);
         $idsValidos = array_map(fn($m) => (int) $m['usuario_id'], $membros);
 
+        // "Falta justificada" precisa do motivo
+        $semMotivo = [];
+        foreach ($membros as $m) {
+            $aid = (int) $m['usuario_id'];
+            if (($presencas[$aid] ?? 'sim') === 'justificado' && trim($justificativas[$aid] ?? '') === '') {
+                $semMotivo[] = $m['nome'];
+            }
+        }
+        if ($semMotivo) {
+            $this->flash('Informe o motivo da falta justificada de: ' . implode(', ', $semMotivo) . '.');
+            $this->voltarAta($id);
+        }
+
         foreach ($idsValidos as $alunoId) {
             $presente = $presencas[$alunoId] ?? 'sim';
             if (!in_array($presente, ['sim', 'nao', 'justificado'], true)) {
@@ -454,9 +495,56 @@ class AtaController
             ['total' => count($idsValidos)]);
 
         $this->flash('Presenças atualizadas.', 'sucesso');
+        $this->voltarAta($id);
+    }
+    
+    // ============ TELA FOCADA DE PREENCHIMENTO ============
+
+public function preencher(int $id)
+{
+    $ata = $this->ata->porId($id);
+    if (!$ata) { $this->flash('Ata não encontrada.'); $this->redirect('/turmas'); }
+
+    $this->exigirContribuicao($ata);
+
+    $projeto = $this->projeto->porId((int) $ata['projeto_id']);
+
+    $this->render('atas/preencher', [
+        'ata'           => $ata,
+        'projeto'       => $projeto,
+        'atividades'    => $this->ativ->listarPorAta($id),
+        'relatorios'    => $this->rel->listarPorAta($id),
+        'participantes' => $this->participantes($id),
+        'membros'       => $this->membro->listarAtivos((int) $ata['grupo_id']),
+        'souDiretorAta' => $_SESSION['usuario']['tipo'] === 'master' || $this->ehDiretorDoGrupo($ata, (int) $_SESSION['usuario']['id']),
+        'meuId'         => (int) $_SESSION['usuario']['id'],
+        'alunos'        => $this->alunosParaSelecao($id),
+    ]);
+}
+
+// ============ TELA FOCADA DE VALIDAÇÃO ============
+
+public function validarForm(int $id)
+{
+    $ata = $this->ata->porId($id);
+    if (!$ata) { $this->flash('Ata não encontrada.'); $this->redirect('/turmas'); }
+
+    $projeto = $this->projeto->porId((int) $ata['projeto_id']);
+    $this->exigirPodeEditar($projeto);
+
+    if ($ata['status'] !== 'preenchida') {
+        $this->flash('Apenas atas preenchidas podem ser validadas.');
         $this->redirect('/atas/' . $id);
     }
 
+    $this->render('atas/validar', [
+        'ata'           => $ata,
+        'projeto'       => $projeto,
+        'atividades'    => $this->ativ->listarPorAta($id),
+        'relatorios'    => $this->rel->listarPorAta($id),
+        'participantes' => $this->participantes($id),
+    ]);
+}
     // ============ DETALHE / VISUALIZAÇÃO ============
 
         public function detalhe(int $id)
@@ -470,7 +558,7 @@ class AtaController
         $souMaster       = $u['tipo'] === 'master';
         $souRep          = $this->tu->ehRepresentante((int) $projeto['turma_id'], (int) $u['id']);
         $souDiretor      = $this->diretor->ehDiretorAtivo((int) $ata['grupo_id'], (int) $u['id']);
-        $souParticipante = $this->ehParticipante($id, (int) $u['id']);
+        $souParticipante = $this->ehParticipante($id, (int) $u['id']) || $this->ehMembroDoGrupo($ata, (int) $u['id']);
 
         if (!$souMaster && !$souRep && !$souDiretor && !$souParticipante) {
             http_response_code(403); exit('Sem acesso a esta ata.');
@@ -484,8 +572,8 @@ class AtaController
         $alunos = $this->alunosParaSelecao($id);
 
         // Permissões
-        $podePreencher = $souDiretor
-                      && (int) $ata['diretor_id'] === (int) $u['id']
+        // Qualquer diretor ativo do grupo pode preencher (diretor_id é só referência)
+        $podePreencher = ($souDiretor || (($ata['preenchimento'] ?? 'diretor') === 'grupo' && $this->ehMembroDoGrupo($ata, (int) $u['id'])))
                       && $ata['status'] === 'pendente'
                       && !$projeto['encerrado'];
 
@@ -503,7 +591,7 @@ class AtaController
             'podePreencher'        => $podePreencher,
             'podeValidar'          => $podeValidar,
             'podeExcluir'          => $podeExcluir,
-            'souDiretorDesignado'  => (int) $ata['diretor_id'] === (int) $u['id'],
+            'souDiretorDesignado'  => $souDiretor,
         ]);
     }
 
@@ -514,16 +602,16 @@ class AtaController
         $ata = $this->ata->porId($id);
         if (!$ata) { $this->flash('Ata não encontrada.'); $this->redirect('/turmas'); }
 
-        $this->exigirPreenchimento($ata);
+        $this->exigirContribuicao($ata);
         CsrfMiddleware::validate();
 
         $nome      = trim($_POST['nome'] ?? '');
         $descricao = trim($_POST['descricao'] ?? '') ?: null;
-        $participantesIds = array_map('intval', $_POST['participantes'] ?? []);
+        $participantesIds = $this->filtrarDaTurma($ata, (array) ($_POST['participantes'] ?? []));
 
         if (strlen($nome) < 2) {
             $this->flash('Nome da atividade muito curto.');
-            $this->redirect('/atas/' . $id);
+            $this->voltarAta($id);
         }
 
         $ativId = $this->ativ->criar($id, $nome, $descricao, (int) $_SESSION['usuario']['id']);
@@ -534,11 +622,22 @@ class AtaController
             }
         }
 
+        $mencionados = array_values(array_diff($participantesIds, [(int) $_SESSION['usuario']['id']]));
+        if ($mencionados) {
+            (new Notificacao())->criarParaVarios(
+                $mencionados,
+                'ata',
+                'Você foi mencionado em uma ata',
+                "{$_SESSION['usuario']['nome']} registrou você na atividade '{$nome}' da ata '{$ata['titulo']}'.",
+                '/minhas-atividades'
+            );
+        }
+
         $this->audit->registrar('atividade_adicionada', 'atividades_ata', $ativId, null,
             ['ata_id' => $id, 'nome' => $nome]);
 
         $this->flash('Atividade adicionada.', 'sucesso');
-        $this->redirect('/atas/' . $id);
+        $this->voltarAta($id);
     }
 
     public function excluirAtividade(int $ativId)
@@ -550,13 +649,14 @@ class AtaController
         if (!$atv) { $this->flash('Atividade não encontrada.'); $this->redirect('/turmas'); }
 
         $ata = $this->ata->porId((int) $atv['ata_id']);
-        $this->exigirPreenchimento($ata);
+        $this->exigirContribuicao($ata);
+        $this->exigirAutoriaOuDiretor($ata, (int) $atv['autor_id']);
         CsrfMiddleware::validate();
 
         $this->ativ->excluir($ativId);
         $this->audit->registrar('atividade_removida', 'atividades_ata', $ativId, $atv, null);
         $this->flash('Atividade removida.', 'sucesso');
-        $this->redirect('/atas/' . $atv['ata_id']);
+        $this->voltarAta((int) $atv['ata_id']);
     }
 
     public function adicionarRelatorio(int $id)
@@ -564,14 +664,14 @@ class AtaController
         $ata = $this->ata->porId($id);
         if (!$ata) { $this->flash('Ata não encontrada.'); $this->redirect('/turmas'); }
 
-        $this->exigirPreenchimento($ata);
+        $this->exigirContribuicao($ata);
         CsrfMiddleware::validate();
 
         $titulo         = trim($_POST['titulo'] ?? '') ?: null;
         $conteudo       = trim($_POST['conteudo'] ?? '');
         $tipoRelatorio  = $_POST['tipo_relatorio'] ?? 'ocorrencia';
         $tema           = $_POST['tema'] ?? null;
-        $participantesIds = array_map('intval', $_POST['participantes'] ?? []);
+        $participantesIds = $this->filtrarDaTurma($ata, (array) ($_POST['participantes'] ?? []));
 
         $erros = [];
         if (strlen($conteudo) < 3) $erros[] = 'Conteúdo do relatório muito curto.';
@@ -581,7 +681,7 @@ class AtaController
 
         if ($erros) {
             $this->flash(implode(' | ', $erros));
-            $this->redirect('/atas/' . $id);
+            $this->voltarAta($id);
         }
 
         $usuario = $_SESSION['usuario'];
@@ -591,7 +691,7 @@ class AtaController
         $souRep  = $this->tu->ehRepresentante((int) $projeto['turma_id'], (int) $usuario['id']);
 
         // Master cai em 'diretor' por padrão (é quem revisa), a menos que seja rep da turma
-        $tipoUsuario = $souRep ? 'representante' : 'diretor';
+        $tipoUsuario = $souRep ? 'representante' : ($this->ehDiretorDoGrupo($ata, (int) $usuario['id']) ? 'diretor' : 'aluno');
 
         $relId = $this->rel->criar($id, (int) $usuario['id'], $tipoUsuario, $titulo, $conteudo, $tipoRelatorio, $tema);
 
@@ -603,7 +703,7 @@ class AtaController
             ['ata_id' => $id, 'tema' => $tema]);
 
         $this->flash('Relatório adicionado.', 'sucesso');
-        $this->redirect('/atas/' . $id);
+        $this->voltarAta($id);
     }
 
     public function excluirRelatorio(int $relId)
@@ -615,13 +715,14 @@ class AtaController
         if (!$rel) { $this->flash('Relatório não encontrado.'); $this->redirect('/turmas'); }
 
         $ata = $this->ata->porId((int) $rel['ata_id']);
-        $this->exigirPreenchimento($ata);
+        $this->exigirContribuicao($ata);
+        $this->exigirAutoriaOuDiretor($ata, (int) $rel['usuario_id']);
         CsrfMiddleware::validate();
 
         $this->rel->excluir($relId);
         $this->audit->registrar('relatorio_removido', 'relatorios_ata', $relId, $rel, null);
         $this->flash('Relatório removido.', 'sucesso');
-        $this->redirect('/atas/' . $rel['ata_id']);
+        $this->voltarAta((int) $rel['ata_id']);
     }
 
         public function finalizar(int $id)
@@ -698,6 +799,51 @@ class AtaController
         $this->redirect('/atas/' . $id);
     }
 
+    /**
+     * Representante devolve uma ata preenchida (ou já validada) para o diretor corrigir.
+     * Volta para 'pendente'; o motivo é obrigatório e vai no aviso aos diretores do grupo.
+     */
+    public function reabrir(int $id)
+    {
+        $ata = $this->ata->porId($id);
+        if (!$ata) { $this->flash('Ata não encontrada.'); $this->redirect('/turmas'); }
+
+        $projeto = $this->projeto->porId((int) $ata['projeto_id']);
+        $this->exigirPodeEditar($projeto);
+        CsrfMiddleware::validate();
+
+        if (!in_array($ata['status'], ['preenchida', 'revisada'], true)) {
+            $this->flash('Esta ata ainda está com o diretor: não há o que reabrir.');
+            $this->redirect('/atas/' . $id);
+        }
+        if (!empty($projeto['encerrado'])) {
+            $this->flash('Projeto encerrado: as atas não podem mais ser reabertas.');
+            $this->redirect('/atas/' . $id);
+        }
+
+        $motivo = trim($_POST['motivo'] ?? '');
+        if (mb_strlen($motivo) < 3) {
+            $this->flash('Diga o que precisa ser corrigido: o diretor vai ler esse motivo.');
+            $this->redirect('/atas/' . $id . ($ata['status'] === 'preenchida' ? '/validar-form' : ''));
+        }
+
+        $this->ata->definirStatus($id, 'pendente');
+        $this->audit->registrar('ata_reaberta', 'atas', $id,
+            ['status' => $ata['status']], ['status' => 'pendente', 'motivo' => $motivo]);
+
+        $diretores = array_map(fn($d) => (int) $d['usuario_id'], $this->diretor->listarAtivos((int) $ata['grupo_id']));
+        (new Notificacao())->criarParaVarios(
+            $diretores,
+            'ata',
+            'Ata devolvida para correção',
+            "A ata '{$ata['titulo']}' voltou para você corrigir. Motivo: {$motivo}",
+            '/atas/' . $id . '/preencher'
+        );
+
+        $this->flash('Ata devolvida ao diretor. Ele foi avisado com o motivo.', 'sucesso');
+        $this->redirect('/atas/' . $id);
+    }
+
     public function excluir(int $id)
     {
         $ata = $this->ata->porId($id);
@@ -716,6 +862,17 @@ class AtaController
     }
 
     // ============ HELPERS ============
+
+    // ============ MINHAS ATIVIDADES (área do aluno) ============
+
+    public function minhasAtividades()
+    {
+        $u = $_SESSION['usuario'];
+        $this->render('atas/minhas_atividades', [
+            'atividades' => $this->ata->atividadesDoUsuario((int) $u['id']),
+            'meuId'      => (int) $u['id'],
+        ]);
+    }
 
     private function ehParticipante(int $ataId, int $usuarioId): bool
     {
@@ -768,14 +925,81 @@ class AtaController
         http_response_code(403); exit('Apenas representante ou master.');
     }
 
+    /**
+     * Mantém só os IDs de pessoas ativas na turma da ata (impede marcar usuários de fora).
+     */
+    private function filtrarDaTurma(array $ata, array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn($i) => $i > 0)));
+        if (!$ids) return [];
+        $stmt = Database::getConnection()->prepare("SELECT usuario_id FROM turma_usuarios WHERE turma_id = ? AND ativo = 1");
+        $stmt->execute([(int) $ata['turma_id']]);
+        return array_values(array_intersect($ids, array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN))));
+    }
+
+    /**
+     * Depois de uma ação de preenchimento, volta para a tela de onde a pessoa veio
+     * (a tela focada "preencher" ou o detalhe da ata).
+     */
+    private function voltarAta(int $ataId): void
+    {
+        $origem = $_SERVER['HTTP_REFERER'] ?? '';
+        $this->redirect('/atas/' . $ataId . (str_contains($origem, '/atas/' . $ataId . '/preencher') ? '/preencher' : ''));
+    }
+
+    private function ehDiretorDoGrupo(array $ata, int $usuarioId): bool
+    {
+        $st = Database::getConnection()->prepare("SELECT 1 FROM grupo_diretores WHERE grupo_id = ? AND usuario_id = ? AND ativo = 1 LIMIT 1");
+        $st->execute([(int) $ata['grupo_id'], $usuarioId]);
+        return (int) $ata['diretor_id'] === $usuarioId || (bool) $st->fetchColumn();
+    }
+
+    private function ehMembroDoGrupo(array $ata, int $usuarioId): bool
+    {
+        return $this->membro->estaAtivo((int) $ata['grupo_id'], $usuarioId);
+    }
+
+    /**
+     * Quem pode adicionar atividades e relatórios: o diretor do grupo e, quando a ata
+     * está aberta ao grupo, qualquer membro ativo. Presenças e envio continuam com o diretor.
+     */
+    private function exigirContribuicao(array $ata): void
+    {
+        $u = $_SESSION['usuario'] ?? null;
+        if (!$u) { http_response_code(403); exit('Não autenticado.'); }
+        if ($u['tipo'] === 'master') return;
+
+        $uid = (int) $u['id'];
+        $pode = $this->ehDiretorDoGrupo($ata, $uid)
+             || (($ata['preenchimento'] ?? 'diretor') === 'grupo' && $this->ehMembroDoGrupo($ata, $uid));
+        if (!$pode) { http_response_code(403); exit('Você não pode preencher esta ata.'); }
+        if ($ata['status'] !== 'pendente') { http_response_code(403); exit('Esta ata já foi enviada.'); }
+
+        $projeto = $this->projeto->porId((int) $ata['projeto_id']);
+        if ($projeto['encerrado']) { http_response_code(403); exit('Projeto encerrado.'); }
+    }
+
+    /** Membro comum só remove o que ele mesmo registrou; diretor e master removem qualquer item. */
+    private function exigirAutoriaOuDiretor(array $ata, int $autorId): void
+    {
+        $u = $_SESSION['usuario'];
+        if ($u['tipo'] === 'master' || $this->ehDiretorDoGrupo($ata, (int) $u['id']) || (int) $u['id'] === $autorId) return;
+        http_response_code(403); exit('Você só pode remover o que você registrou.');
+    }
+
     private function exigirPreenchimento(array $ata): void
     {
         $u = $_SESSION['usuario'] ?? null;
         if (!$u) { http_response_code(403); exit('Não autenticado.'); }
         if ($u['tipo'] === 'master') return;
 
-        if ((int) $ata['diretor_id'] !== (int) $u['id']) {
-            http_response_code(403); exit('Apenas o diretor designado pode preencher esta ata.');
+        // Qualquer diretor ativo do grupo pode preencher: diretor_id é só uma referência (descricao.md 8.1)
+        $stDir = Database::getConnection()->prepare(
+            "SELECT 1 FROM grupo_diretores WHERE grupo_id = ? AND usuario_id = ? AND ativo = 1 LIMIT 1"
+        );
+        $stDir->execute([(int) $ata['grupo_id'], (int) $u['id']]);
+        if ((int) $ata['diretor_id'] !== (int) $u['id'] && !$stDir->fetchColumn()) {
+            http_response_code(403); exit('Apenas os diretores do grupo podem preencher esta ata.');
         }
         if ($ata['status'] !== 'pendente') {
             http_response_code(403); exit('Esta ata já foi finalizada.');

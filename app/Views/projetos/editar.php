@@ -1,37 +1,58 @@
 <?php
+$cssPagina = 'projetos.css';
+
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 require_once __DIR__ . '/../layouts/flashes.php';
 ?>
-<?php require __DIR__ . '/../projetos/_nav.php'; ?>
 
-<h1>Editar Projeto</h1>
-<p>Turma: <strong><?= h($projeto['turma_nome']) ?></strong></p>
+<section class="hero-section">
+    <div>
+        <div class="eyebrow">
+            <span class="status-dot"></span>
+            Editar projeto
+        </div>
+        <h1><?= h($projeto['nome']) ?></h1>
+        <p class="hero-subtitle">
+            Turma: <strong><?= h($projeto['turma_nome']) ?></strong>
+        </p>
+    </div>
+    <div class="hero-actions">
+        <a class="button button-ghost" href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+</section>
 
-<form method="POST" action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/atualizar">
+<form method="POST" action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/atualizar" class="panel">
     <?= ViewHelper::csrfField() ?>
 
-    <p><label>Nome *<br>
-        <input type="text" name="nome" maxlength="150" value="<?= h($projeto['nome']) ?>" required></label></p>
+    <label class="field-label">Nome *</label>
+    <input type="text" name="nome" class="field" maxlength="150"
+           value="<?= h($projeto['nome']) ?>" required>
 
-    <p><label>Descrição<br>
-        <textarea name="descricao" rows="3" maxlength="2000"><?= h($projeto['descricao'] ?? '') ?></textarea></label></p>
+    <label class="field-label">Descrição</label>
+    <textarea name="descricao" class="field" rows="3" maxlength="2000"><?= h($projeto['descricao'] ?? '') ?></textarea>
 
-    <p><label>Prazo<br>
-        <input type="date" name="prazo" value="<?= h($projeto['prazo'] ?? '') ?>"></label></p>
+    <label class="field-label">Prazo</label>
+    <input type="date" name="prazo" class="field" value="<?= h($projeto['prazo'] ?? '') ?>">
 
-    <p><label>Modo de avaliação *<br>
-        <select name="modo_avaliacao" required>
-            <?php foreach ($modos as $val => $label): ?>
-                <option value="<?= h($val) ?>" <?= $val === $projeto['modo_avaliacao'] ? 'selected' : '' ?>>
-                    <?= h($label) ?>
-                </option>
-            <?php endforeach; ?>
-        </select></label></p>
+    <label class="field-label">Modo de avaliação *</label>
+    <select name="modo_avaliacao" class="field" required>
+        <?php foreach ($modos as $val => $label): ?>
+            <option value="<?= h($val) ?>" <?= $val === $projeto['modo_avaliacao'] ? 'selected' : '' ?>>
+                <?= h($label) ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
 
-    <p>
-        <button type="submit"><i class="fas fa-check"></i> Salvar</button>
-        <a href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>">Cancelar</a>
+    <p style="margin-top:20px;">
+        <button type="submit" class="button button-primary">
+            <i class="fas fa-check"></i> Salvar alterações
+        </button>
+        <a class="button button-ghost" href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>">
+            Cancelar
+        </a>
     </p>
 </form>
 

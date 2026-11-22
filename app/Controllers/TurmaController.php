@@ -1,33 +1,42 @@
 <?php
-require_once __DIR__ . '/../Models/Notificacao.php';
 // app/Controllers/TurmaController.php
+
 require_once __DIR__ . '/../Core/App.php';
+require_once __DIR__ . '/../Config/database.php';
 require_once __DIR__ . '/../Models/Turma.php';
+require_once __DIR__ . '/../Models/Projeto.php';
 require_once __DIR__ . '/../Models/TurmaUsuario.php';
 require_once __DIR__ . '/../Models/Auditoria.php';
-require_once __DIR__ . '/../Helpers/ViewHelper.php';
-require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
 require_once __DIR__ . '/../Models/Curso.php';
 require_once __DIR__ . '/../Models/Periodo.php';
+require_once __DIR__ . '/../Models/Notificacao.php';
+require_once __DIR__ . '/../Helpers/ViewHelper.php';
+require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
 
 class TurmaController
 {
+    const ANOS_MODULO = [
+        '1MOD' => '1º Módulo',
+        '2MOD' => '2º Módulo',
+        '3MOD' => '3º Módulo',
+    ];
+
     private Turma        $turma;
     private TurmaUsuario $tu;
     private Auditoria    $audit;
-    private Curso       $curso;
-    private Periodo $periodo;
-
-    const ANOS_MODULO = ['1MOD' => '1º Módulo', '2MOD' => '2º Módulo', '3MOD' => '3º Módulo'];
+    private Curso        $curso;
+    private Periodo      $periodo;
 
     public function __construct()
     {
-        $this->turma = new Turma();
-        $this->tu    = new TurmaUsuario();
-        $this->audit = new Auditoria();
+        $this->turma   = new Turma();
+        $this->tu      = new TurmaUsuario();
+        $this->audit   = new Auditoria();
         $this->curso   = new Curso();
         $this->periodo = new Periodo();
     }
+
+    // ============ LISTAGEM ============
 
     public function index()
     {
@@ -42,14 +51,16 @@ class TurmaController
         ]);
     }
 
+    // ============ CRIAR ============
+
     public function criarForm()
     {
         $this->exigirMaster();
 
         $this->render('turmas/criar', [
-            'cursos'    => $this->curso->listarAtivos(),
-            'periodos'  => $this->periodo->listarAtivos(),
-            'anosModulo' => TurmaController::ANOS_MODULO,
+            'cursos'     => $this->curso->listarAtivos(),
+            'periodos'   => $this->periodo->listarAtivos(),
+            'anosModulo' => self::ANOS_MODULO,
         ]);
     }
 
@@ -63,21 +74,21 @@ class TurmaController
         $cursoId      = (int) ($_POST['curso_id']    ?? 0);
         $periodoId    = (int) ($_POST['periodo_id']  ?? 0);
         $codigoAcesso = strtoupper(trim($_POST['codigo_acesso'] ?? ''));
-        $corP         = trim($_POST['cor_primaria']   ?? '#3498db');
-        $corS         = trim($_POST['cor_secundaria'] ?? '#2ecc71');
+        $corP         = trim($_POST['cor_primaria']   ?? '#7165e8');
+        $corS         = trim($_POST['cor_secundaria'] ?? '#39b889');
 
         $erros = [];
-        if (!ctype_digit($codigoEscola))                    $erros[] = 'Código da escola deve ser numérico.';
-        if (!array_key_exists($anoModulo, self::ANOS_MODULO)) $erros[] = 'Ano/Módulo inválido.';
+        if (!ctype_digit($codigoEscola))                       $erros[] = 'Código da escola deve ser numérico.';
+        if (!array_key_exists($anoModulo, self::ANOS_MODULO))  $erros[] = 'Ano/Módulo inválido.';
 
-        $curso = $cursoId   ? $this->curso->porId($cursoId)     : null;
-        if (!$curso || !$curso['ativo'])                    $erros[] = 'Curso inválido.';
+        $curso = $cursoId ? $this->curso->porId($cursoId) : null;
+        if (!$curso || !$curso['ativo'])                       $erros[] = 'Curso inválido.';
 
         $periodo = $periodoId ? $this->periodo->porId($periodoId) : null;
-        if (!$periodo || !$periodo['ativo'])                $erros[] = 'Período inválido.';
+        if (!$periodo || !$periodo['ativo'])                   $erros[] = 'Período inválido.';
 
-        if (strlen($codigoAcesso) < 4)                      $erros[] = 'Código de acesso muito curto.';
-        if ($this->turma->codigoJaExiste($codigoAcesso))    $erros[] = 'Código já em uso.';
+        if (strlen($codigoAcesso) < 4)                         $erros[] = 'Código de acesso muito curto.';
+        if ($this->turma->codigoJaExiste($codigoAcesso))       $erros[] = 'Código já em uso.';
 
         if ($erros) {
             $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => implode(' | ', $erros)];
@@ -99,6 +110,8 @@ class TurmaController
         $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => "Turma '{$nome}' criada. Código: {$codigoAcesso}"];
         $this->redirect('/turmas/' . $id);
     }
+
+    // ============ DETALHE ============
 
     public function detalhe(int $id)
     {
@@ -129,8 +142,153 @@ class TurmaController
             'alunos'         => $this->tu->listarAlunos($id),
             'isMaster'       => $souMaster,
             'isRep'          => $souRep,
+            'projetos'       => (new Projeto())->listarPorTurma($id),
         ]);
     }
+
+    // ============ EDITAR ============
+
+    public function editarForm(int $id)
+    {
+        $this->exigirMaster();
+
+        $turma = $this->turma->porId($id);
+        if (!$turma) {
+            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Turma não encontrada.'];
+            $this->redirect('/turmas');
+        }
+
+        $partes = explode('-', $turma['nome']);
+        $codigoEscolaAtual = $partes[0] ?? '';
+        $anoModuloAtual    = $partes[1] ?? '';
+        $siglaCursoAtual   = $partes[2] ?? '';
+        $siglaPeriodoAtual = $partes[3] ?? '';
+
+        $cursoAtualId = null;
+        foreach ($this->curso->listarTodos() as $c) {
+            if ($c['sigla'] === $siglaCursoAtual) { $cursoAtualId = (int) $c['id']; break; }
+        }
+        $periodoAtualId = null;
+        foreach ($this->periodo->listarTodos() as $p) {
+            if ($p['sigla'] === $siglaPeriodoAtual) { $periodoAtualId = (int) $p['id']; break; }
+        }
+
+        $this->render('turmas/editar', [
+            'turma'             => $turma,
+            'cursos'            => $this->curso->listarAtivos(),
+            'periodos'          => $this->periodo->listarAtivos(),
+            'anosModulo'        => self::ANOS_MODULO,
+            'codigoEscolaAtual' => $codigoEscolaAtual,
+            'anoModuloAtual'    => $anoModuloAtual,
+            'cursoAtualId'      => $cursoAtualId,
+            'periodoAtualId'    => $periodoAtualId,
+        ]);
+    }
+
+    public function atualizar(int $id)
+    {
+        $this->exigirMaster();
+        CsrfMiddleware::validate();
+
+        $antes = $this->turma->porId($id);
+        if (!$antes) {
+            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Turma não encontrada.'];
+            $this->redirect('/turmas');
+        }
+
+        $codigoEscola = trim($_POST['codigo_escola'] ?? '');
+        $anoModulo    = trim($_POST['ano_modulo']    ?? '');
+        $cursoId      = (int) ($_POST['curso_id']    ?? 0);
+        $periodoId    = (int) ($_POST['periodo_id']  ?? 0);
+        $codigoAcesso = strtoupper(trim($_POST['codigo_acesso'] ?? ''));
+        $corP         = trim($_POST['cor_primaria']   ?? '#7165e8');
+        $corS         = trim($_POST['cor_secundaria'] ?? '#39b889');
+
+        $erros = [];
+        if (!ctype_digit($codigoEscola))                       $erros[] = 'Código da escola deve ser numérico.';
+        if (!array_key_exists($anoModulo, self::ANOS_MODULO))  $erros[] = 'Ano/Módulo inválido.';
+
+        $curso = $cursoId ? $this->curso->porId($cursoId) : null;
+        if (!$curso || !$curso['ativo'])                       $erros[] = 'Curso inválido.';
+
+        $periodo = $periodoId ? $this->periodo->porId($periodoId) : null;
+        if (!$periodo || !$periodo['ativo'])                   $erros[] = 'Período inválido.';
+
+        if (strlen($codigoAcesso) < 4)                         $erros[] = 'Código de acesso muito curto.';
+        if ($this->turma->codigoJaExiste($codigoAcesso, $id))  $erros[] = 'Código já em uso.';
+
+        if ($erros) {
+            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => implode(' | ', $erros)];
+            $this->redirect('/turmas/' . $id . '/editar');
+        }
+
+        $nome = Turma::montarNome($codigoEscola, $anoModulo, $curso['sigla'], $periodo['sigla']);
+
+        Database::getConnection()->prepare("
+            UPDATE turmas SET nome = ?, codigo_acesso = ?, codigo_interno = ?, cor_primaria = ?, cor_secundaria = ?
+            WHERE id = ?
+        ")->execute([$nome, $codigoAcesso, $nome, $corP, $corS, $id]);
+
+        $this->audit->registrar('turma_atualizada', 'turmas', $id, $antes,
+            ['nome' => $nome, 'codigo_acesso' => $codigoAcesso]);
+
+        $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Turma atualizada.'];
+        $this->redirect('/turmas/' . $id);
+    }
+
+    // ============ EXCLUIR ============
+
+    public function excluirForm(int $id)
+    {
+        $this->exigirMaster();
+
+        $turma = $this->turma->porId($id);
+        if (!$turma) {
+            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Turma não encontrada.'];
+            $this->redirect('/turmas');
+        }
+
+        $totalAlunos   = $this->tu->contarAtivos($id);
+        $totalProjetos = $this->contarProjetos($id);
+
+        $this->render('turmas/excluir', [
+            'turma'         => $turma,
+            'totalAlunos'   => $totalAlunos,
+            'totalProjetos' => $totalProjetos,
+            'podeExcluir'   => ($totalAlunos === 0 && $totalProjetos === 0),
+        ]);
+    }
+
+    public function excluir(int $id)
+    {
+        $this->exigirMaster();
+        CsrfMiddleware::validate();
+
+        $turma = $this->turma->porId($id);
+        if (!$turma) {
+            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Turma não encontrada.'];
+            $this->redirect('/turmas');
+        }
+
+        $totalAlunos   = $this->tu->contarAtivos($id);
+        $totalProjetos = $this->contarProjetos($id);
+
+        if ($totalAlunos > 0 || $totalProjetos > 0) {
+            $_SESSION['flash'] = [
+                'tipo' => 'erro',
+                'mensagem' => "Não é possível excluir: turma tem {$totalAlunos} aluno(s) e {$totalProjetos} projeto(s)."
+            ];
+            $this->redirect('/turmas/' . $id);
+        }
+
+        $this->audit->registrar('turma_excluida', 'turmas', $id, $turma, null);
+        $this->turma->delete($id, 'id');
+
+        $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => "Turma '{$turma['nome']}' excluída."];
+        $this->redirect('/turmas');
+    }
+
+    // ============ BLOQUEIO ============
 
     public function bloquear(int $id)
     {
@@ -158,6 +316,8 @@ class TurmaController
         $this->redirect('/turmas/' . $id);
     }
 
+    // ============ CÓDIGO DE ACESSO ============
+
     public function regenerarCodigo(int $id)
     {
         CsrfMiddleware::validate();
@@ -175,6 +335,77 @@ class TurmaController
         $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => "Novo código: {$novo}"];
         $this->redirect('/turmas/' . $id);
     }
+
+    // ============ IDENTIDADE (cor e logo da turma) ============
+
+    private function exigirRepOuMaster(int $id): array
+    {
+        $turma = $this->turma->porId($id);
+        if (!$turma) {
+            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Turma não encontrada.'];
+            $this->redirect('/turmas');
+        }
+        $u = $_SESSION['usuario'];
+        if ($u['tipo'] !== 'master' && !$this->tu->ehRepresentante($id, (int) $u['id'])) {
+            http_response_code(403);
+            exit('Sem permissão.');
+        }
+        return $turma;
+    }
+
+    public function identidadeForm(int $id)
+    {
+        $turma = $this->exigirRepOuMaster($id);
+        $this->render('turmas/identidade', ['turma' => $turma]);
+    }
+
+    public function salvarIdentidade(int $id)
+    {
+        CsrfMiddleware::validate();
+        $turma = $this->exigirRepOuMaster($id);
+
+        $personalizada = !empty($_POST['cor_personalizada']) ? 1 : 0;
+        $cor = strtolower(trim($_POST['cor_primaria'] ?? ''));
+        if (!preg_match('/^#[0-9a-f]{6}$/', $cor)) {
+            $cor = $turma['cor_primaria'];
+        }
+
+        $logo = $turma['logo'];
+        $logoAntigo = null;
+
+        if (!empty($_POST['remover_logo'])) {
+            $logoAntigo = $logo;
+            $logo = null;
+        }
+
+        if (!empty($_FILES['logo']['name'])) {
+            require_once __DIR__ . '/../Helpers/UploadHelper.php';
+            $r = UploadHelper::upload($_FILES['logo'], 'uploads/turmas', ['png', 'jpg', 'jpeg', 'webp'], 1048576);
+            if (!$r['success']) {
+                $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Logo: ' . $r['message'] . ' Use PNG, JPG ou WEBP de até 1 MB.'];
+                $this->redirect('/turmas/' . $id . '/identidade');
+            }
+            $logoAntigo = $turma['logo'];
+            $logo = $r['arquivo'];
+        }
+
+        $this->turma->atualizarIdentidade($id, $cor, $personalizada, $logo);
+
+        // Apaga o arquivo antigo só depois de salvar
+        if ($logoAntigo && $logoAntigo !== $logo && str_starts_with($logoAntigo, 'uploads/turmas/')) {
+            $caminho = __DIR__ . '/../../public/' . $logoAntigo;
+            if (is_file($caminho)) @unlink($caminho);
+        }
+
+        $this->audit->registrar('turma_identidade_alterada', 'turmas', $id,
+            ['cor' => $turma['cor_primaria'], 'personalizada' => (int) $turma['cor_personalizada'], 'logo' => $turma['logo']],
+            ['cor' => $cor, 'personalizada' => $personalizada, 'logo' => $logo]);
+
+        $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Identidade da turma salva.'];
+        $this->redirect('/turmas/' . $id . '/identidade');
+    }
+
+    // ============ ENTRAR ============
 
     public function entrarForm()
     {
@@ -214,6 +445,8 @@ class TurmaController
         $this->redirect('/turmas/' . $turma['id']);
     }
 
+    // ============ REPRESENTANTES ============
+
     public function representantesForm(int $id)
     {
         $this->exigirMaster();
@@ -227,7 +460,7 @@ class TurmaController
         ]);
     }
 
-        public function nomearRepresentante(int $id)
+    public function nomearRepresentante(int $id)
     {
         $this->exigirMaster();
         CsrfMiddleware::validate();
@@ -253,7 +486,6 @@ class TurmaController
             ['usuario_id' => $usuarioId, 'papel' => 'representante']);
 
         $turma = $this->turma->porId($id);
-
         (new Notificacao())->criar(
             $usuarioId,
             'papel',
@@ -266,7 +498,7 @@ class TurmaController
         $this->redirect('/turmas/' . $id . '/representantes');
     }
 
-        public function removerRepresentante(int $id)
+    public function removerRepresentante(int $id)
     {
         $this->exigirMaster();
         CsrfMiddleware::validate();
@@ -278,10 +510,7 @@ class TurmaController
         }
 
         if ($this->tu->contarRepresentantes($id) <= 1) {
-            $_SESSION['flash'] = [
-                'tipo' => 'erro',
-                'mensagem' => 'Não é possível remover o último representante. Nomeie outro antes.'
-            ];
+            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Não é possível remover o último representante.'];
             $this->redirect('/turmas/' . $id . '/representantes');
         }
 
@@ -291,7 +520,6 @@ class TurmaController
             ['usuario_id' => $usuarioId, 'papel' => 'aluno']);
 
         $turma = $this->turma->porId($id);
-
         (new Notificacao())->criar(
             $usuarioId,
             'papel',
@@ -303,6 +531,16 @@ class TurmaController
         $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Representante removido.'];
         $this->redirect('/turmas/' . $id . '/representantes');
     }
+
+    // ============ HELPERS ============
+
+    private function contarProjetos(int $turmaId): int
+    {
+        $stmt = Database::getConnection()->prepare("SELECT COUNT(*) FROM projetos WHERE turma_id = ?");
+        $stmt->execute([$turmaId]);
+        return (int) $stmt->fetchColumn();
+    }
+
     private function exigirMaster(): void
     {
         if (empty($_SESSION['usuario']) || $_SESSION['usuario']['tipo'] !== 'master') {

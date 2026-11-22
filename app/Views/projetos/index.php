@@ -1,56 +1,48 @@
 <?php
+$cssPagina = 'projetos.css';
+
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 require_once __DIR__ . '/../layouts/flashes.php';
 ?>
 
-<h1>Projetos — <?= h($turma['nome']) ?></h1>
-
-<?php if ($isMaster): ?>
-    <p>
-        <a href="<?= $basePath ?>/projetos/criar?turma_id=<?= (int) $turma['id'] ?>">
-            <i class="fas fa-plus"></i> Novo Projeto
+<section class="hero-section">
+    <div>
+        <h1>Projetos</h1>
+        <p class="hero-subtitle">
+            <?= h($turma['nome']) ?> · <?= count($projetos) ?> projeto(s)
+        </p>
+    </div>
+    <div class="hero-actions">
+        <a class="button button-ghost" href="<?= $basePath ?>/turmas/<?= (int) $turma['id'] ?>">
+            <i class="fas fa-arrow-left"></i> Voltar à turma
         </a>
-    </p>
-<?php endif; ?>
+        <?php if ($isMaster): ?>
+            <a class="button button-primary" href="<?= $basePath ?>/projetos/criar?turma_id=<?= (int) $turma['id'] ?>">
+                <i class="fas fa-plus"></i> Novo projeto
+            </a>
+        <?php endif; ?>
+    </div>
+</section>
 
 <?php if (empty($projetos)): ?>
-    <p>Nenhum projeto cadastrado nesta turma.</p>
+    <section class="panel empty-state">
+        <h2>Nenhum projeto cadastrado</h2>
+        <p>
+            <?php if ($isMaster): ?>
+                Crie o primeiro projeto desta turma clicando no botão abaixo.
+            <?php else: ?>
+                Aguarde o professor ou representante criar um projeto.
+            <?php endif; ?>
+        </p>
+        <?php if ($isMaster): ?>
+            <a class="button button-primary" href="<?= $basePath ?>/projetos/criar?turma_id=<?= (int) $turma['id'] ?>">
+                <i class="fas fa-plus"></i> Criar projeto
+            </a>
+        <?php endif; ?>
+    </section>
 <?php else: ?>
-    <table border="1" cellpadding="6">
-        <thead>
-            <tr>
-                <th>Nome</th>
-                <th>Modo</th>
-                <th>Prazo</th>
-                <th>Etapas</th>
-                <th>Status</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($projetos as $p): ?>
-                <tr>
-                    <td><?= h($p['nome']) ?></td>
-                    <td><?= h($p['modo_avaliacao']) ?></td>
-                    <td><?= h($p['prazo'] ?? '—') ?></td>
-                    <td><?= (int) $p['total_etapas'] ?></td>
-                    <td>
-                        <?php if ($p['encerrado']): ?>
-                            <i class="fas fa-lock" style="color:#b00"></i> Encerrado
-                        <?php else: ?>
-                            <i class="fas fa-play" style="color:#0a0"></i> Em andamento
-                        <?php endif; ?>
-                    </td>
-                    <td><a href="<?= $basePath ?>/projetos/<?= (int) $p['id'] ?>">Abrir</a></td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+    <?php require __DIR__ . '/_lista.php'; ?>
 <?php endif; ?>
-
-<p><a href="<?= $basePath ?>/turmas/<?= (int) $turma['id'] ?>">
-    <i class="fas fa-arrow-left"></i> Voltar à turma
-</a></p>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

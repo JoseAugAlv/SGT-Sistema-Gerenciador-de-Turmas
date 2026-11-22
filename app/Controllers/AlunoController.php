@@ -38,61 +38,98 @@ class AlunoController
     // ============ LISTAGEM ============
 
     public function index()
-    {
-        $u = $_SESSION['usuario'];
-        $isMaster = $u['tipo'] === 'master';
+{
+    $u        = $_SESSION['usuario'];
+    $isMaster = $u['tipo'] === 'master';
+    $pdo      = Database::getConnection();
 
-        $pdo = Database::getConnection();
-
-        if ($isMaster) {
-            // Master vê todos os alunos
-            $stmt = $pdo->query("
-                SELECT u.*,
-                       (SELECT GROUP_CONCAT(t.nome SEPARATOR ', ')
-                        FROM turma_usuarios tu
-                        INNER JOIN turmas t ON t.id = tu.turma_id
-                        WHERE tu.usuario_id = u.id AND tu.ativo = 1) AS turmas
-                FROM usuarios u
-                WHERE u.tipo = 'aluno'
-                ORDER BY u.nome ASC
-                LIMIT 500
-            ");
-            $alunos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $minhasTurmas = $this->turma->listarTodas();
-        } else {
-            // Representante vê apenas alunos das suas turmas
-            $minhasTurmas = $this->turmasQueSouRep((int) $u['id']);
-
-            if (empty($minhasTurmas)) {
-                http_response_code(403);
-                exit('Você não é representante de nenhuma turma.');
-            }
-
-            $idsTurmas = array_map(fn($t) => (int) $t['id'], $minhasTurmas);
-            $ph = implode(',', array_fill(0, count($idsTurmas), '?'));
-
-            $stmt = $pdo->prepare("
-                SELECT DISTINCT u.*,
-                       (SELECT GROUP_CONCAT(t2.nome SEPARATOR ', ')
-                        FROM turma_usuarios tu2
-                        INNER JOIN turmas t2 ON t2.id = tu2.turma_id
-                        WHERE tu2.usuario_id = u.id AND tu2.ativo = 1) AS turmas
-                FROM usuarios u
-                INNER JOIN turma_usuarios tu ON tu.usuario_id = u.id
-                WHERE u.tipo = 'aluno' AND tu.turma_id IN ($ph)
-                ORDER BY u.nome ASC
-                LIMIT 500
-            ");
-            $stmt->execute($idsTurmas);
-            $alunos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
-
-        $this->render('alunos/index', [
-            'alunos'       => $alunos,
-            'minhasTurmas' => $minhasTurmas,
-            'isMaster'     => $isMaster,
-        ]);
+    // ---------- Quais turmas o usuário enxerga ----------
+    if ($isMaster) {
+        $minhasTurmas = $this->turma->listarTodas();
+    } else {
+        // Todas as turmas em que o usuário está ATIVO
+        // (não só onde é representante)
+        $minhasTurmas = $this->turma->listarDoUsuario((int) $u['id']);
     }
+
+    $idsTurmas = array_map(fn($t) => (int) $t['id'], $minhasTurmas);
+
+    // Sem turmas → lista vazia (não é erro)
+    if (empty($idsTurmas)) {
+        $this->render('alunos/index', [
+            'alunos'         => [],
+            'gruposPorAluno' => [],
+            'minhasTurmas'   => [],
+            'isMaster'       => $isMaster,
+            'podeGerenciar'  => $isMaster,
+        ]);
+        return;
+    }
+
+    $ph = implode(',', array_fill(0, count($idsTurmas), '?'));
+
+    // ---------- Alunos das turmas ----------
+    $stmt = $pdo->prepare("
+        SELECT u.id, u.nome, u.email, u.ativo
+        FROM usuarios u
+        INNER JOIN turma_usuarios tu ON tu.usuario_id = u.id
+        WHERE u.tipo = 'aluno'
+          AND tu.turma_id IN ($ph)
+          AND tu.ativo = 1
+        GROUP BY u.id, u.nome, u.email, u.ativo
+        ORDER BY u.nome ASC
+        LIMIT 500
+    ");
+    $stmt->execute($idsTurmas);
+    $alunos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // ---------- Grupos por aluno (dentro dessas turmas) ----------
+    $gruposPorAluno = [];
+    $alunoIds = array_column($alunos, 'id');
+
+    if (!empty($alunoIds)) {
+        $ph2 = implode(',', array_fill(0, count($alunoIds), '?'));
+        $stmt = $pdo->prepare("
+            SELECT ga.usuario_id,
+                   g.id  AS grupo_id,
+                   g.nome AS grupo_nome,
+                   p.id  AS projeto_id,
+                   p.nome AS projeto_nome,
+                   p.encerrado
+            FROM grupo_alunos ga
+            INNER JOIN grupos   g ON g.id = ga.grupo_id
+            INNER JOIN projetos p ON p.id = g.projeto_id
+            WHERE ga.usuario_id IN ($ph2)
+              AND ga.saiu_em IS NULL
+              AND p.turma_id IN ($ph)
+            ORDER BY p.nome ASC, g.nome ASC
+        ");
+        $stmt->execute(array_merge($alunoIds, $idsTurmas));
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $gruposPorAluno[(int) $row['usuario_id']][] = $row;
+        }
+    }
+
+    // ---------- Sou representante em alguma turma? ----------
+    $souRep = false;
+    if (!$isMaster) {
+        foreach ($minhasTurmas as $t) {
+            if ($this->tu->ehRepresentante((int) $t['id'], (int) $u['id'])) {
+                $souRep = true;
+                break;
+            }
+        }
+    }
+
+    $this->render('alunos/index', [
+        'alunos'         => $alunos,
+        'gruposPorAluno' => $gruposPorAluno,
+        'minhasTurmas'   => $minhasTurmas,
+        'isMaster'       => $isMaster,
+        'podeGerenciar'  => $isMaster || $souRep,
+    ]);
+}
 
     // ============ CRIAR ALUNO INDIVIDUAL ============
 

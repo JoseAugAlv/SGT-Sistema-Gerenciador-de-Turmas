@@ -1,92 +1,139 @@
 <?php
+$cssPagina = ['projetos.css', 'atas.css'];
+
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 require_once __DIR__ . '/../layouts/flashes.php';
 ?>
 
-<h1><?= h($projeto['nome']) ?></h1>
-<p>Turma: <a href="<?= $basePath ?>/turmas/<?= (int) $projeto['turma_id'] ?>"><?= h($projeto['turma_nome']) ?></a></p>
+<section class="hero-section">
+    <div>
+        <div class="eyebrow">
+            <span class="status-dot"></span>
+            Nova ata
+        </div>
+        <h1><?= h($projeto['nome']) ?></h1>
+        <p class="hero-subtitle">
+            <a href="<?= $basePath ?>/turmas/<?= (int) $projeto['turma_id'] ?>"><?= h($projeto['turma_nome']) ?></a>
+            — Escolha os grupos e os dados da ata.
+        </p>
+    </div>
+    <div class="hero-actions">
+        <a class="button button-ghost" href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/atas">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+</section>
 
 <?php require __DIR__ . '/../projetos/_nav.php'; ?>
 
-<h2>Nova Ata</h2>
-
-<form method="POST" action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/atas/salvar">
+<form method="POST" action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/atas/salvar" class="panel">
     <?= ViewHelper::csrfField() ?>
 
-    <p><label>Título *<br>
-        <input type="text" name="titulo" maxlength="200" required autofocus></label></p>
+    <label class="field-label">Título *</label>
+    <input type="text" name="titulo" class="field" maxlength="200" required autofocus>
 
-    <p><label>Descrição<br>
-        <textarea name="descricao" rows="3" maxlength="2000"></textarea></label></p>
+    <label class="field-label">Descrição</label>
+    <textarea name="descricao" class="field" rows="3" maxlength="2000"></textarea>
 
-    <fieldset>
+    <fieldset class="mt-16">
         <legend>Grupos *</legend>
 
         <?php if (empty($grupos)): ?>
-            <p><strong>Nenhum grupo cadastrado neste projeto.</strong></p>
+            <div class="notice notice-warning mt-0">
+                <span>!</span>
+                <div>
+                    <strong>Nenhum grupo cadastrado</strong>
+                    <p>Crie grupos neste projeto antes de criar atas.</p>
+                </div>
+            </div>
         <?php else: ?>
-            <p>
-                <label>
-                    <input type="checkbox" id="check-todos" onclick="toggleTodos(this)">
-                    <strong>Selecionar todos os grupos com diretor ativo</strong>
-                </label>
+            <p class="text-muted mb-12" style="font-size:12px;">
+                <i class="fas fa-info-circle"></i>
+                Apenas grupos com diretor ativo podem receber atas. Marque os que devem receber esta ata.
             </p>
 
-            <table border="1" cellpadding="6">
-                <thead>
-                    <tr>
-                        <th style="width:30px;"></th>
-                        <th>Grupo</th>
-                        <th>Diretor(es) ativo(s)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($grupos as $g): ?>
-                        <?php $temDiretor = (int) $g['total_diretores'] > 0; ?>
+            <div class="ata-replicar-tabela-wrapper">
+                <table class="ata-replicar-tabela">
+                    <thead>
                         <tr>
-                            <td>
-                                <input type="checkbox"
-                                       class="check-grupo"
-                                       name="grupos[]"
-                                       value="<?= (int) $g['id'] ?>"
-                                       data-tem-diretor="<?= $temDiretor ? '1' : '0' ?>"
-                                       <?= $temDiretor ? '' : 'disabled' ?>>
-                            </td>
-                            <td><?= h($g['nome']) ?></td>
-                            <td>
-                                <?php if ($temDiretor): ?>
-                                    <i class="fas fa-check-circle" style="color:#0a0"></i>
-                                    <?= (int) $g['total_diretores'] ?>
-                                <?php else: ?>
-                                    <i class="fas fa-ban" style="color:#b00"></i>
-                                    <small>Sem diretor — não pode receber ata</small>
-                                <?php endif; ?>
-                            </td>
+                            <th style="width:36px;"></th>
+                            <th>Grupo</th>
+                            <th>Diretores ativos</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($grupos as $g): ?>
+                            <?php $temDiretor = (int) $g['total_diretores'] > 0; ?>
+                            <tr>
+                                <td>
+                                    <input type="checkbox"
+                                           class="check-grupo"
+                                           name="grupos[]"
+                                           value="<?= (int) $g['id'] ?>"
+                                           data-tem-diretor="<?= $temDiretor ? '1' : '0' ?>"
+                                           <?= $temDiretor ? '' : 'disabled' ?>>
+                                </td>
+                                <td><strong><?= h($g['nome']) ?></strong></td>
+                                <td>
+                                    <?php if ($temDiretor): ?>
+                                        <span class="badge badge-green">
+                                            <i class="fas fa-check-circle"></i>
+                                            <?= (int) $g['total_diretores'] ?> diretor(es)
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="badge badge-red">
+                                            <i class="fas fa-ban"></i>
+                                            Sem diretor ativo
+                                        </span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="mt-12">
+                <label class="check-line">
+                    <input type="checkbox" id="check-todos" onclick="toggleTodos(this)">
+                    <span><strong>Selecionar todos os grupos com diretor ativo</strong></span>
+                </label>
+            </p>
         <?php endif; ?>
     </fieldset>
 
-    <p><label>Data da ata *<br>
-        <input type="date" name="data_ata" value="<?= date('Y-m-d') ?>" required></label></p>
+    <?php $modoPreenchimento = 'diretor'; require __DIR__ . '/_preenchimento.php'; ?>
 
-    <p><label>Prazo de preenchimento<br>
-        <input type="date" name="prazo_preenchimento"></label></p>
+    <div class="field-row mt-16">
+        <div>
+            <label class="field-label">Data da ata *</label>
+            <input type="date" name="data_ata" class="field" value="<?= date('Y-m-d') ?>" required>
+        </div>
+        <div>
+            <label class="field-label">Prazo de preenchimento</label>
+            <input type="date" name="prazo_preenchimento" class="field">
+        </div>
+    </div>
 
-    <p><label>Horário início<br>
-        <input type="time" name="horario_inicio"></label></p>
+    <div class="field-row">
+        <div>
+            <label class="field-label">Horário início</label>
+            <input type="time" name="horario_inicio" class="field">
+        </div>
+        <div>
+            <label class="field-label">Horário fim</label>
+            <input type="time" name="horario_fim" class="field">
+        </div>
+    </div>
 
-    <p><label>Horário fim<br>
-        <input type="time" name="horario_fim"></label></p>
-
-    <p>
-        <button type="submit" <?= empty($grupos) ? 'disabled' : '' ?>>
+    <p class="mt-20">
+        <button type="submit" class="button button-primary" <?= empty($grupos) ? 'disabled' : '' ?>>
             <i class="fas fa-check"></i> Criar ata(s)
         </button>
-        <a href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/atas">Cancelar</a>
+        <a class="button button-ghost" href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/atas">
+            Cancelar
+        </a>
     </p>
 </form>
 
@@ -98,13 +145,13 @@ function toggleTodos(master) {
     });
 }
 
-// Se todos os grupos individuais estiverem marcados, reflete no "todos"
 document.addEventListener('change', function(e) {
     if (!e.target.matches('.check-grupo')) return;
 
     const todos = document.querySelectorAll('.check-grupo:not([disabled])');
     const marcados = document.querySelectorAll('.check-grupo:not([disabled]):checked');
-    document.getElementById('check-todos').checked = (todos.length === marcados.length);
+    const master = document.getElementById('check-todos');
+    if (master) master.checked = (todos.length > 0 && todos.length === marcados.length);
 });
 </script>
 

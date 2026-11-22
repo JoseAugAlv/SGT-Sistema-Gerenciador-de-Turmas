@@ -1,38 +1,70 @@
 <?php
+$cssPagina = ['projetos.css', 'grupos.css'];
+
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 require_once __DIR__ . '/../layouts/flashes.php';
 ?>
+
+<section class="hero-section">
+    <div>
+        <div class="eyebrow">
+            <span class="status-dot"></span>
+            Novo grupo
+        </div>
+        <h1><?= h($projeto['nome']) ?></h1>
+        <p class="hero-subtitle">
+            Defina o nome e os modos do grupo. Depois você adiciona membros e diretores.
+        </p>
+    </div>
+    <div class="hero-actions">
+        <a class="button button-ghost" href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/grupos">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+</section>
+
 <?php require __DIR__ . '/../projetos/_nav.php'; ?>
 
-<h1>Novo Grupo — <?= h($projeto['nome']) ?></h1>
-
-<form method="POST" action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/grupos/salvar">
+<form method="POST" action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/grupos/salvar" class="panel">
     <?= ViewHelper::csrfField() ?>
 
-    <p><label>Nome do grupo *<br>
-        <input type="text" name="nome" maxlength="150" required autofocus></label></p>
+    <label class="field-label">Nome do grupo *</label>
+    <input type="text" name="nome" class="field" maxlength="150" required autofocus>
 
-    <p><label>Modo do grupo *<br>
-        <select name="modo_avaliacao_grupo" required>
-            <?php foreach ($modosGrupo as $val => $label): ?>
-                <option value="<?= h($val) ?>"><?= h($label) ?></option>
-            <?php endforeach; ?>
-        </select></label></p>
+    <label class="field-label">Modo do grupo *</label>
+    <select name="modo_avaliacao_grupo" class="field" required>
+        <?php foreach ($modosGrupo as $val => $label): ?>
+            <option value="<?= h($val) ?>"><?= h($label) ?></option>
+        <?php endforeach; ?>
+    </select>
 
-    <p><label>Modo de avaliação padrão *<br>
-        <select name="modo_avaliacao_por" required>
-            <?php foreach ($modosPor as $val => $label): ?>
-                <option value="<?= h($val) ?>"><?= h($label) ?></option>
-            <?php endforeach; ?>
-        </select></label></p>
+    <label class="field-label">Modo de avaliação padrão *</label>
+    <select name="modo_avaliacao_por" class="field" required>
+        <?php foreach ($modosPor as $val => $label): ?>
+            <option value="<?= h($val) ?>"><?= h($label) ?></option>
+        <?php endforeach; ?>
+    </select>
 
-    <p><em>Observação: estes modos são apenas valores padrão de UI. Cada critério
-    define seu próprio <code>tipo_avaliacao</code>.</em></p>
+    <div class="notice notice-blue">
+        <span>i</span>
+        <div>
+            <strong>Estes modos são apenas padrão de UI</strong>
+            <p>
+                Cada critério define seu próprio <code>tipo_avaliacao</code> e é ele quem
+                determina como o critério é avaliado. O que você escolhe aqui só pré-preenche
+                o formulário de novos critérios.
+            </p>
+        </div>
+    </div>
 
-    <p>
-        <button type="submit"><i class="fas fa-check"></i> Criar grupo</button>
-        <a href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/grupos">Cancelar</a>
+    <p class="mt-20">
+        <button type="submit" class="button button-primary">
+            <i class="fas fa-check"></i> Criar grupo
+        </button>
+        <a class="button button-ghost" href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/grupos">
+            Cancelar
+        </a>
     </p>
 </form>
 

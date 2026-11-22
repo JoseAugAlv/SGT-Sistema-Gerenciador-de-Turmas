@@ -43,18 +43,39 @@ class GrupoController
     }
 
     public function index(int $projetoId)
-    {
-        $projeto = $this->projeto->porId($projetoId);
-        if (!$projeto) { $this->flash('Projeto não encontrado.'); $this->redirect('/turmas'); }
+{
+    $projeto = $this->projeto->porId($projetoId);
+    if (!$projeto) { $this->flash('Projeto não encontrado.'); $this->redirect('/turmas'); }
 
-        $this->exigirAcessoProjeto($projeto);
+    $this->exigirAcessoProjeto($projeto);
 
-        $this->render('grupos/index', [
-            'projeto'    => $projeto,
-            'grupos'     => $this->grupo->listarPorProjeto($projetoId),
-            'podeEditar' => $this->podeEditarProjeto($projeto),
-        ]);
-    }
+    // Alunos da turma com seus grupos neste projeto
+    $pdo  = Database::getConnection();
+    $stmt = $pdo->prepare("
+        SELECT u.id, u.nome, u.email,
+               (
+                   SELECT GROUP_CONCAT(g2.nome ORDER BY g2.nome SEPARATOR ', ')
+                   FROM grupo_alunos ga2
+                   INNER JOIN grupos g2 ON g2.id = ga2.grupo_id
+                   WHERE ga2.usuario_id = u.id
+                     AND ga2.saiu_em IS NULL
+                     AND g2.projeto_id = ?
+               ) AS grupos_nomes
+        FROM turma_usuarios tu
+        INNER JOIN usuarios u ON u.id = tu.usuario_id
+        WHERE tu.turma_id = ? AND tu.ativo = 1
+        ORDER BY u.nome ASC
+    ");
+    $stmt->execute([$projetoId, (int) $projeto['turma_id']]);
+    $alunosComGrupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $this->render('grupos/index', [
+        'projeto'         => $projeto,
+        'grupos'          => $this->grupo->listarPorProjeto($projetoId),
+        'alunosComGrupos' => $alunosComGrupos,
+        'podeEditar'      => $this->podeEditarProjeto($projeto),
+    ]);
+}
 
     public function criarForm(int $projetoId)
     {
@@ -214,35 +235,47 @@ class GrupoController
     }
 
     public function adicionarMembro(int $id)
-    {
-        $grupo = $this->grupo->porId($id);
-        if (!$grupo) { $this->flash('Grupo não encontrado.'); $this->redirect('/turmas'); }
+{
+    $grupo = $this->grupo->porId($id);
+    if (!$grupo) { $this->flash('Grupo não encontrado.'); $this->redirect('/turmas'); }
 
-        $projeto = $this->projeto->porId((int) $grupo['projeto_id']);
-        $this->exigirPodeEditarProjeto($projeto);
-        CsrfMiddleware::validate();
+    $projeto = $this->projeto->porId((int) $grupo['projeto_id']);
+    $this->exigirPodeEditarProjeto($projeto);
+    CsrfMiddleware::validate();
 
-        if ($projeto['encerrado']) {
-            $this->flash('Projeto encerrado.'); $this->redirect('/grupos/' . $id);
-        }
+    if ($projeto['encerrado']) {
+        $this->flash('Projeto encerrado.'); $this->redirect('/grupos/' . $id);
+    }
 
-        $usuarioId = (int) ($_POST['usuario_id'] ?? 0);
-        if (!$usuarioId) { $this->flash('Selecione um aluno.'); $this->redirect('/grupos/' . $id); }
+    // Aceita tanto usuario_id (single) quanto usuario_ids[] (múltiplo)
+    $ids = [];
+    if (!empty($_POST['usuario_ids'])) {
+        $ids = array_map('intval', (array) $_POST['usuario_ids']);
+    } elseif (!empty($_POST['usuario_id'])) {
+        $ids = [(int) $_POST['usuario_id']];
+    }
+    $ids = array_values(array_unique(array_filter($ids, fn($x) => $x > 0)));
 
-        if (!$this->tu->estaAtivo((int) $projeto['turma_id'], $usuarioId)) {
-            $this->flash('Aluno não está ativo nesta turma.'); $this->redirect('/grupos/' . $id);
-        }
-        if ($this->membro->estaAtivo($id, $usuarioId)) {
-            $this->flash('Aluno já está no grupo.'); $this->redirect('/grupos/' . $id);
-        }
-
-        $this->membro->adicionar($id, $usuarioId);
-        $this->audit->registrar('grupo_membro_adicionado', 'grupo_alunos', $id, null,
-            ['usuario_id' => $usuarioId]);
-
-        $this->flash('Aluno adicionado ao grupo.', 'sucesso');
+    if (empty($ids)) {
+        $this->flash('Selecione pelo menos um aluno.');
         $this->redirect('/grupos/' . $id);
     }
+
+    $adicionados = 0;
+    foreach ($ids as $uid) {
+        if (!$this->tu->estaAtivo((int) $projeto['turma_id'], $uid)) continue;
+        if ($this->membro->estaAtivo($id, $uid)) continue;
+
+        $this->membro->adicionar($id, $uid);
+        $adicionados++;
+    }
+
+    $this->audit->registrar('grupo_membros_adicionados', 'grupo_alunos', $id, null,
+        ['usuario_ids' => $ids, 'adicionados' => $adicionados]);
+
+    $this->flash("{$adicionados} aluno(s) adicionado(s) ao grupo.", 'sucesso');
+    $this->redirect('/grupos/' . $id);
+}
 
     public function removerMembro(int $id)
     {
@@ -267,6 +300,70 @@ class GrupoController
         $this->flash('Aluno removido do grupo.', 'sucesso');
         $this->redirect('/grupos/' . $id);
     }
+
+        // ============ CONFIGURAÇÃO DE AVALIAÇÃO DO GRUPO ============
+
+    public function configAvaliacaoForm(int $id)
+    {
+        $grupo = $this->grupo->porId($id);
+        if (!$grupo) { $this->flash('Grupo não encontrado.'); $this->redirect('/turmas'); }
+
+        $projeto = $this->projeto->porId((int) $grupo['projeto_id']);
+        $this->exigirPodeEditarProjeto($projeto);
+
+        if ($projeto['encerrado']) {
+            $this->flash('Projeto encerrado.');
+            $this->redirect('/grupos/' . $id);
+        }
+
+        $this->render('grupos/config_avaliacao', [
+            'grupo'      => $grupo,
+            'projeto'    => $projeto,
+            'modosGrupo' => self::MODOS_GRUPO,
+            'modosPor'   => self::MODOS_POR,
+        ]);
+    }
+
+    public function configAvaliacaoSalvar(int $id)
+    {
+        $grupo = $this->grupo->porId($id);
+        if (!$grupo) { $this->flash('Grupo não encontrado.'); $this->redirect('/turmas'); }
+
+        $projeto = $this->projeto->porId((int) $grupo['projeto_id']);
+        $this->exigirPodeEditarProjeto($projeto);
+        CsrfMiddleware::validate();
+
+        if ($projeto['encerrado']) {
+            $this->flash('Projeto encerrado.');
+            $this->redirect('/grupos/' . $id);
+        }
+
+        $modoG = $_POST['modo_avaliacao_grupo'] ?? 'individual';
+        $modoP = $_POST['modo_avaliacao_por']   ?? 'diretor';
+
+        $erros = [];
+        if (!array_key_exists($modoG, self::MODOS_GRUPO)) $erros[] = 'Modo de grupo inválido.';
+        if (!array_key_exists($modoP, self::MODOS_POR))   $erros[] = 'Modo por inválido.';
+
+        if ($erros) {
+            $this->flash(implode(' | ', $erros));
+            $this->redirect('/grupos/' . $id . '/config-avaliacao');
+        }
+
+        $this->grupo->atualizar($id, [
+            'nome'                 => $grupo['nome'],
+            'modo_avaliacao_grupo' => $modoG,
+            'modo_avaliacao_por'   => $modoP,
+        ]);
+
+        $this->audit->registrar('grupo_config_avaliacao_atualizada', 'grupos', $id,
+            ['modo_grupo' => $grupo['modo_avaliacao_grupo'], 'modo_por' => $grupo['modo_avaliacao_por']],
+            ['modo_grupo' => $modoG, 'modo_por' => $modoP]);
+
+        $this->flash('Configuração de avaliação atualizada.', 'sucesso');
+        $this->redirect('/grupos/' . $id);
+    }
+
 
     // ============ HELPERS ============
 

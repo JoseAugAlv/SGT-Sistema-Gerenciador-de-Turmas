@@ -1,167 +1,132 @@
 <?php
+$cssPagina = 'tutorial.css';
+
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 require_once __DIR__ . '/../layouts/flashes.php';
 ?>
 
-<section class="hero-section">
+<section class="tut-hero">
     <div>
         <div class="eyebrow">
             <span class="status-dot"></span>
-            Guia do sistema
+            Tutorial
         </div>
-        <h1>Tutorial</h1>
-        <p class="hero-subtitle">
-            Aprenda a usar o <?= h($appName) ?> passo a passo.
+        <h1>Aprenda o sistema passo a passo</h1>
+        <p>
+            Escolha o guia do seu papel ou explore as telas em miniatura com dados fictícios.
         </p>
     </div>
-</section>
-
-<section class="section-heading">
-    <div>
-        <h2>Tutoriais disponíveis</h2>
-        <p>Escolha o tutorial do seu papel no sistema.</p>
+    <div class="hero-actions">
+        <a class="button button-primary" href="<?= $basePath ?>/tutorial/exemplos">
+            <i class="fas fa-images"></i> Ver exemplos de telas
+        </a>
     </div>
 </section>
 
-<section class="component-grid">
-
-    <!-- ============ ALUNO (sempre visível) ============ -->
-    <article class="panel">
-        <div class="panel-header">
-            <div>
-                <h2><i class="fas fa-user-graduate"></i> Aluno</h2>
-                <p>Para quem participa das turmas, projetos e avaliações.</p>
-            </div>
+<!-- ---------- Guias por papel ---------- -->
+<section class="tut-cards">
+    <article class="tut-card">
+        <span class="tut-card-icon purple"><i class="fas fa-user-graduate"></i></span>
+        <h2>Guia do Aluno</h2>
+        <p>
+            Como entrar em uma turma, ver projetos, fazer autoavaliação,
+            avaliar colegas e acompanhar suas notas.
+        </p>
+        <div class="tut-card-foot">
+            <span><i class="fas fa-book-open"></i> 7 tópicos</span>
+            <a class="button small button-primary" href="<?= $basePath ?>/tutorial/aluno">
+                Abrir <i class="fas fa-arrow-right"></i>
+            </a>
         </div>
-
-        <ul>
-            <li>Como entrar em uma turma com código</li>
-            <li>Ver meus projetos e grupos</li>
-            <li>Fazer autoavaliação</li>
-            <li>Avaliar colegas (avaliação por pares)</li>
-            <li>Ver minhas notas</li>
-            <li>Ver atas em que participei</li>
-            <li>Notificações e preferências</li>
-        </ul>
-
-        <a class="button button-primary full-width" href="<?= $basePath ?>/tutorial/aluno">
-            <i class="fas fa-book-open"></i> Abrir tutorial
-        </a>
     </article>
 
-    <!-- ============ DIRETOR (só se for diretor) ============ -->
-    <?php if ($isDiretor): ?>
-        <article class="panel">
-            <div class="panel-header">
-                <div>
-                    <h2><i class="fas fa-crown"></i> Diretor</h2>
-                    <p>Para quem lidera um grupo dentro de um projeto.</p>
-                </div>
-            </div>
-
-            <ul>
-                <li>Ver meu grupo e meus colegas</li>
-                <li>Avaliar os membros do grupo</li>
-                <li>Preencher atas (atividades + relatórios)</li>
-                <li>Cadastrar e usar materiais</li>
-                <li>Ver notas do grupo</li>
-                <li>Notificações e pendências</li>
-            </ul>
-
-            <a class="button button-primary full-width" href="<?= $basePath ?>/tutorial/diretor">
-                <i class="fas fa-book-open"></i> Abrir tutorial
+    <article class="tut-card">
+        <span class="tut-card-icon blue"><i class="fas fa-crown"></i></span>
+        <h2>Guia do Diretor</h2>
+        <p>
+            Como preencher atas, avaliar membros do grupo, cadastrar materiais
+            e acompanhar o desempenho da equipe.
+        </p>
+        <div class="tut-card-foot">
+            <span><i class="fas fa-book-open"></i> 6 tópicos</span>
+            <a class="button small button-primary" href="<?= $basePath ?>/tutorial/diretor">
+                Abrir <i class="fas fa-arrow-right"></i>
             </a>
-        </article>
-    <?php endif; ?>
+        </div>
+    </article>
 
-    <!-- ============ REPRESENTANTE (só se for rep) ============ -->
-    <?php if ($isRep): ?>
-        <article class="panel">
-            <div class="panel-header">
-                <div>
-                    <h2><i class="fas fa-user-tie"></i> Representante</h2>
-                    <p>Para quem representa a turma e coordena grupos.</p>
-                </div>
-            </div>
-
-            <ul>
-                <li>Gerenciar grupos e diretores</li>
-                <li>Criar e editar etapas, critérios e conceitos</li>
-                <li>Avaliar a turma em massa</li>
-                <li>Criar atas e validar as preenchidas</li>
-                <li>Enviar alertas</li>
-                <li>Gerar relatórios e boletins</li>
-                <li>Cadastrar e controlar materiais</li>
-            </ul>
-
-            <a class="button button-primary full-width" href="<?= $basePath ?>/tutorial/representante">
-                <i class="fas fa-book-open"></i> Abrir tutorial
+    <article class="tut-card">
+        <span class="tut-card-icon green"><i class="fas fa-user-tie"></i></span>
+        <h2>Guia do Representante</h2>
+        <p>
+            Como coordenar grupos, criar critérios, avaliar em massa, validar
+            atas, enviar alertas e gerar relatórios.
+        </p>
+        <div class="tut-card-foot">
+            <span><i class="fas fa-book-open"></i> 9 tópicos</span>
+            <a class="button small button-primary" href="<?= $basePath ?>/tutorial/representante">
+                Abrir <i class="fas fa-arrow-right"></i>
             </a>
-        </article>
-    <?php endif; ?>
-
-    <!-- ============ MASTER (só se for master) ============ -->
-    <?php if ($isMaster): ?>
-        <article class="panel">
-            <div class="panel-header">
-                <div>
-                    <h2><i class="fas fa-shield-halved"></i> Master</h2>
-                    <p>Para o administrador global do sistema.</p>
-                </div>
-            </div>
-
-            <ul>
-                <li>Criar turmas e cursos/períodos</li>
-                <li>Bloquear e desbloquear turmas</li>
-                <li>Nomear e remover representantes</li>
-                <li>Gerenciar critérios arquivados</li>
-                <li>Auditoria e backup</li>
-                <li>Aprovar/negar solicitações LGPD</li>
-            </ul>
-
-            <a class="button button-primary full-width" href="<?= $basePath ?>/tutorial/master">
-                <i class="fas fa-book-open"></i> Abrir tutorial
-            </a>
-        </article>
-    <?php endif; ?>
-
+        </div>
+    </article>
 </section>
 
-<!-- ============ FAQ (só para logado) ============ -->
-<?php if (!empty($_SESSION['usuario'])): ?>
-    <section class="panel" style="margin-top:20px;">
-        <div class="panel-header">
-            <div>
-                <h2><i class="fas fa-circle-question"></i> Perguntas frequentes</h2>
-            </div>
+<!-- ---------- Callout de destaque ---------- -->
+<div class="tut-callout info">
+    <i class="fas fa-circle-info"></i>
+    <div>
+        <strong>Telas de exemplo disponíveis</strong>
+        <p class="mb-0">
+            Quer ver como cada tela se parece antes de usar? Acesse a
+            <a href="<?= $basePath ?>/tutorial/exemplos" style="color:inherit; font-weight:700; text-decoration:underline;">
+                galeria de exemplos
+            </a>
+            e explore miniaturas com dados fictícios — sem precisar estar logado em uma turma.
+        </p>
+    </div>
+</div>
+
+<!-- ---------- FAQ ---------- -->
+<section class="tut-block">
+    <div class="tut-block-header">
+        <span class="tut-block-num"><i class="fas fa-question"></i></span>
+        <div>
+            <h2>Perguntas frequentes</h2>
         </div>
+    </div>
 
-        <details>
-            <summary>Posso estar em mais de uma turma ao mesmo tempo?</summary>
-            <p>Sim. Você pode ser aluno em uma turma, representante em outra e diretor de um grupo específico em outra — tudo simultaneamente.</p>
-        </details>
+    <details>
+        <summary>Posso estar em mais de uma turma ao mesmo tempo?</summary>
+        <p class="mb-0">
+            Sim. Você pode ser aluno em uma turma, representante em outra e diretor
+            de um grupo específico em outra — tudo simultaneamente.
+        </p>
+    </details>
 
-        <details>
-            <summary>Como faço para entrar em uma turma?</summary>
-            <p>Peça o código de acesso para o professor ou representante, acesse <strong>Turmas → Entrar com código</strong> e digite o código.</p>
-        </details>
+    <details>
+        <summary>Como faço para entrar em uma turma?</summary>
+        <p class="mb-0">
+            Peça o código de acesso para o professor ou representante, acesse
+            <strong>Turmas → Entrar com código</strong> e digite o código.
+        </p>
+    </details>
 
-        <details>
-            <summary>Posso ver as notas dos outros alunos?</summary>
-            <p>Aluno comum vê apenas as próprias notas. Representantes, diretores e master veem conforme configuração de visibilidade definida pelo representante em <strong>Configuração de Conceito</strong>.</p>
-        </details>
+    <details>
+        <summary>Posso ver as notas dos outros alunos?</summary>
+        <p class="mb-0">
+            Aluno comum vê apenas as próprias notas. Representantes e diretores
+            veem conforme a configuração de visibilidade definida pelo representante.
+        </p>
+    </details>
 
-        <details>
-            <summary>Quando é que o boletim fica congelado?</summary>
-            <p>Quando o projeto é encerrado. Depois disso, edições nas avaliações não alteram o boletim daquele projeto.</p>
-        </details>
-
-        <details>
-            <summary>O que é avaliação por pares?</summary>
-            <p>Cada aluno avalia os colegas da turma com conceito e justificativa. A justificativa é interna — apenas representante e diretor veem.</p>
-        </details>
-    </section>
-<?php endif; ?>
+    <details>
+        <summary>Quando o boletim fica congelado?</summary>
+        <p class="mb-0">
+            Quando o projeto é encerrado. Depois disso, edições nas avaliações
+            não alteram o boletim daquele projeto.
+        </p>
+    </details>
+</section>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

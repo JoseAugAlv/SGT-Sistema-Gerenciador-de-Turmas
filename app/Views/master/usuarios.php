@@ -1,161 +1,339 @@
 <?php
 // app/Views/master/usuarios.php
+// Lista de usuários com busca por nome/email e atribuição de tipo.
 
-$tituloPagina = 'Master Usuários - ' . App::getName();
-$cssPagina = 'master.css';
-$basePath = App::getBasePath();
-$appName = App::getName();
+$tituloPagina = 'Gerenciar Usuários — ' . App::getName();
+$cssPagina    = 'master.css';
 
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
+require_once __DIR__ . '/../layouts/flashes.php';
 
-if (!isset($_SESSION['usuario']) || $_SESSION['usuario']['role'] != 1) {
+// Bloqueio de segurança
+if (empty($_SESSION['usuario']) || ($_SESSION['usuario']['tipo'] ?? '') !== 'master') {
     header('Location: ' . $basePath . '/');
     exit;
 }
 
-if (isset($_SESSION['flash'])) {
-    $flash = $_SESSION['flash'];
-    echo '<div class="flash-' . $flash['tipo'] . '">' . htmlspecialchars($flash['mensagem']) . '</div>';
-    unset($_SESSION['flash']);
+$pdo = Database::getConnection();
+
+// ============ BUSCA ============
+$busca = trim($_GET['busca'] ?? '');
+$like  = '%' . $busca . '%';
+
+// ============ LISTA DE USUÁRIOS ============
+$usuarios = [];
+try {
+    if ($busca !== '') {
+        $stmt = $pdo->prepare("
+            SELECT id, nome, email, tipo, ativo, ultimo_acesso, created_at
+            FROM usuarios
+            WHERE nome LIKE ? OR email LIKE ?
+            ORDER BY nome ASC
+        ");
+        $stmt->execute([$like, $like]);
+    } else {
+        $stmt = $pdo->query("
+            SELECT id, nome, email, tipo, ativo, ultimo_acesso, created_at
+            FROM usuarios
+            ORDER BY nome ASC
+        ");
+    }
+    $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $usuarios = [];
 }
 
-$pdo = Database::getConnection();
-$perfis = $pdo->query("SELECT * FROM perfil ORDER BY id_perfil")->fetchAll(PDO::FETCH_ASSOC);
+// ============ ESTATÍSTICAS GLOBAIS (sem filtro) ============
+$totalGeral    = (int) $pdo->query("SELECT COUNT(*) FROM usuarios")->fetchColumn();
+$ativosGeral   = (int) $pdo->query("SELECT COUNT(*) FROM usuarios WHERE ativo = 1")->fetchColumn();
+$inativosGeral = $totalGeral - $ativosGeral;
+$mastersGeral  = (int) $pdo->query("SELECT COUNT(*) FROM usuarios WHERE tipo = 'master'")->fetchColumn();
+
+$totalFiltrado = count($usuarios);
 ?>
 
-<section class="master-section animate-in">
-    <div class="container">
-        <div class="master-content">
+<section class="master-section">
+    <div class="master-content">
 
-            <!-- Hero -->
-            <div class="master-hero">
-                <div>
-                    <h1><i class="fas fa-users-cog" style="color: #2563eb;"></i> Gerenciar Usuários</h1>
-                    <p class="master-subtitle">
-                        <i class="fas fa-user-shield"></i> Visualize e atribua perfis a todos os usuários do sistema
-                    </p>
-                </div>
-                <span class="badge-count">
-                    <i class="fas fa-users"></i> <?= count($usuarios ?? []) ?> usuário(s)
-                </span>
+        <!-- ============ HERO ============ -->
+        <header class="master-hero">
+            <div>
+                <h1><i class="fas fa-users-cog"></i> Gerenciar Usuários</h1>
+                <p class="master-subtitle">
+                    <i class="fas fa-user-shield"></i>
+                    Visualize, edite e altere o tipo de acesso dos usuários do sistema.
+                </p>
             </div>
+            <span class="badge-count">
+                <i class="fas fa-users"></i> <?= $totalGeral ?> usuário(s)
+            </span>
+        </header>
 
-            <!-- Ações -->
-            <div class="master-box box-primary">
-                <div class="box-actions">
-                    <a href="<?= $basePath ?>/usuarios/criar" class="btn btn-new">
-                        <i class="fas fa-user-plus"></i> Cadastrar Usuário
-                    </a>
-                    <span class="box-info-text">
-                        <i class="fas fa-info-circle"></i> Atribua perfis aos usuários
-                    </span>
-                </div>
-            </div>
+        <!-- ============ STATS ============ -->
+        <div class="master-stats" style="grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));">
+            <article class="master-stat-card">
+                <span class="label">Total</span>
+                <span class="valor"><?= $totalGeral ?></span>
+                <span class="foot">usuários cadastrados</span>
+            </article>
 
-            <!-- Lista de Usuários -->
-            <?php if (empty($usuarios)): ?>
-                <div class="empty-state">
-                    <i class="fas fa-users"></i>
-                    <h3>Nenhum usuário cadastrado</h3>
-                    <p>Comece cadastrando o primeiro usuário do sistema.</p>
-                    <a href="<?= $basePath ?>/usuarios/criar" class="btn btn-new">
-                        <i class="fas fa-user-plus"></i> Cadastrar Usuário
-                    </a>
-                </div>
-            <?php else: ?>
-                <div class="master-table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nome</th>
-                                <th>Email</th>
-                                <th>Perfil</th>
-                                <th>Status</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($usuarios as $usuario): ?>
-                                <tr>
-                                    <td>#<?= $usuario['id_usuario'] ?></td>
-                                    <td><strong><?= htmlspecialchars($usuario['nome']) ?></strong></td>
-                                    <td><?= htmlspecialchars($usuario['email']) ?></td>
-                                    <td>
-                                        <span class="status-badge perfil-<?= $usuario['id_perfil'] ?? 4 ?>">
-                                            <?= htmlspecialchars($usuario['nome_perfil'] ?? 'Usuario') ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="status-badge <?= $usuario['ativo'] ? 'ativo' : 'inativo' ?>">
-                                            <?= $usuario['ativo'] ? 'Ativo' : 'Inativo' ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <button onclick="abrirModalAtribuir(<?= $usuario['id_usuario'] ?>, '<?= addslashes($usuario['nome']) ?>', '<?= $usuario['id_perfil'] ?? 4 ?>')" class="btn btn-sm btn-primary">
-                                            <i class="fas fa-user-tag"></i> Atribuir Perfil
-                                        </button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+            <article class="master-stat-card accent-green">
+                <span class="label">Ativos</span>
+                <span class="valor"><?= $ativosGeral ?></span>
+                <span class="foot">com acesso liberado</span>
+            </article>
 
-                <div class="master-info">
-                    <i class="fas fa-info-circle"></i> 
-                    Total de usuários: <strong><?= count($usuarios) ?></strong>
-                    <?php 
-                    $ativos = array_filter($usuarios, function($u) { return $u['ativo'] == 1; });
-                    ?>
-                    | Ativos: <strong><?= count($ativos) ?></strong>
-                    | Inativos: <strong><?= count($usuarios) - count($ativos) ?></strong>
-                </div>
+            <article class="master-stat-card accent-red">
+                <span class="label">Inativos</span>
+                <span class="valor"><?= $inativosGeral ?></span>
+                <span class="foot">acesso bloqueado</span>
+            </article>
+
+            <article class="master-stat-card accent-orange">
+                <span class="label">Masters</span>
+                <span class="valor"><?= $mastersGeral ?></span>
+                <span class="foot">acesso total</span>
+            </article>
+        </div>
+
+        <!-- ============ BARRA DE BUSCA ============ -->
+        <form method="GET" action="<?= $basePath ?>/master/usuarios" class="master-search">
+            <span class="search-icon"><i class="fas fa-magnifying-glass"></i></span>
+
+            <input type="text"
+                   name="busca"
+                   value="<?= h($busca) ?>"
+                   placeholder="Pesquisar por nome ou email..."
+                   autocomplete="off"
+                   autofocus>
+
+            <?php if ($busca !== ''): ?>
+                <a class="search-clear"
+                   href="<?= $basePath ?>/master/usuarios"
+                   title="Limpar busca">
+                    <i class="fas fa-xmark"></i>
+                </a>
             <?php endif; ?>
 
-            <!-- Voltar -->
-            <div class="master-voltar">
-                <a href="<?= $basePath ?>/master" class="btn">
-                    <i class="fas fa-arrow-left"></i> Voltar para Área Master
+            <button type="submit" class="btn-new">
+                <i class="fas fa-search"></i> Pesquisar
+            </button>
+        </form>
+
+        <!-- ============ INFO DA BUSCA ============ -->
+        <?php if ($busca !== ''): ?>
+            <div class="master-info">
+                <i class="fas fa-filter"></i>
+                <strong><?= $totalFiltrado ?></strong> resultado(s) para
+                <strong>"<?= h($busca) ?>"</strong>
+                <a href="<?= $basePath ?>/master/usuarios"
+                   style="margin-left:auto; color: var(--primary); font-weight:700; text-decoration:none; font-size:12px;">
+                    <i class="fas fa-xmark"></i> Limpar
                 </a>
             </div>
+        <?php endif; ?>
 
+        <!-- ============ AÇÃO NOVO ============ -->
+        <div class="master-box box-primary">
+            <div class="box-actions">
+                <span class="box-info-text">
+                    <i class="fas fa-circle-info"></i>
+                    <strong>Master</strong> tem acesso total. <strong>Aluno</strong> vê apenas suas turmas e avaliações.
+                </span>
+                <a class="btn-new" href="<?= $basePath ?>/usuarios/criar">
+                    <i class="fas fa-user-plus"></i> Novo usuário
+                </a>
+            </div>
         </div>
+
+        <!-- ============ LISTA ============ -->
+        <?php if (empty($usuarios)): ?>
+            <div class="empty-state">
+                <i class="fas fa-<?= $busca !== '' ? 'magnifying-glass' : 'users' ?>"></i>
+                <?php if ($busca !== ''): ?>
+                    <h3>Nenhum resultado</h3>
+                    <p>Nenhum usuário encontrado para "<strong><?= h($busca) ?></strong>".</p>
+                    <a class="btn-new" href="<?= $basePath ?>/master/usuarios">
+                        <i class="fas fa-xmark"></i> Limpar busca
+                    </a>
+                <?php else: ?>
+                    <h3>Nenhum usuário cadastrado</h3>
+                    <p>Comece cadastrando o primeiro usuário do sistema.</p>
+                    <a class="btn-new" href="<?= $basePath ?>/usuarios/criar">
+                        <i class="fas fa-user-plus"></i> Cadastrar usuário
+                    </a>
+                <?php endif; ?>
+            </div>
+        <?php else: ?>
+            <div class="master-table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Tipo</th>
+                            <th>Status</th>
+                            <th style="text-align:right;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($usuarios as $u): ?>
+                            <?php
+                            $uid      = (int) $u['id'];
+                            $tipo     = $u['tipo'] ?? 'aluno';
+                            $ativo    = !empty($u['ativo']);
+                            $souEu    = $uid === (int) $_SESSION['usuario']['id'];
+                            $perfilCl = $tipo === 'master' ? 'perfil-1' : 'perfil-4';
+
+                            // Destaca o termo buscado no nome/email
+                            $destacar = function (string $texto) use ($busca): string {
+                                if ($busca === '') return h($texto);
+                                $escaped = preg_quote($busca, '/');
+                                return preg_replace(
+                                    '/(' . $escaped . ')/iu',
+                                    '<mark>$1</mark>',
+                                    h($texto)
+                                );
+                            };
+                            ?>
+
+                            <tr>
+                                <td><strong>#<?= $uid ?></strong></td>
+
+                                <td>
+                                    <strong><?= $destacar($u['nome']) ?></strong>
+                                    <?php if ($souEu): ?>
+                                        <small style="color: var(--primary); font-weight: 700;">
+                                            <i class="fas fa-user"></i> você
+                                        </small>
+                                    <?php elseif (!empty($u['ultimo_acesso'])): ?>
+                                        <small>último acesso: <?= h($u['ultimo_acesso']) ?></small>
+                                    <?php endif; ?>
+                                </td>
+
+                                <td><?= $destacar($u['email']) ?></td>
+
+                                <td>
+                                    <span class="status-badge <?= $perfilCl ?>">
+                                        <?php if ($tipo === 'master'): ?>
+                                            <i class="fas fa-crown"></i> Master
+                                        <?php else: ?>
+                                            <i class="fas fa-user-graduate"></i> Aluno
+                                        <?php endif; ?>
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <?php if ($ativo): ?>
+                                        <span class="status-badge ativo">
+                                            <i class="fas fa-check"></i> Ativo
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="status-badge inativo">
+                                            <i class="fas fa-ban"></i> Inativo
+                                        </span>
+                                    <?php endif; ?>
+                                </td>
+
+                                <td style="text-align:right; white-space:nowrap;">
+                                    <button type="button"
+                                            class="btn btn-sm btn-edit"
+                                            title="Alterar tipo"
+                                            onclick='abrirModalAtribuir(
+                                                <?= $uid ?>,
+                                                <?= json_encode($u["nome"], JSON_UNESCAPED_UNICODE) ?>,
+                                                <?= json_encode($tipo) ?>
+                                            )'>
+                                        <i class="fas fa-user-tag"></i> Perfil
+                                    </button>
+
+                                    <a class="btn btn-sm btn-edit"
+                                       title="Editar"
+                                       href="<?= $basePath ?>/usuarios/editar?id=<?= $uid ?>">
+                                        <i class="fas fa-pen"></i>
+                                    </a>
+
+                                    <?php if (!$souEu): ?>
+                                        <a class="btn btn-sm btn-danger"
+                                           title="Desativar"
+                                           href="<?= $basePath ?>/usuarios/excluir?id=<?= $uid ?>"
+                                           onclick="return confirm('Desativar este usuário? O acesso será bloqueado.')">
+                                            <i class="fas fa-user-slash"></i>
+                                        </a>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="master-info">
+                <i class="fas fa-circle-info"></i>
+                <?php if ($busca !== ''): ?>
+                    Mostrando <strong><?= $totalFiltrado ?></strong> de
+                    <strong><?= $totalGeral ?></strong> usuário(s)
+                <?php else: ?>
+                    Total de usuários: <strong><?= $totalGeral ?></strong>
+                    · Ativos: <strong><?= $ativosGeral ?></strong>
+                    · Inativos: <strong><?= $inativosGeral ?></strong>
+                    · Masters: <strong><?= $mastersGeral ?></strong>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- ============ VOLTAR ============ -->
+        <div class="master-voltar">
+            <a class="btn" href="<?= $basePath ?>/master"
+               style="padding:9px 14px; border-radius:9px; border:1px solid var(--border); color:var(--muted); text-decoration:none; font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
+                <i class="fas fa-arrow-left"></i> Voltar ao painel
+            </a>
+        </div>
+
     </div>
 </section>
 
-<!-- Modal para atribuir perfil -->
+<!-- ============================================================ -->
+<!-- MODAL — ALTERAR TIPO DE ACESSO                                -->
+<!-- ============================================================ -->
 <div id="modalAtribuir" class="master-modal">
     <div class="modal-box">
         <div class="modal-header">
-            <h2><i class="fas fa-user-tag" style="color: #2563eb;"></i> Atribuir Perfil</h2>
-            <button onclick="fecharModal()" class="modal-close">&times;</button>
+            <h2>
+                <i class="fas fa-user-tag" style="color: var(--primary);"></i>
+                Alterar tipo de acesso
+            </h2>
+            <button type="button" class="modal-close" onclick="fecharModal()">&times;</button>
         </div>
+
         <div class="modal-body">
-            <p><strong>Usuário:</strong> <span id="modalUsuarioNome"></span></p>
+            <p>
+                <strong>Usuário</strong>
+                <span id="modalUsuarioNome" style="font-weight:700; color: var(--text);"></span>
+            </p>
+
             <form action="<?= $basePath ?>/usuarios/atribuir-perfil" method="POST">
                 <?= ViewHelper::csrfField() ?>
                 <input type="hidden" id="modalIdUsuario" name="id_usuario">
-                
+
                 <div class="form-group">
-                    <label for="modalIdPerfil">Perfil</label>
-                    <select id="modalIdPerfil" name="id_perfil" class="form-control" required>
-                        <option value="">Selecione</option>
-                        <?php foreach ($perfis as $perfil): ?>
-                            <option value="<?= $perfil['id_perfil'] ?>">
-                                <?= htmlspecialchars($perfil['perfil']) ?>
-                            </option>
-                        <?php endforeach; ?>
+                    <label for="modalTipo">Tipo de acesso</label>
+                    <select id="modalTipo" name="tipo" class="form-control" required>
+                        <option value="aluno">Aluno — acesso limitado</option>
+                        <option value="master">Master — acesso total</option>
                     </select>
                 </div>
-                
+
                 <div class="modal-actions">
-                    <button type="submit" class="btn btn-new">
-                        <i class="fas fa-save"></i> Salvar
+                    <button type="button" class="btn"
+                            onclick="fecharModal()"
+                            style="padding:9px 14px; border-radius:9px; border:1px solid var(--border); color:var(--muted); font-size:13px; font-weight:700; background:transparent; cursor:pointer;">
+                        <i class="fas fa-xmark"></i> Cancelar
                     </button>
-                    <button type="button" onclick="fecharModal()" class="btn">
-                        <i class="fas fa-times"></i> Cancelar
+                    <button type="submit" class="btn-new">
+                        <i class="fas fa-save"></i> Salvar
                     </button>
                 </div>
             </form>
@@ -164,28 +342,40 @@ $perfis = $pdo->query("SELECT * FROM perfil ORDER BY id_perfil")->fetchAll(PDO::
 </div>
 
 <script>
-function abrirModalAtribuir(id, nome, idPerfil) {
+function abrirModalAtribuir(id, nome, tipo) {
     document.getElementById('modalIdUsuario').value = id;
     document.getElementById('modalUsuarioNome').textContent = nome;
-    document.getElementById('modalIdPerfil').value = idPerfil || 4;
+    document.getElementById('modalTipo').value = tipo || 'aluno';
     document.getElementById('modalAtribuir').classList.add('active');
     document.body.style.overflow = 'hidden';
 }
 
 function fecharModal() {
     document.getElementById('modalAtribuir').classList.remove('active');
-    document.body.style.overflow = 'auto';
+    document.body.style.overflow = '';
 }
 
-document.getElementById('modalAtribuir').addEventListener('click', function(e) {
-    if (e.target === this) {
-        fecharModal();
-    }
+document.getElementById('modalAtribuir').addEventListener('click', function (e) {
+    if (e.target === this) fecharModal();
 });
 
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        fecharModal();
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') fecharModal();
+});
+
+// ============================================================
+// Atalho: "/" foca na busca, ESC limpa
+// ============================================================
+document.addEventListener('keydown', function (e) {
+    var input = document.querySelector('.master-search input[name="busca"]');
+    if (!input) return;
+
+    // "/" fora de um input foca na busca
+    if (e.key === '/' && document.activeElement !== input
+        && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+        e.preventDefault();
+        input.focus();
+        input.select();
     }
 });
 </script>

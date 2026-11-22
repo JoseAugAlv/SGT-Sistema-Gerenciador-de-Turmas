@@ -1,0 +1,569 @@
+/* ============================================================
+   ATAS — estilos específicos
+   Carregado em /projetos/*/atas e /atas/*
+   ============================================================ */
+
+/* ---------- Grid de cards de ata (index) ---------- */
+.atas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.ata-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 200px;
+}
+
+.ata-card .panel-header { margin-bottom: 4px; }
+.ata-card .panel-header h2 {
+    font-size: 15px;
+    line-height: 1.35;
+    margin-bottom: 4px;
+    word-break: break-word;
+}
+.ata-card .panel-header p {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin: 0;
+}
+
+.ata-card .status-line {
+    border-top: 1px solid var(--border);
+    padding: 8px 0;
+    margin: 0;
+    font-size: 12px;
+}
+.ata-card .status-line:last-of-type { border-bottom: 0; }
+
+.ata-card .ata-acoes {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+/* ---------- Status da ata ---------- */
+.ata-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    white-space: nowrap;
+}
+.ata-status.pendente {
+    background: rgba(245, 166, 72, .15);
+    color: #d48b1c;
+}
+.ata-status.preenchida {
+    background: rgba(60, 142, 234, .15);
+    color: var(--blue);
+}
+.ata-status.revisada {
+    background: rgba(57, 184, 137, .15);
+    color: #29946e;
+}
+
+/* ---------- Bloco de info do detalhe ---------- */
+.ata-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.ata-info-linha {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+}
+.ata-info-linha:last-child { border-bottom: 0; }
+.ata-info-linha .label {
+    color: var(--muted);
+    font-weight: 600;
+    flex-shrink: 0;
+}
+.ata-info-linha .valor {
+    color: var(--text);
+    text-align: right;
+    word-break: break-word;
+}
+
+/* ---------- Hero meta do detalhe ---------- */
+.ata-hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    align-items: center;
+    color: var(--muted);
+    font-size: 12.5px;
+    margin-top: 4px;
+}
+.ata-hero-meta code {
+    background: var(--surface-2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.92em;
+    color: var(--text);
+}
+
+/* ---------- Lista de participantes da ata ---------- */
+.ata-participantes {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ata-participante {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    border-left: 4px solid var(--border-strong);
+    transition: border-color .15s;
+}
+.ata-participante:hover { border-color: var(--border-strong); }
+
+.ata-participante.presente      { border-left-color: var(--green); }
+.ata-participante.ausente       { border-left-color: var(--red); }
+.ata-participante.justificado   { border-left-color: var(--orange); }
+
+.ata-participante .pinfo {
+    flex: 1;
+    min-width: 0;
+}
+.ata-participante strong {
+    display: block;
+    font-size: 12.5px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ata-participante small {
+    display: block;
+    color: var(--muted);
+    font-size: 10.5px;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ata-participante .presenca-controls {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-shrink: 0;
+}
+.ata-participante .presenca-controls select {
+    min-width: 120px;
+}
+.ata-participante .presenca-controls input[type="text"] {
+    min-width: 180px;
+}
+
+/* ---------- Lista de atividades ---------- */
+.ata-atividades {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ata-atividade {
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    border-left: 4px solid var(--primary);
+}
+.ata-atividade-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 6px;
+}
+.ata-atividade-header strong {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.35;
+}
+.ata-atividade-desc {
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.55;
+    margin: 4px 0 8px;
+}
+.ata-atividade-participantes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.participante-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    background: var(--surface-2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+}
+.participante-tag.grupo {
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary);
+    border-color: transparent;
+}
+.participante-tag.turma {
+    background: rgba(60, 142, 234, .12);
+    color: var(--blue);
+    border-color: transparent;
+}
+
+/* ---------- Lista de relatórios ---------- */
+.ata-relatorios {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ata-relatorio {
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    border-left: 4px solid var(--blue);
+}
+.ata-relatorio.ocorrencia      { border-left-color: var(--orange); }
+.ata-relatorio.decisao         { border-left-color: var(--primary); }
+.ata-relatorio.encaminhamento  { border-left-color: var(--blue); }
+.ata-relatorio.observacao      { border-left-color: var(--muted); }
+
+.ata-relatorio-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 6px;
+}
+.ata-relatorio-header strong {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.35;
+}
+.ata-relatorio-tipo {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    background: var(--surface-2);
+    color: var(--muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.ata-relatorio-tipo.ocorrencia     { background: rgba(245, 166, 72, .15);  color: #d48b1c; }
+.ata-relatorio-tipo.decisao        { background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary); }
+.ata-relatorio-tipo.encaminhamento { background: rgba(60, 142, 234, .15);  color: var(--blue); }
+.ata-relatorio-tipo.observacao     { background: var(--surface-2);         color: var(--muted); }
+
+.ata-relatorio-conteudo {
+    font-size: 12.5px;
+    color: var(--text);
+    line-height: 1.6;
+    margin: 6px 0 8px;
+}
+
+.ata-relatorio-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+}
+.ata-relatorio-footer .participantes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+/* ---------- Formulários de adicionar (atividade/relatório) ---------- */
+.ata-add-form {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+.ata-add-form h3 {
+    font-size: 13px;
+    margin: 0 0 12px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.ata-add-form h3 i { color: var(--primary); font-size: 12px; }
+
+/* ---------- Replicação de ata (editar) ---------- */
+.ata-replicar-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+}
+.ata-replicar-tabela th {
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    font-weight: 700;
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+}
+.ata-replicar-tabela td {
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+.ata-replicar-tabela tr:hover { background: var(--surface-2); }
+
+/* ---------- Aviso de réplica ---------- */
+.ata-replicar-info {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: rgba(245, 166, 72, .1);
+    border-left: 3px solid var(--orange);
+    color: #d48b1c;
+    font-size: 12.5px;
+    line-height: 1.55;
+    margin-bottom: 16px;
+}
+.ata-replicar-info i { flex-shrink: 0; margin-top: 2px; }
+.ata-replicar-info strong { color: var(--text); }
+
+/* ---------- Barra de ações finalizar/validar ---------- */
+.ata-footer-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    margin-top: 20px;
+}
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 800px) {
+    .atas-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .ata-card { min-height: 0; }
+
+    .ata-info-linha { flex-direction: column; gap: 4px; }
+    .ata-info-linha .valor { text-align: left; }
+
+    .ata-participante {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .ata-participante .presenca-controls {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+    }
+    .ata-participante .presenca-controls select,
+    .ata-participante .presenca-controls input[type="text"] {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .ata-card .ata-acoes { flex-direction: column; align-items: stretch; }
+    .ata-card .ata-acoes .button { width: 100%; }
+
+    .ata-atividade-header,
+    .ata-relatorio-header {
+        flex-direction: column;
+        gap: 6px;
+    }
+}
+/* ============================================================
+   PRUMO: atas
+   ============================================================ */
+
+/* Faixas laterais antigas viram bordas inteiras com fundo tingido */
+.ata-participante, .ata-atividade, .ata-relatorio, .ata-card { border-left-width: 1px !important; }
+.ata-participante.presente    { border-color: color-mix(in srgb, var(--green) 40%, var(--border)); background: color-mix(in srgb, var(--green) 6%, var(--surface)); }
+.ata-participante.ausente     { border-color: color-mix(in srgb, var(--red) 40%, var(--border)); background: color-mix(in srgb, var(--red) 6%, var(--surface)); }
+.ata-participante.justificado { border-color: color-mix(in srgb, var(--orange) 40%, var(--border)); background: color-mix(in srgb, var(--orange) 6%, var(--surface)); }
+
+/* Situação da ata (mesmo vocabulário em todas as telas) */
+.ata-status-chip {
+    display: inline-flex; align-items: center; height: 26px; padding: 0 10px;
+    border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap;
+    background: var(--surface-2); color: var(--muted);
+}
+.ata-status-chip.pendente   { background: color-mix(in srgb, var(--orange) 14%, var(--surface)); color: var(--orange); }
+.ata-status-chip.preenchida { background: color-mix(in srgb, var(--blue) 14%, var(--surface)); color: var(--blue); }
+.ata-status-chip.revisada   { background: color-mix(in srgb, var(--green) 14%, var(--surface)); color: var(--green); }
+
+/* Lista de atas */
+.lista-atas li { grid-template-columns: 52px minmax(0, 1fr) auto auto; }
+.ata-link { color: var(--text); text-decoration: none; }
+.ata-link:hover { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+.ata-acoes-linha { display: flex; gap: 6px; }
+@media (max-width: 640px) {
+    .lista-atas li { grid-template-columns: 52px minmax(0, 1fr); }
+    .lista-atas .ata-status-chip { grid-column: 2; justify-self: start; }
+    .lista-atas .ata-acoes-linha { grid-column: 1 / -1; }
+    .lista-atas .ata-acoes-linha .tarefa-acao { flex: 1; text-align: center; }
+}
+
+.ata-filtros { display: flex; flex-wrap: wrap; gap: 6px; }
+.ata-filtros button {
+    display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px;
+    border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
+    color: var(--muted); font: 600 12px/1 var(--sans); cursor: pointer;
+}
+.ata-filtros button b { font-family: var(--font-num); font-size: 13px; color: var(--text); }
+.ata-filtros button.ativo { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+@media (max-width: 640px) { .para-fazer .bloco-titulo:has(.ata-filtros) { flex-direction: column; align-items: flex-start; } }
+
+/* Etapas da ata: Criada → Preenchida → Validada */
+.ata-etapas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin: 0 0 22px; padding: 0; list-style: none; counter-reset: etapa; }
+.ata-etapas li { position: relative; padding: 14px 12px 0; text-align: center; font-size: 13px; color: var(--muted); }
+.ata-etapas li::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--border);
+}
+.ata-etapas li:first-child::before { border-radius: 4px 0 0 4px; }
+.ata-etapas li:last-child::before { border-radius: 0 4px 4px 0; }
+.ata-etapas li.feita::before, .ata-etapas li.atual::before { background: var(--primary); }
+.ata-etapas li strong { display: block; font-size: 14px; color: var(--text); }
+.ata-etapas li.atual strong { color: var(--primary); }
+.ata-etapas li small { display: block; margin-top: 2px; font-size: 12px; }
+
+.ata-meta {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0;
+    margin-bottom: 22px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: hidden;
+}
+.ata-meta div { padding: 12px 14px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 0 -1px -1px 0; }
+.ata-meta dt { font-size: 12px; color: var(--muted); }
+.ata-meta dd { margin: 2px 0 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.ata-descricao { margin: 0 0 22px; color: var(--muted); line-height: 1.6; max-width: 75ch; }
+
+/* ---------- Preencher ata: passos numerados ---------- */
+.passos-ata { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; max-width: 980px; }
+.passo { padding: 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.passo-topo { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 14px; }
+.passo-num {
+    width: 38px; height: 38px; flex: none; display: grid; place-items: center;
+    border-radius: 10px; background: var(--primary); color: #fff; font-size: 22px;
+}
+.passo-topo h2 { margin: 0; font-size: 17px; display: flex; align-items: center; gap: 8px; }
+.passo-topo p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.passo-conta { font-family: var(--font-num); font-size: 15px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+.passo-acoes { margin: 14px 0 0; }
+.passo-final { border-color: var(--primary); background: var(--primary-soft); }
+
+.presenca-lista { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 12px; }
+.presenca-linha {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 12px;
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+}
+.presenca-linha:last-child { border-bottom: 0; }
+.presenca-opcoes { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.presenca-op { position: relative; cursor: pointer; }
+.presenca-op input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.presenca-op span { display: block; padding: 9px 12px; font-size: 13px; font-weight: 600; color: var(--muted); border-right: 1px solid var(--border); }
+.presenca-op:last-child span { border-right: 0; }
+.presenca-op.p-sim { --cor: var(--green); }
+.presenca-op.p-justificado { --cor: var(--orange); }
+.presenca-op.p-nao { --cor: var(--red); }
+.presenca-op input:checked + span { background: var(--cor); color: #fff; }
+.presenca-op input:focus-visible + span { outline: 2px solid var(--text); outline-offset: -3px; }
+.presenca-motivo { display: none; grid-column: 1 / -1; margin: 0; }
+.presenca-linha:not([data-presenca="sim"]) .presenca-motivo { display: block; }
+@media (max-width: 640px) {
+    .presenca-linha { grid-template-columns: 1fr; }
+    .presenca-opcoes { width: 100%; }
+    .presenca-op { flex: 1; text-align: center; }
+}
+
+.registro { padding: 12px 14px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.registro-topo { display: flex; align-items: center; gap: 10px; }
+.registro-topo strong { flex: 1; font-size: 14px; }
+.registro-topo form { margin: 0; }
+.registro p { margin: 6px 0 0; font-size: 13px; color: var(--muted); line-height: 1.55; }
+.registro-tipo { font-size: 12px; font-weight: 600; color: var(--primary); }
+.registro-remover { width: 32px; height: 32px; border: 0; border-radius: 8px; background: none; color: var(--muted-2); cursor: pointer; }
+.registro-remover:hover { background: color-mix(in srgb, var(--red) 12%, transparent); color: var(--red); }
+.registro-pessoas { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.registro-pessoas span { padding: 3px 8px; border-radius: 999px; background: var(--surface-2); font-size: 12px; color: var(--muted); }
+
+.registro-novo { border: 1px dashed var(--border-strong); border-radius: 12px; padding: 0 14px; }
+.registro-novo[open] { padding-bottom: 14px; border-style: solid; }
+.registro-novo summary { padding: 12px 0; cursor: pointer; color: var(--primary); font-weight: 700; font-size: 14px; list-style: none; }
+.registro-novo summary::-webkit-details-marker { display: none; }
+
+.pessoas { border: 0; padding: 0; margin: 14px 0 0; }
+.pessoas legend { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.pessoas-lista { display: flex; flex-wrap: wrap; gap: 6px; }
+.pessoa-chip { position: relative; cursor: pointer; }
+.pessoa-chip input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.pessoa-chip span {
+    display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px;
+    border: 1px solid var(--border); border-radius: 999px; font-size: 13px; color: var(--text); background: var(--surface);
+}
+.pessoa-chip input:checked + span { border-color: var(--primary); background: var(--primary); color: #fff; }
+.pessoa-chip input:checked + span::before { content: "\2713"; font-weight: 700; }
+.pessoa-chip input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: 2px; }
+.pessoas-todos { border: 0; background: none; color: var(--primary); font: 600 13px/1 var(--sans); cursor: pointer; padding: 6px; }
+.pessoas-outros { margin-top: 10px; }
+.pessoas-outros summary { cursor: pointer; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.presenca-linha .aval-aluno { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.presenca-linha .avatar { width: 32px; height: 32px; flex: none; font-size: 12px; }
+.presenca-linha strong { font-size: 14px; font-weight: 600; }
+
+/* Minhas atividades (área do aluno) */
+.lista-atividades { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.lista-atividades li { padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.lista-atividades li:target { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
+.atv-topo { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.atv-topo strong { font-size: 15px; }
+.atv-data { font-family: var(--font-num); font-weight: 700; color: var(--primary); white-space: nowrap; }
+.lista-atividades p { margin: 6px 0 0; font-size: 14px; color: var(--muted); line-height: 1.55; max-width: 75ch; }
+.lista-atividades small { display: block; margin-top: 8px; font-size: 12px; color: var(--muted); }
+.lista-atividades small a { color: var(--primary); }
+.passo-aviso { background: var(--primary-soft); border-color: var(--primary); }
+.passo-aviso p { margin: 0; font-size: 14px; line-height: 1.55; }
+.passo-aviso i { color: var(--primary); margin-right: 6px; }
+.registro-autor { display: block; margin-top: 6px; font-size: 12px; color: var(--muted); }

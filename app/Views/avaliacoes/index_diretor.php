@@ -1,191 +1,166 @@
 <?php
+$cssPagina = ['projetos.css', 'avaliacoes.css'];
+
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 require_once __DIR__ . '/../layouts/flashes.php';
 
+// Minhas notas já salvas: [cid][alunoId]
 $mapa = [];
 foreach ($minhasAvaliacoes as $cid => $linhas) {
-    foreach ($linhas as $l) {
-        $mapa[(int) $cid][(int) $l['aluno_id']] = $l;
+    foreach ($linhas as $l) $mapa[(int) $cid][(int) $l['aluno_id']] = $l;
+}
+// Notas dos outros diretores do grupo (transparência): [cid][alunoId][]
+$outrosMapa = [];
+foreach ($avaliacoesOutros as $cid => $porDiretor) {
+    foreach ($porDiretor as $linhas) {
+        foreach ($linhas as $l) $outrosMapa[(int) $cid][(int) $l['aluno_id']][] = $l;
     }
 }
+
+$fmt = fn($v) => $v === null || $v === '' ? '' : rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
+$grupoNome = '';
+foreach ($meusGrupos as $g) if ((int) $g['id'] === (int) $grupoAtual) $grupoNome = $g['nome'];
+$avaliaveis = count(array_filter($membros, fn($m) => (int) $m['usuario_id'] !== $meuId));
 ?>
 
-<h1><?= h($projeto['nome']) ?></h1>
-<p>Turma: <a href="<?= $basePath ?>/turmas/<?= (int) $projeto['turma_id'] ?>"><?= h($projeto['turma_nome']) ?></a></p>
+<section class="hero-section">
+    <div>
+        <h1>Avaliar meu grupo</h1>
+        <p class="hero-subtitle">
+            <?= h($projeto['nome']) ?><?= $grupoNome ? ' · Grupo ' . h($grupoNome) : '' ?>
+        </p>
+    </div>
+</section>
 
 <?php require __DIR__ . '/../projetos/_nav.php'; ?>
 <?php require __DIR__ . '/_nav.php'; ?>
 
-<h2>Avaliação por Diretor</h2>
+<?php if (count($meusGrupos) > 1): ?>
+    <nav class="aval-grupos" aria-label="Escolher grupo">
+        <span>Você dirige:</span>
+        <?php foreach ($meusGrupos as $g): $atual = (int) $g['id'] === (int) $grupoAtual; ?>
+            <a href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/avaliacoes/diretor?grupo_id=<?= (int) $g['id'] ?>"
+               class="<?= $atual ? 'ativo' : '' ?>"<?= $atual ? ' aria-current="page"' : '' ?>><i class="fas fa-users"></i> <?= h($g['nome']) ?></a>
+        <?php endforeach; ?>
+    </nav>
+<?php endif; ?>
 
 <?php if (empty($criterios)): ?>
-    <p>Nenhum critério do tipo <strong>diretor</strong> ou <strong>misto</strong> está aberto.</p>
-    <?php require_once __DIR__ . '/../layouts/footer.php'; return; ?>
-<?php endif; ?>
-
-<?php if (count($meusGrupos) > 1): ?>
-    <p>
-        <strong>Grupo:</strong>
-        <?php foreach ($meusGrupos as $g): ?>
-            <?php if ((int) $g['id'] === $grupoAtual): ?>
-                <strong><?= h($g['nome']) ?></strong>
-            <?php else: ?>
-                <a href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/avaliacoes/diretor?grupo_id=<?= (int) $g['id'] ?>">
-                    <?= h($g['nome']) ?>
-                </a>
-            <?php endif; ?>
-            <?= $g !== end($meusGrupos) ? '—' : '' ?>
-        <?php endforeach; ?>
-    </p>
+    <div class="lista-vazia">
+        <i class="fas fa-crown"></i>
+        <span>Não há critérios abertos para os diretores avaliarem agora.</span>
+    </div>
 <?php else: ?>
-    <p>Grupo: <strong><?= h($meusGrupos[0]['nome']) ?></strong></p>
-<?php endif; ?>
 
-<form method="POST" action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/avaliacoes/diretor/salvar">
+<form method="POST" id="form-avaliacao" class="aval-app"
+      action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/avaliacoes/diretor/salvar"
+      data-i-max="<?= (float) $cfg['limite_i_max'] ?>" data-r-max="<?= (float) $cfg['limite_r_max'] ?>"
+      data-b-max="<?= (float) $cfg['limite_b_max'] ?>" data-chave="aval-dir-<?= (int) $projeto['id'] ?>-<?= (int) $grupoAtual ?>">
     <?= ViewHelper::csrfField() ?>
     <input type="hidden" name="grupo_id" value="<?= (int) $grupoAtual ?>">
 
-    <fieldset>
-        <legend><i class="fas fa-bolt"></i> Preenchimento rápido</legend>
-        <p>
-            <strong>Conceito:</strong>
-            <button type="button" onclick="preencherTodosConceito('MB')">Todos MB</button>
-            <button type="button" onclick="preencherTodosConceito('B')">Todos B</button>
-            <button type="button" onclick="preencherTodosConceito('R')">Todos R</button>
-            <button type="button" onclick="preencherTodosConceito('I')">Todos I</button>
-        </p>
-        <p>
-            <strong>Valor:</strong>
-            <?php foreach ([100,95,90,85,80,70,60,50,25,0] as $v): ?>
-                <button type="button" onclick="preencherTodosValor(<?= $v ?>)"><?= $v ?></button>
+    <aside class="aval-criterios" aria-label="Critérios">
+        <h2>Critérios</h2>
+        <div class="aval-criterios-lista" role="tablist">
+            <?php foreach ($criterios as $i => $c): $cid = (int) $c['id']; ?>
+                <button type="button" role="tab" class="aval-crit-btn" id="tab-<?= $cid ?>"
+                        data-alvo="<?= $cid ?>" aria-controls="painel-<?= $cid ?>" aria-selected="<?= $i === 0 ? 'true' : 'false' ?>">
+                    <span class="aval-crit-nome"><?= h($c['nome']) ?></span>
+                    <span class="aval-crit-meta">
+                        <span class="aval-progresso" data-progresso="<?= $cid ?>">0/<?= $avaliaveis ?></span>
+                        <span><?= $c['tipo_avaliacao'] === 'misto' ? 'misto · ' : '' ?>peso <?= $fmt($c['peso']) ?></span>
+                    </span>
+                    <span class="aval-barra"><i data-barra="<?= $cid ?>"></i></span>
+                </button>
             <?php endforeach; ?>
-        </p>
-    </fieldset>
+        </div>
+    </aside>
 
-    <table border="1" cellpadding="4">
-        <thead>
-            <tr>
-                <th>Aluno</th>
-                <?php foreach ($criterios as $c): ?>
-                    <th><?= h($c['nome']) ?><br>
-                        <small><?= h($c['tipo_avaliacao']) ?> — peso <?= number_format((float) $c['peso'], 2, ',', '.') ?></small>
-                    </th>
-                <?php endforeach; ?>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($membros as $m): $aid = (int) $m['usuario_id']; ?>
-                <?php $souEu = $aid === $meuId; ?>
-                <tr <?= $souEu ? 'style="background:#f5f5f5"' : '' ?>>
-                    <td>
-                        <?= h($m['nome']) ?>
-                        <?php if ($souEu): ?><small>(você — não pode se autoavaliar)</small><?php endif; ?>
-                    </td>
-                    <?php foreach ($criterios as $c): $cid = (int) $c['id']; ?>
-                        <?php
-                        $reg = $mapa[$cid][$aid] ?? null;
-                        $conc = $reg['conceito'] ?? '';
-                        $val  = $reg['valor_numerico'] ?? '';
+    <div class="aval-area">
+        <?php foreach ($criterios as $i => $c): $cid = (int) $c['id']; ?>
+            <section class="aval-painel" id="painel-<?= $cid ?>" role="tabpanel" aria-labelledby="tab-<?= $cid ?>"
+                     data-criterio="<?= $cid ?>" <?= $i === 0 ? '' : 'hidden' ?>>
+                <header class="aval-painel-topo">
+                    <h2><?= h($c['nome']) ?></h2>
+                    <p>
+                        <?= $c['tipo_avaliacao'] === 'misto' ? 'Misto: sua nota vale metade, a outra metade é do representante' : 'Avaliado pelos diretores do grupo' ?>
+                        <?php if (!empty($c['prazo_avaliacao'])): ?> · prazo <?= h(date('d/m H:i', strtotime($c['prazo_avaliacao']))) ?><?php endif; ?>
+                    </p>
+                    <?php if (!empty($c['descricao'])): ?>
+                        <details class="aval-descricao"><summary>Ver descrição</summary><p><?= nl2br(h($c['descricao'])) ?></p></details>
+                    <?php endif; ?>
+                </header>
 
-                        // Avaliações de outros diretores
-                        $outros = [];
-                        if (!empty($avaliacoesOutros[$cid])) {
-                            foreach ($avaliacoesOutros[$cid] as $outroId => $linhas) {
-                                foreach ($linhas as $l) {
-                                    if ((int) $l['aluno_id'] === $aid) $outros[] = $l;
-                                }
-                            }
-                        }
-                        ?>
-                        <td>
+                <div class="aval-ferramentas">
+                    <span class="aval-dica">Atalhos: 1 a 4 escolhem o conceito, Enter vai para o próximo.</span>
+                    <div class="aval-preencher" role="group" aria-label="Preencher quem está sem nota">
+                        <span>Sem nota recebem:</span>
+                        <?php foreach (['MB', 'B', 'R', 'I'] as $op): ?>
+                            <button type="button" class="conceito-chip c-<?= strtolower($op) ?>" data-preencher="<?= $op ?>"><?= $op ?></button>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <ul class="aval-lista">
+                    <?php foreach ($membros as $m):
+                        $aid   = (int) $m['usuario_id'];
+                        $souEu = $aid === $meuId;
+                        $reg   = $mapa[$cid][$aid] ?? null;
+                        $conc  = $reg['conceito'] ?? '';
+                        $val   = $reg ? $fmt($reg['valor_numerico']) : '';
+                        $nome  = "aval[{$cid}][{$aid}]";
+                        $outros = $outrosMapa[$cid][$aid] ?? [];
+                    ?>
+                        <li class="aval-linha<?= $souEu ? ' sou-eu' : '' ?>" data-nome="<?= h(mb_strtolower($m['nome'])) ?>">
+                            <span class="aval-aluno">
+                                <span class="avatar avatar-blue" aria-hidden="true"><?= h(mb_strtoupper(mb_substr($m['nome'], 0, 1))) ?></span>
+                                <span>
+                                    <strong><?= h($m['nome']) ?><?= $souEu ? ' (você)' : '' ?></strong>
+                                    <?php if ($outros): ?>
+                                        <small class="aval-outros-dir">
+                                            Outro diretor:
+                                            <?php foreach ($outros as $o): ?>
+                                                <span class="conceito-chip mini c-<?= strtolower($o['conceito']) ?>"><?= h($o['conceito']) ?> <?= $fmt($o['valor_numerico']) ?></span>
+                                            <?php endforeach; ?>
+                                        </small>
+                                    <?php endif; ?>
+                                </span>
+                            </span>
+
                             <?php if ($souEu): ?>
-                                <em>bloqueado</em>
+                                <span class="txt-mudo">Você não avalia a si mesmo</span>
                             <?php else: ?>
-                                <select data-campo="conceito" name="aval[<?= $cid ?>][<?= $aid ?>][conceito]">
-                                    <option value="">—</option>
-                                    <?php foreach (['I','R','B','MB'] as $op): ?>
-                                        <option value="<?= $op ?>" <?= $conc === $op ? 'selected' : '' ?>><?= $op ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <input type="number" step="0.01" min="0" max="100"
-                                       data-campo="valor"
-                                       name="aval[<?= $cid ?>][<?= $aid ?>][valor]"
-                                       value="<?= $val !== '' ? number_format((float) $val, 2, '.', '') : '' ?>"
-                                       style="width:70px">
-                                <?php if (!empty($outros)): ?>
-                                    <br>
-                                    <small>
-                                        Outros diretores:
-                                        <?php foreach ($outros as $o): ?>
-                                            <code><?= h($o['conceito']) ?> (<?= number_format((float) $o['valor_numerico'], 2, ',', '.') ?>)</code>
+                                <span class="aval-nota" data-celula>
+                                    <span class="conceito-grupo" role="radiogroup" aria-label="Conceito de <?= h($m['nome']) ?>">
+                                        <?php foreach (['I', 'R', 'B', 'MB'] as $op): ?>
+                                            <label class="conceito-op c-<?= strtolower($op) ?>">
+                                                <input type="radio" name="<?= $nome ?>[conceito]" value="<?= $op ?>" <?= $conc === $op ? 'checked' : '' ?>>
+                                                <span><?= $op ?></span>
+                                            </label>
                                         <?php endforeach; ?>
-                                    </small>
-                                <?php endif; ?>
+                                    </span>
+                                    <input type="text" inputmode="decimal" class="aval-valor" name="<?= $nome ?>[valor]"
+                                           value="<?= h($val) ?>" placeholder="—" maxlength="6" aria-label="Valor de 0 a 100 de <?= h($m['nome']) ?>">
+                                    <button type="button" class="aval-limpar" data-limpar title="Tirar nota" aria-label="Tirar nota de <?= h($m['nome']) ?>"><i class="fas fa-xmark"></i></button>
+                                </span>
                             <?php endif; ?>
-                        </td>
+                        </li>
                     <?php endforeach; ?>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+                </ul>
+            </section>
+        <?php endforeach; ?>
+    </div>
 
-    <p><button type="submit"><i class="fas fa-save"></i> Salvar avaliações</button></p>
+    <div class="aval-barra-salvar">
+        <span class="aval-status" data-status aria-live="polite">Nenhuma alteração</span>
+        <button type="submit" class="button button-primary" <?= $projeto['encerrado'] ? 'disabled' : '' ?>>
+            <i class="fas fa-check"></i> Salvar avaliações
+        </button>
+    </div>
 </form>
 
-<script>
-const CFG = {
-    iMax:  <?= (int) $cfg['limite_i_max'] ?>,
-    rMin:  <?= (int) $cfg['limite_r_min'] ?>,
-    rMax:  <?= (int) $cfg['limite_r_max'] ?>,
-    bMin:  <?= (int) $cfg['limite_b_min'] ?>,
-    bMax:  <?= (int) $cfg['limite_b_max'] ?>,
-    mbMin: <?= (int) $cfg['limite_mb_min'] ?>,
-};
-function valorPorConceito(c) {
-    switch (c) {
-        case 'I':  return CFG.iMax;
-        case 'R':  return Math.round((CFG.rMin + CFG.rMax) / 2);
-        case 'B':  return Math.round((CFG.bMin + CFG.bMax) / 2);
-        case 'MB': return CFG.mbMin;
-    }
-    return '';
-}
-function conceitoPorValor(v) {
-    v = parseFloat(v);
-    if (isNaN(v)) return '';
-    if (v <= CFG.iMax) return 'I';
-    if (v <= CFG.rMax) return 'R';
-    if (v <= CFG.bMax) return 'B';
-    return 'MB';
-}
-function aplicarConceito(sel) {
-    const td = sel.closest('td');
-    const inp = td.querySelector('[data-campo="valor"]');
-    if (!inp) return;
-    if (sel.value === '') { inp.value = ''; return; }
-    inp.value = valorPorConceito(sel.value);
-}
-function aplicarValor(inp) {
-    const td = inp.closest('td');
-    const sel = td.querySelector('[data-campo="conceito"]');
-    if (!sel) return;
-    const v = inp.value.trim();
-    if (v === '') { sel.value = ''; return; }
-    sel.value = conceitoPorValor(v);
-}
-document.addEventListener('change', e => {
-    if (e.target.matches('[data-campo="conceito"]')) aplicarConceito(e.target);
-});
-document.addEventListener('input', e => {
-    if (e.target.matches('[data-campo="valor"]')) aplicarValor(e.target);
-});
-function preencherTodosConceito(c) {
-    document.querySelectorAll('[data-campo="conceito"]').forEach(s => { s.value = c; aplicarConceito(s); });
-}
-function preencherTodosValor(v) {
-    document.querySelectorAll('[data-campo="valor"]').forEach(i => { i.value = v; aplicarValor(i); });
-}
-</script>
+<script src="<?= ViewHelper::asset('js/avaliacao.js') ?>"></script>
+<?php endif; ?>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

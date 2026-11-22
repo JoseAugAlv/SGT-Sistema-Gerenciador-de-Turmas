@@ -1,238 +1,206 @@
 <?php
+$cssPagina = ['projetos.css', 'criterios.css'];
+
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 require_once __DIR__ . '/../layouts/flashes.php';
 
-// ---------- Verifica o papel do usuário ----------
-require_once __DIR__ . '/../../Config/database.php';
-require_once __DIR__ . '/../../Models/TurmaUsuario.php';
-
-$u = $_SESSION['usuario'] ?? null;
-$isMaster = $u && $u['tipo'] === 'master';
-
-$tu = new TurmaUsuario();
-$isRep = $u && !$isMaster && $tu->ehRepresentante((int) $projeto['turma_id'], (int) $u['id']);
-
-// Só master ou representante pode editar/reabrir critérios
-$podeGerenciar = $isMaster || $isRep;
-
-$badgePeso = [
-    'incompleto' => ['icon' => 'fas fa-hourglass-half',       'cor' => '#c80', 'txt' => 'Incompleto'],
-    'completo'   => ['icon' => 'fas fa-check-circle',         'cor' => '#0a0', 'txt' => 'Completo'],
-    'excedido'   => ['icon' => 'fas fa-exclamation-triangle', 'cor' => '#b00', 'txt' => 'Excedido'],
+// $podeEditar (representante/master, projeto aberto) e $podeReabrir vêm do controller.
+$tipoLabel = [
+    'diretor'       => 'Diretor avalia',
+    'representante' => 'Representante avalia',
+    'pares'         => 'Colegas avaliam',
+    'autoavaliacao' => 'Autoavaliação',
+    'coletiva'      => 'Nota do grupo',
+    'misto'         => 'Diretor + representante',
 ];
-$b = $badgePeso[$statusPeso];
+$aplicLabel = Criterio::APLICAVEIS;
 
-$tipoLabel = fn(string $t) => Criterio::TIPOS[$t] ?? $t;
-$aplicLabel = fn(string $a) => Criterio::APLICAVEIS[$a] ?? $a;
+$pesoFmt   = fn($v) => number_format((float) $v, 2, ',', '.');
+$abertos   = count(array_filter($criterios, fn($c) => !$c['bloqueado']));
+$bloqueados = count($criterios) - $abertos;
+$falta     = 10 - $somaPesos;
+
+$statusPesoTxt = [
+    'completo'   => 'Soma completa',
+    'incompleto' => 'Faltam ' . $pesoFmt($falta) . ' para 10',
+    'excedido'   => 'Passou ' . $pesoFmt(-$falta) . ' de 10',
+][$statusPeso];
+$pid = (int) $projeto['id'];
 ?>
 
-<h1><?= h($projeto['nome']) ?></h1>
-<p>Turma: <a href="<?= $basePath ?>/turmas/<?= (int) $projeto['turma_id'] ?>"><?= h($projeto['turma_nome']) ?></a></p>
+<section class="hero-section">
+    <div>
+        <div class="eyebrow">
+            <span class="status-dot"></span>
+            Critérios
+        </div>
+        <h1><?= h($projeto['nome']) ?></h1>
+        <p class="hero-subtitle">
+            <a href="<?= $basePath ?>/turmas/<?= (int) $projeto['turma_id'] ?>"><?= h($projeto['turma_nome']) ?></a>
+        </p>
+    </div>
+    <div class="hero-actions">
+        <?php if ($podeEditar): ?>
+            <a class="button button-primary" href="<?= $basePath ?>/projetos/<?= $pid ?>/criterios/criar">
+                <i class="fas fa-plus"></i> Novo critério
+            </a>
+        <?php endif; ?>
+    </div>
+</section>
 
 <?php require __DIR__ . '/../projetos/_nav.php'; ?>
 
-<h2>Critérios (<?= count($criterios) ?>)</h2>
-
-<p>
-    Soma dos pesos:
-    <strong style="color: <?= $b['cor'] ?>">
-        <?= number_format($somaPesos, 2, ',', '.') ?> / 10.00
-    </strong>
-    <i class="<?= $b['icon'] ?>" style="color: <?= $b['cor'] ?>"></i>
-    <?= $b['txt'] ?>
-</p>
-
-<?php if ($podeEditar): ?>
-    <p>
-        <a href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/criterios/criar">
-            <i class="fas fa-plus"></i> Novo critério
-        </a>
-    </p>
-<?php endif; ?>
-
 <?php if (empty($criterios)): ?>
-    <p>Nenhum critério cadastrado.</p>
+    <section class="panel empty-state">
+        <span class="icon-large text-muted"><i class="fas fa-clipboard-check"></i></span>
+        <h2>Nenhum critério cadastrado</h2>
+        <p>
+            <?= $podeEditar
+                ? 'Os critérios definem como os alunos são avaliados. A soma dos pesos deve dar 10.'
+                : 'Aguarde o representante criar os critérios deste projeto.' ?>
+        </p>
+        <?php if ($podeEditar): ?>
+            <a class="button button-primary" href="<?= $basePath ?>/projetos/<?= $pid ?>/criterios/criar">
+                <i class="fas fa-plus"></i> Criar critério
+            </a>
+        <?php endif; ?>
+    </section>
 <?php else: ?>
-    <table border="1" cellpadding="6">
-        <thead>
-            <tr>
-                <th>Nome</th>
-                <th>Peso</th>
-                <th>Tipo</th>
-                <th>Aplicável</th>
-                <th>Status</th>
-                <th>Avaliações</th>
-                <th>Detalhes</th>
-                <?php if ($podeEditar): ?><th>Ações</th><?php endif; ?>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($criterios as $c): ?>
-                <tr>
-                    <td><?= h($c['nome']) ?></td>
-                    <td><?= number_format((float) $c['peso'], 2, ',', '.') ?></td>
-                    <td><code><?= h($c['tipo_avaliacao']) ?></code></td>
-                    <td><code><?= h($c['aplicavel_a']) ?></code></td>
-                    <td>
-                        <?php if ($c['bloqueado']): ?>
-                            <i class="fas fa-lock" style="color:#b00"></i> Bloqueado
-                        <?php else: ?>
-                            <i class="fas fa-lock-open" style="color:#0a0"></i> Aberto
+
+    <!-- Resumo: soma dos pesos + situação -->
+    <div class="grade-numeros crit-numeros">
+        <div class="grade-celula crit-soma <?= h($statusPeso) ?>">
+            <span class="num"><?= $pesoFmt($somaPesos) ?><small class="crit-de"> / 10</small></span>
+            <span class="crit-barra" aria-hidden="true"><span style="width: <?= min(100, max(0, $somaPesos * 10)) ?>%"></span></span>
+            <small class="crit-soma-txt"><?= h($statusPesoTxt) ?></small>
+        </div>
+        <div class="grade-celula">
+            <span class="num"><?= count($criterios) ?></span>
+            <small>critério(s)</small>
+        </div>
+        <div class="grade-celula">
+            <span class="num"><?= $abertos ?></span>
+            <small>abertos para nota<?= $bloqueados ? ' · ' . $bloqueados . ' encerrado(s)' : '' ?></small>
+        </div>
+    </div>
+
+    <ul class="lista-tarefas lista-criterios">
+        <?php foreach ($criterios as $c):
+            $cid   = (int) $c['id'];
+            $total = (int) $c['total_avaliacoes'] + (int) $c['total_coletivas'];
+            $prazoTxt = '';
+            $prazoCls = '';
+            if (!empty($c['prazo_avaliacao'])) {
+                $prazoTxt = ($c['bloqueado'] ? 'encerrou ' : 'até ') . ViewHelper::data($c['prazo_avaliacao'], true);
+                $restante = strtotime($c['prazo_avaliacao']) - time();
+                if (!$c['bloqueado'] && $restante < 3 * 86400) $prazoCls = 'txt-alerta';
+            }
+        ?>
+            <li class="<?= $c['bloqueado'] ? 'bloqueado' : '' ?>">
+                <span class="crit-peso num" title="Peso"><?= $pesoFmt($c['peso']) ?><small>peso</small></span>
+                <div class="tarefa-info">
+                    <strong><?= h($c['nome']) ?></strong>
+                    <small>
+                        <span class="crit-tipo t-<?= h($c['tipo_avaliacao']) ?>"><?= h($tipoLabel[$c['tipo_avaliacao']] ?? $c['tipo_avaliacao']) ?></span>
+                        <?php if ($c['aplicavel_a'] !== 'todos'): ?> · <?= h($aplicLabel[$c['aplicavel_a']] ?? $c['aplicavel_a']) ?><?php endif; ?>
+                        <?php if (!empty($c['etapa_nome'])): ?> · etapa <?= h($c['etapa_nome']) ?><?php endif; ?>
+                        <?php if ($prazoTxt): ?> · <span class="<?= $prazoCls ?>"><?= h($prazoTxt) ?></span><?php endif; ?>
+                        · <?= $total ?> nota(s)
+                    </small>
+                    <?php if (!empty($c['obrigatorio'])): $faltam = $faltamPreencher[$cid] ?? null; ?>
+                        <div class="crit-obrig-linha">
+                            <span class="crit-obrig-tag"><i class="fas fa-asterisk"></i> Obrigatório</span>
+                            <?php if ($faltam !== null): ?>
+                                <?php $jaDesc = $descontos[$cid] ?? []; $semDesc = array_diff_key($faltam, $jaDesc); ?>
+                                <?php if (empty($faltam)): ?>
+                                    <span class="crit-obrig-ok">todos já preencheram</span>
+                                <?php elseif (!$c['bloqueado']): ?>
+                                    <details class="crit-faltam">
+                                        <summary class="txt-alerta"><?= count($faltam) ?> aluno(s) ainda não preencheram</summary>
+                                        <p><?= h(implode(', ', $faltam)) ?></p>
+                                    </details>
+                                <?php else: ?>
+                                    <details class="crit-faltam"<?= $semDesc ? ' open' : '' ?>>
+                                        <summary class="<?= $semDesc ? 'txt-alerta' : '' ?>">
+                                            <?= count($faltam) ?> aluno(s) não preencheram<?= $jaDesc ? ' · ' . count($jaDesc) . ' com desconto' : '' ?>
+                                        </summary>
+
+                                        <?php if ($semDesc && $podeEditar): ?>
+                                            <form method="POST" action="<?= $basePath ?>/criterios/<?= $cid ?>/descontar" class="crit-desc-form">
+                                                <?= ViewHelper::csrfField() ?>
+                                                <div class="crit-desc-alunos">
+                                                    <?php foreach ($semDesc as $aid => $nomeAluno): ?>
+                                                        <label class="participante"><input type="checkbox" name="alunos[]" value="<?= (int) $aid ?>" checked> <?= h($nomeAluno) ?></label>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                                <div class="crit-desc-acao">
+                                                    <label>Descontar
+                                                        <input type="number" name="pontos" class="field" min="0.1" max="100" step="0.1" value="5" required>
+                                                        ponto(s) da média final <span class="txt-mudo">(escala 0–100)</span>
+                                                    </label>
+                                                    <button type="submit" class="button small button-primary"
+                                                            onclick="return confirm('Aplicar o desconto aos alunos marcados? Eles serão avisados.')">Aplicar desconto</button>
+                                                </div>
+                                            </form>
+                                        <?php elseif ($semDesc): ?>
+                                            <p><?= h(implode(', ', $semDesc)) ?></p>
+                                        <?php endif; ?>
+
+                                        <?php if ($jaDesc): ?>
+                                            <ul class="crit-desc-lista">
+                                                <?php foreach ($jaDesc as $aid => $d): ?>
+                                                    <li>
+                                                        <span><?= h($d['aluno_nome']) ?> · <strong>−<?= number_format((float) $d['pontos'], 1, ',', '.') ?></strong></span>
+                                                        <?php if ($podeEditar): ?>
+                                                            <form method="POST" action="<?= $basePath ?>/criterios/<?= $cid ?>/remover-desconto" class="d-inline">
+                                                                <?= ViewHelper::csrfField() ?>
+                                                                <input type="hidden" name="aluno_id" value="<?= (int) $aid ?>">
+                                                                <button type="submit" class="crit-desc-remover">remover</button>
+                                                            </form>
+                                                        <?php endif; ?>
+                                                    </li>
+                                                <?php endforeach; ?>
+                                            </ul>
+                                        <?php endif; ?>
+                                    </details>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+                    <?php if (!empty($c['descricao'])): ?>
+                        <details class="crit-descricao">
+                            <summary>Ver descrição</summary>
+                            <p><?= nl2br(h($c['descricao'])) ?></p>
+                        </details>
+                    <?php endif; ?>
+                </div>
+                <span class="crit-status <?= $c['bloqueado'] ? 'fechado' : 'aberto' ?>">
+                    <i class="fas <?= $c['bloqueado'] ? 'fa-lock' : 'fa-lock-open' ?>"></i>
+                    <?= $c['bloqueado'] ? 'Encerrado' : 'Aberto' ?>
+                </span>
+                <?php if ($podeEditar || ($podeReabrir && $c['bloqueado'])): ?>
+                    <span class="crit-acoes-linha">
+                        <?php if ($c['bloqueado'] && $podeReabrir): ?>
+                            <a class="tarefa-acao primaria" href="<?= $basePath ?>/criterios/<?= $cid ?>/reabrir">Reabrir</a>
                         <?php endif; ?>
-                    </td>
-                    <td><?= (int) $c['total_avaliacoes'] + (int) $c['total_coletivas'] ?></td>
-                    <td>
-                        <button type="button" onclick="abrirModal('modal-criterio-<?= (int) $c['id'] ?>')">
-                            <i class="fas fa-eye"></i> Ver detalhes
-                        </button>
-                    </td>
-                    <?php if ($podeEditar): ?>
-                        <td>
-                            <a href="<?= $basePath ?>/criterios/<?= (int) $c['id'] ?>/editar" title="Editar">
-                                <i class="fas fa-pen"></i>
-                            </a>
-                            <form method="POST" action="<?= $basePath ?>/criterios/<?= (int) $c['id'] ?>/excluir"
-                                  style="display:inline">
+                        <?php if ($podeEditar): ?>
+                            <a class="tarefa-acao" href="<?= $basePath ?>/criterios/<?= $cid ?>/editar">Editar</a>
+                            <form method="POST" action="<?= $basePath ?>/criterios/<?= $cid ?>/excluir" class="d-inline">
                                 <?= ViewHelper::csrfField() ?>
-                                <button type="submit" title="Excluir"
-                                        onclick="return confirm('Excluir este critério? Se houver avaliações, serão arquivadas por 30 dias.')">
+                                <button type="submit" class="tarefa-acao perigo" aria-label="Excluir <?= h($c['nome']) ?>"
+                                        onclick="return confirm('<?= $total
+                                            ? 'Este critério tem ' . $total . ' nota(s). Elas ficam arquivadas por 30 dias e só o master pode restaurar. Excluir mesmo assim?'
+                                            : 'Excluir este critério?' ?>')">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </form>
-                            <?php if ($c['bloqueado']): ?>
-                                <a href="<?= $basePath ?>/criterios/<?= (int) $c['id'] ?>/reabrir" title="Reabrir">
-                                    <i class="fas fa-rotate"></i>
-                                </a>
-                            <?php endif; ?>
-                        </td>
-                    <?php endif; ?>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+                        <?php endif; ?>
+                    </span>
+                <?php endif; ?>
+            </li>
+        <?php endforeach; ?>
+    </ul>
 <?php endif; ?>
-
-<?php foreach ($criterios as $c): ?>
-    <div id="modal-criterio-<?= (int) $c['id'] ?>" class="modal-overlay"
-         style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-                background:rgba(0,0,0,0.5); z-index:9000; padding:2rem; overflow:auto;">
-
-        <div style="background:#fff; max-width:640px; margin:2rem auto; padding:2rem;
-                    border-radius:8px; position:relative;">
-
-            <button type="button" onclick="fecharModal('modal-criterio-<?= (int) $c['id'] ?>')"
-                    style="position:absolute; top:8px; right:12px; font-size:1.5rem;
-                           border:none; background:none; cursor:pointer;">
-                &times;
-            </button>
-
-            <h2 style="margin-top:0;"><?= h($c['nome']) ?></h2>
-
-            <table border="1" cellpadding="6" style="width:100%;">
-                <tbody>
-                    <tr>
-                        <th style="text-align:left;">Peso</th>
-                        <td><?= number_format((float) $c['peso'], 2, ',', '.') ?></td>
-                    </tr>
-                    <tr>
-                        <th style="text-align:left;">Tipo de avaliação</th>
-                        <td>
-                            <?= h($tipoLabel($c['tipo_avaliacao'])) ?>
-                            <br><small><code><?= h($c['tipo_avaliacao']) ?></code></small>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th style="text-align:left;">Aplicável a</th>
-                        <td>
-                            <?= h($aplicLabel($c['aplicavel_a'])) ?>
-                            <br><small><code><?= h($c['aplicavel_a']) ?></code></small>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th style="text-align:left;">Etapa</th>
-                        <td><?= h($c['etapa_nome'] ?? '—') ?></td>
-                    </tr>
-                    <tr>
-                        <th style="text-align:left;">Prazo de avaliação</th>
-                        <td><?= h($c['prazo_avaliacao'] ?? '—') ?></td>
-                    </tr>
-                    <tr>
-                        <th style="text-align:left;">Status</th>
-                        <td>
-                            <?php if ($c['bloqueado']): ?>
-                                <i class="fas fa-lock" style="color:#b00"></i> Bloqueado
-                            <?php else: ?>
-                                <i class="fas fa-lock-open" style="color:#0a0"></i> Aberto
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th style="text-align:left;">Avaliações registradas</th>
-                        <td>
-                            Individuais: <strong><?= (int) $c['total_avaliacoes'] ?></strong>
-                            —
-                            Coletivas: <strong><?= (int) $c['total_coletivas'] ?></strong>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th style="text-align:left;">Criado em</th>
-                        <td><?= h($c['created_at'] ?? '—') ?></td>
-                    </tr>
-                    <?php if (!empty($c['reaberto_em'])): ?>
-                        <tr>
-                            <th style="text-align:left;">Reaberto em</th>
-                            <td><?= h($c['reaberto_em']) ?></td>
-                        </tr>
-                    <?php endif; ?>
-                    <?php if (!empty($c['descricao'])): ?>
-                        <tr>
-                            <th style="text-align:left;">Descrição</th>
-                            <td><?= nl2br(h($c['descricao'])) ?></td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-
-            <p style="margin-bottom:0;">
-                <button type="button" onclick="fecharModal('modal-criterio-<?= (int) $c['id'] ?>')">
-                    <i class="fas fa-times"></i> Fechar
-                </button>
-            </p>
-        </div>
-    </div>
-<?php endforeach; ?>
-
-<script>
-function abrirModal(id) {
-    document.getElementById(id).style.display = 'block';
-    document.body.style.overflow = 'hidden';
-}
-
-function fecharModal(id) {
-    document.getElementById(id).style.display = 'none';
-    document.body.style.overflow = '';
-}
-
-// Fecha ao clicar fora do box
-document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
-    overlay.addEventListener('click', function(e) {
-        if (e.target === overlay) {
-            overlay.style.display = 'none';
-            document.body.style.overflow = '';
-        }
-    });
-});
-
-// Fecha com ESC
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        document.querySelectorAll('.modal-overlay').forEach(function(o) {
-            o.style.display = 'none';
-        });
-        document.body.style.overflow = '';
-    }
-});
-</script>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

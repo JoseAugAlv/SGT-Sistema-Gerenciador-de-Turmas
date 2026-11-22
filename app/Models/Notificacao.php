@@ -132,7 +132,7 @@ class Notificacao extends Model
         $ph = implode(',', array_fill(0, count($projetos), '?'));
 
         $stmt = $pdo->prepare("
-            SELECT c.id, c.nome, c.prazo_avaliacao, c.projeto_id, p.nome AS projeto_nome
+            SELECT c.id, c.nome, c.prazo_avaliacao, c.projeto_id, p.nome AS projeto_nome, c.obrigatorio
             FROM criterios c
             INNER JOIN projetos p ON p.id = c.projeto_id
             WHERE c.projeto_id IN ({$ph})
@@ -161,8 +161,9 @@ class Notificacao extends Model
             $this->criar(
                 $usuarioId,
                 'prazo',
-                'Prazo próximo',
-                "O critério '{$c['nome']}' do projeto '{$c['projeto_nome']}' vence em " . date('d/m H:i', strtotime($c['prazo_avaliacao'])) . '.',
+                !empty($c['obrigatorio']) ? 'Avaliação obrigatória vencendo' : 'Prazo próximo',
+                "O critério '{$c['nome']}' do projeto '{$c['projeto_nome']}' vence em " . date('d/m H:i', strtotime($c['prazo_avaliacao'])) . '.'
+                    . (!empty($c['obrigatorio']) ? ' O preenchimento é obrigatório.' : ''),
                 '/projetos/' . (int) $c['projeto_id'] . '/avaliacoes',
                 (int) $c['id']
             );

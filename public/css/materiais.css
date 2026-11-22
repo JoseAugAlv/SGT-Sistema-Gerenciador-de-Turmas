@@ -1,0 +1,591 @@
+/* ============================================================
+   MATERIAIS — estilos específicos
+   Carregado em /projetos/*/materiais e /materiais/*
+   ============================================================ */
+
+/* ---------- Grid de cards de material (index) ---------- */
+.materiais-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.material-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 200px;
+}
+
+.material-card .panel-header { margin-bottom: 4px; }
+.material-card .panel-header h2 {
+    font-size: 15px;
+    line-height: 1.35;
+    margin-bottom: 4px;
+    word-break: break-word;
+}
+.material-card .panel-header p {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin: 0;
+}
+
+.material-card .status-line {
+    border-top: 1px solid var(--border);
+    padding: 8px 0;
+    margin: 0;
+    font-size: 12px;
+}
+.material-card .status-line:last-of-type { border-bottom: 0; }
+
+.material-card .material-acoes {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+/* ---------- Badge de estoque ---------- */
+.estoque-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.estoque-badge.alto {
+    background: rgba(57, 184, 137, .15);
+    color: #29946e;
+}
+.estoque-badge.medio {
+    background: rgba(60, 142, 234, .15);
+    color: var(--blue);
+}
+.estoque-badge.baixo {
+    background: rgba(245, 166, 72, .15);
+    color: #d48b1c;
+}
+.estoque-badge.zerado {
+    background: rgba(228, 109, 120, .15);
+    color: var(--red);
+}
+
+/* ---------- Valor do estoque em destaque ---------- */
+.material-quantidade {
+    font-size: 22px;
+    font-weight: 750;
+    letter-spacing: -.5px;
+    color: var(--text);
+    line-height: 1;
+}
+.material-quantidade small {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+    margin-left: 4px;
+    letter-spacing: 0;
+}
+
+.material-preco {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary);
+}
+.material-preco small {
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 11px;
+    margin-right: 4px;
+}
+
+/* ---------- Hero meta ---------- */
+.material-hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    align-items: center;
+    color: var(--muted);
+    font-size: 12.5px;
+    margin-top: 4px;
+}
+.material-hero-meta code {
+    background: var(--surface-2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.92em;
+    color: var(--text);
+}
+
+/* ---------- Tipo de movimentação ---------- */
+.mov-tipo {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    white-space: nowrap;
+}
+.mov-tipo.cadastro {
+    background: var(--surface-2);
+    color: var(--muted);
+}
+.mov-tipo.compra {
+    background: rgba(57, 184, 137, .15);
+    color: #29946e;
+}
+.mov-tipo.uso {
+    background: rgba(245, 166, 72, .15);
+    color: #d48b1c;
+}
+.mov-tipo.ajuste {
+    background: rgba(60, 142, 234, .15);
+    color: var(--blue);
+}
+
+/* ---------- Tabela de movimentações ---------- */
+.mov-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    margin-bottom: 16px;
+}
+
+.mov-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    margin: 0;
+}
+
+.mov-tabela th,
+.mov-tabela td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    text-align: left;
+}
+
+.mov-tabela thead th {
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.mov-tabela tbody tr:hover { background: var(--surface-2); }
+.mov-tabela tbody tr:last-child td { border-bottom: 0; }
+
+.mov-tabela .td-material {
+    font-weight: 600;
+    color: var(--text);
+}
+.mov-tabela .td-qtd {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+.mov-tabela .td-preco {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--primary);
+    font-weight: 600;
+}
+.mov-tabela .td-data {
+    color: var(--muted);
+    font-size: 11.5px;
+    white-space: nowrap;
+}
+.mov-tabela .td-usuario {
+    color: var(--text);
+}
+.mov-tabela .td-usuario small {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    margin-top: 2px;
+}
+
+/* ---------- Painel de filtros ---------- */
+.mov-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+    padding: 14px 16px;
+    background: var(--surface-2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+}
+.mov-filtros .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 140px;
+}
+.mov-filtros .field-label {
+    margin: 0;
+    font-size: 11px;
+    color: var(--muted);
+}
+.mov-filtros .field {
+    padding: 6px 10px;
+    font-size: 12.5px;
+}
+.mov-filtros .filtros-acoes {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+/* ---------- Bloco de conferência (usar/comprar) ---------- */
+.material-resumo {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 14px 16px;
+    background: var(--surface-2);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    border-left: 4px solid var(--primary);
+}
+
+.material-resumo .resumo-linha {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    font-size: 12.5px;
+}
+.material-resumo .resumo-linha .label {
+    color: var(--muted);
+    font-weight: 600;
+}
+.material-resumo .resumo-linha .valor {
+    color: var(--text);
+    font-weight: 600;
+}
+.material-resumo .resumo-linha .valor.destaque {
+    color: var(--primary);
+    font-size: 14px;
+}
+
+/* ---------- Empty state local ---------- */
+.material-empty {
+    text-align: center;
+    padding: 32px 20px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 800px) {
+    .materiais-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .material-card { min-height: 0; }
+
+    .mov-filtros {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .mov-filtros .field-group { min-width: 0; width: 100%; }
+    .mov-filtros .filtros-acoes { margin-left: 0; width: 100%; }
+    .mov-filtros .filtros-acoes .button { flex: 1; }
+
+    .material-card .material-acoes { flex-direction: column; align-items: stretch; }
+    .material-card .material-acoes .button { width: 100%; }
+
+    .mov-tabela th,
+    .mov-tabela td { padding: 8px 10px; font-size: 11.5px; }
+    .mov-tabela .td-data { font-size: 10.5px; }
+}
+
+/* ============================================================
+   SOLICITAÇÕES DE MATERIAL
+   ============================================================ */
+
+/* ---------- Lista compacta (usada no index) ---------- */
+.solicitacoes-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.solicitacao-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    border-left: 4px solid var(--border-strong);
+    transition: border-color .15s;
+}
+.solicitacao-item:hover { border-color: var(--border-strong); }
+
+.solicitacao-item.pendente  { border-left-color: var(--orange); }
+.solicitacao-item.aprovada  { border-left-color: var(--blue); }
+.solicitacao-item.comprada  { border-left-color: var(--green); }
+.solicitacao-item.recusada  { border-left-color: var(--red); opacity: .75; }
+.solicitacao-item.cancelada { border-left-color: var(--muted); opacity: .65; }
+
+.solicitacao-item .sol-info {
+    flex: 1;
+    min-width: 200px;
+}
+.solicitacao-item .sol-info strong {
+    display: block;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+.solicitacao-item .sol-info small {
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.solicitacao-item .sol-qtd {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    font-size: 15px;
+    font-weight: 750;
+    color: var(--text);
+    letter-spacing: -.3px;
+    white-space: nowrap;
+}
+.solicitacao-item .sol-qtd small {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+.solicitacao-item .sol-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-left: auto;
+}
+
+/* ---------- Status pill ---------- */
+.sol-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    white-space: nowrap;
+}
+.sol-status.pendente  { background: rgba(245, 166, 72, .15);  color: #d48b1c; }
+.sol-status.aprovada  { background: rgba(60, 142, 234, .15);  color: var(--blue); }
+.sol-status.comprada  { background: rgba(57, 184, 137, .15);  color: #29946e; }
+.sol-status.recusada  { background: rgba(228, 109, 120, .15); color: var(--red); }
+.sol-status.cancelada { background: var(--surface-2);         color: var(--muted); }
+
+/* ---------- Card completo (usado em /solicitacoes) ---------- */
+.solicitacao-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    border-left: 4px solid var(--border-strong);
+    transition: border-color .15s;
+    margin-bottom: 10px;
+}
+.solicitacao-card:hover { border-color: var(--border-strong); }
+
+.solicitacao-card.pendente  { border-left-color: var(--orange); }
+.solicitacao-card.aprovada  { border-left-color: var(--blue); }
+.solicitacao-card.comprada  { border-left-color: var(--green); }
+.solicitacao-card.recusada  { border-left-color: var(--red); opacity: .85; }
+.solicitacao-card.cancelada { border-left-color: var(--muted); opacity: .75; }
+
+.sol-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+.sol-card-header h3 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    color: var(--text);
+    letter-spacing: -.2px;
+}
+.sol-meta {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--muted);
+}
+
+.sol-card-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px 24px;
+}
+.sol-detalhe {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 12.5px;
+}
+.sol-detalhe.full { grid-column: 1 / -1; }
+.sol-detalhe .label {
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+}
+.sol-detalhe .valor {
+    color: var(--text);
+    line-height: 1.55;
+}
+
+.sol-card-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 800px) {
+    .solicitacao-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .solicitacao-item .sol-acoes {
+        margin-left: 0;
+        width: 100%;
+    }
+    .solicitacao-item .sol-acoes .button { flex: 1; }
+
+    .sol-card-header { flex-direction: column; }
+    .sol-card-body   { grid-template-columns: 1fr; }
+
+    .sol-card-acoes { flex-direction: column; align-items: stretch; }
+    .sol-card-acoes .button,
+    .sol-card-acoes form { width: 100%; }
+    .sol-card-acoes form input[type="text"] { width: 100%; margin-bottom: 6px; }
+}
+/* ============================================================
+   MATERIAIS — visual novo (abas, listas, filtros)
+   ============================================================ */
+.mat-nav {
+    display: flex; gap: 4px; margin: 0 0 20px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto; scrollbar-width: none;
+}
+.mat-nav::-webkit-scrollbar { display: none; }
+.mat-nav a {
+    display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0;
+    padding: 10px 14px; margin-bottom: -1px;
+    border-bottom: 2px solid transparent;
+    color: var(--muted); font-size: 14px; font-weight: 600; text-decoration: none;
+}
+.mat-nav a:hover { color: var(--text); }
+.mat-nav a.ativa { color: var(--primary); border-bottom-color: var(--primary); }
+.mat-nav i { font-size: 13px; }
+.mat-nav-conta {
+    min-width: 20px; padding: 1px 6px; border-radius: 99px;
+    background: var(--orange); color: #fff; font-size: 11px; font-weight: 700; text-align: center;
+}
+
+.mat-valor { font-size: 30px !important; }
+
+.lista-materiais li,
+.lista-pedidos li { grid-template-columns: 52px minmax(0, 1fr) auto auto; }
+.mat-qtd {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 6px 2px; border-radius: 8px;
+    background: var(--primary-soft); color: var(--primary);
+    font-size: 17px; overflow-wrap: anywhere; text-align: center;
+}
+.mat-qtd small { font-size: 10px; font-weight: 700; letter-spacing: .04em; margin-top: 2px; }
+.lista-materiais li.esgotado .mat-qtd { background: color-mix(in srgb, var(--red) 12%, var(--surface)); color: var(--red); }
+.mat-link { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.mat-link:hover { color: var(--primary); }
+.mat-acoes-linha { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.sol-just { font-style: italic; }
+
+.sol-chip {
+    display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 99px;
+    font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+.sol-chip.pendente  { background: color-mix(in srgb, var(--orange) 14%, var(--surface)); color: var(--orange); }
+.sol-chip.aprovada  { background: color-mix(in srgb, var(--blue) 14%, var(--surface));   color: var(--blue); }
+.sol-chip.comprada  { background: color-mix(in srgb, var(--green) 14%, var(--surface));  color: var(--green); }
+.sol-chip.recusada  { background: color-mix(in srgb, var(--red) 12%, var(--surface));    color: var(--red); }
+.sol-chip.cancelada { background: var(--surface-2); color: var(--muted); }
+
+/* Recusar: abre o campo do motivo ali mesmo */
+.mat-recusa { position: relative; }
+.mat-recusa summary { list-style: none; display: inline-block; }
+.mat-recusa summary::-webkit-details-marker { display: none; }
+.mat-recusa form {
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 4;
+    display: flex; flex-direction: column; gap: 8px;
+    width: min(320px, calc(100vw - 48px)); padding: 12px;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: var(--surface); box-shadow: var(--shadow);
+}
+.mat-recusa .field { margin: 0; }
+
+.mat-filtros { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.mat-filtros a {
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: 99px;
+    color: var(--muted); font-size: 13px; font-weight: 600; text-decoration: none;
+}
+.mat-filtros a:hover { color: var(--text); border-color: var(--border-strong); }
+.mat-filtros a.ativo { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+.mat-vazio-icone { display: block; margin-bottom: 12px; font-size: 32px; color: var(--muted); }
+.mat-unidade { color: var(--muted); font-weight: 500; }
+.mov-tabela .td-qtd, .mov-tabela .td-preco { text-align: right; }
+.mov-tabela .td-obs { color: var(--muted); font-size: 12px; }
+
+@media (max-width: 760px) {
+    .lista-materiais li, .lista-pedidos li { grid-template-columns: 52px minmax(0, 1fr); }
+    .lista-materiais .sol-chip, .lista-pedidos .sol-chip { grid-column: 2; justify-self: start; }
+    .lista-materiais .sol-chip:empty, .lista-materiais li > span:empty { display: none; }
+    .mat-acoes-linha { grid-column: 1 / -1; justify-content: stretch; }
+    .mat-acoes-linha > .tarefa-acao:not(.perigo), .mat-acoes-linha > form:not(.d-inline) { flex: 1; text-align: center; }
+    .mat-recusa form { right: auto; left: 0; }
+}
+.mov-tabela thead th.td-preco, .mov-tabela thead th.td-qtd { color: var(--muted); }

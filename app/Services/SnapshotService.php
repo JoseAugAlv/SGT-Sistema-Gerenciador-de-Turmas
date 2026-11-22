@@ -94,6 +94,11 @@ class SnapshotService
                     'linhas'          => $linhas,
                     'media_ponderada' => $snap['media_geral'],
                     'conceito_final'  => $snap['conceito_geral'],
+                    // o desconto já está dentro da média congelada; aqui só para explicar
+                    'descontos'       => (function () use ($projetoId, $alunoId) {
+                        require_once __DIR__ . '/../Models/DescontoNota.php';
+                        return (new DescontoNota())->doAlunoNoProjeto($projetoId, $alunoId);
+                    })(),
                     'congelado'       => true,
                     'congelado_em'    => $snap['created_at'],
                 ];

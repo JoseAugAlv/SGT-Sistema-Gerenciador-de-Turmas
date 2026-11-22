@@ -23,7 +23,7 @@ $router = new Router();
 require_once __DIR__ . '/../routes/web.php';
 
 // 4. HEADERS DE SEGURANÇA
-header('X-Frame-Options: DENY');
+header('X-Frame-Options: SAMEORIGIN');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 

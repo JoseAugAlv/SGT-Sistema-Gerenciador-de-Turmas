@@ -23,7 +23,43 @@ $tituloAtual = $tituloPagina;
 $breadcrumb  = preg_replace('/\s+—\s+' . preg_quote($appName, '/') . '\s*$/', '', $tituloAtual);
 $breadcrumb  = trim($breadcrumb ?: 'Início');
 
+// Telas sem título próprio: usa o nome da seção pela URL
+if ($breadcrumb === $appName) {
+    $secoes = [
+        'turmas' => 'Turmas', 'alunos' => 'Alunos', 'projetos' => 'Projetos', 'grupos' => 'Grupos',
+        'atas' => 'Atas', 'criterios' => 'Critérios', 'materiais' => 'Materiais', 'solicitacoes' => 'Materiais',
+        'notificacoes' => 'Notificações', 'user' => 'Minha conta', 'lgpd' => 'Privacidade',
+        'master' => 'Master', 'tutorial' => 'Tutorial', 'diretor' => 'Diretor',
+        'configuracoes' => 'Configurações', 'sobre' => 'Sobre', 'termos' => 'Termos', 'usuarios' => 'Usuários',
+    ];
+    $rotaNav = trim(substr(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), strlen($basePath)), '/');
+    $breadcrumb = $secoes[explode('/', $rotaNav)[0]] ?? ($rotaNav === '' ? 'Painel' : $appName);
+}
+
 $inicialApp = strtoupper(substr($appName, 0, 1));
+
+// Papel exibido embaixo do nome: o maior papel que a pessoa tem hoje
+$papelExibido = '';
+if ($usuario) {
+    if (($usuario['tipo'] ?? '') === 'master') {
+        $papelExibido = 'Master';
+    } else {
+        try {
+            $pdoNav = Database::getConnection();
+            $stNav = $pdoNav->prepare("SELECT 1 FROM turma_usuarios WHERE usuario_id = ? AND papel = 'representante' AND ativo = 1 LIMIT 1");
+            $stNav->execute([(int) $usuario['id']]);
+            if ($stNav->fetchColumn()) {
+                $papelExibido = 'Representante';
+            } else {
+                $stNav = $pdoNav->prepare("SELECT 1 FROM grupo_diretores WHERE usuario_id = ? AND ativo = 1 LIMIT 1");
+                $stNav->execute([(int) $usuario['id']]);
+                $papelExibido = $stNav->fetchColumn() ? 'Diretor' : 'Aluno';
+            }
+        } catch (\Throwable $e) {
+            $papelExibido = 'Aluno';
+        }
+    }
+}
 ?>
 <div class="app-shell">
 
@@ -34,10 +70,10 @@ $inicialApp = strtoupper(substr($appName, 0, 1));
 
         <div class="sidebar-header">
             <a class="brand" href="<?= $basePath ?>/">
-                <div class="brand-mark"><?= h($inicialApp) ?></div>
+                <div class="brand-mark"><?= ViewHelper::marcaPrumo() ?></div>
                 <div>
                     <strong><?= h($appName) ?></strong>
-                    <span>Gestão de turmas</span>
+                    <span>Turmas e grêmios</span>
                 </div>
             </a>
 
@@ -70,7 +106,7 @@ $inicialApp = strtoupper(substr($appName, 0, 1));
                     </a>
                     <div>
                         <strong><?= h($usuario['nome']) ?></strong>
-                        <small><?= h($usuario['tipo']) ?></small>
+                        <small><?= h($papelExibido) ?></small>
                     </div>
 
                     <a class="logout-btn"
@@ -103,7 +139,6 @@ $inicialApp = strtoupper(substr($appName, 0, 1));
                 </button>
 
                 <div class="breadcrumb">
-                    <span><?= h($appName) ?></span>
                     <span>/</span>
                     <strong><?= h($breadcrumb) ?></strong>
                 </div>
@@ -111,12 +146,19 @@ $inicialApp = strtoupper(substr($appName, 0, 1));
 
             <div class="topbar-actions">
 
-                <label class="theme-switch" for="theme-toggle-input" title="Alternar tema claro/escuro">
-                    <span><i class="fas fa-sun"></i></span>
-                    <input type="checkbox" id="theme-toggle-input" class="theme-toggle-input" hidden>
-                    <span class="switch-track"><span class="switch-thumb"></span></span>
-                    <span><i class="fas fa-moon"></i></span>
-                </label>
+                <?php if ($logado): ?>
+                    <button type="button" class="busca-botao" data-abrir-busca aria-label="Buscar função (Ctrl+K)">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <span>Buscar função…</span>
+                        <kbd>Ctrl K</kbd>
+                    </button>
+                <?php endif; ?>
+
+                <div class="theme-picker" role="group" aria-label="Tema">
+                    <button type="button" class="tema-btn" data-tema="light" title="Tema claro" aria-label="Tema claro"><i class="fas fa-sun"></i></button>
+                    <button type="button" class="tema-btn" data-tema="dark" title="Tema escuro" aria-label="Tema escuro"><i class="fas fa-moon"></i></button>
+                    <button type="button" class="tema-btn" data-tema="misto" title="Tema misto" aria-label="Tema misto"><i class="fas fa-circle-half-stroke"></i></button>
+                </div>
 
                 <?php if ($logado): ?>
                     <a class="icon-button notification-button"
@@ -176,3 +218,4 @@ $inicialApp = strtoupper(substr($appName, 0, 1));
         </header>
 
         <div class="page-wrap">
+<?php require_once __DIR__ . '/flashes.php'; ?>

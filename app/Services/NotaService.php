@@ -17,10 +17,10 @@ class NotaService
     public static function valorPadraoPorConceito(string $conceito, array $cfg): float
     {
         switch ($conceito) {
-            case 'I':  return (float) $cfg['limite_i_max'];
-            case 'R':  return ((float) $cfg['limite_r_min'] + (float) $cfg['limite_r_max']) / 2;
-            case 'B':  return ((float) $cfg['limite_b_min'] + (float) $cfg['limite_b_max']) / 2;
-            case 'MB': return (float) $cfg['limite_mb_min'];
+            case 'I':  return (float) $cfg['limite_i_max'];   // topo do I
+            case 'R':  return (float) $cfg['limite_r_max'];   // topo do R
+            case 'B':  return (float) $cfg['limite_b_max'];   // topo do B
+            case 'MB': return 100.0;                          // topo absoluto
             default:   return 0.0;
         }
     }
@@ -101,7 +101,7 @@ class NotaService
             FROM grupo_alunos ga
             INNER JOIN grupos g ON g.id = ga.grupo_id
             INNER JOIN grupo_diretores gd ON gd.grupo_id = g.id AND gd.ativo = 1
-            WHERE ga.usuario_id = ? AND g.projeto_id = ?
+            WHERE ga.usuario_id = ? AND g.projeto_id = ? AND ga.saiu_em IS NULL
               AND (SELECT COUNT(*) FROM grupo_diretores WHERE grupo_id = gd.grupo_id AND ativo = 1) = 1
               AND gd.usuario_id = ?
         ");
@@ -124,15 +124,16 @@ class NotaService
             if ($v !== false) $valores[] = (float) $v;
         }
 
-        // Delegação para representante (aluno é único diretor)
+        // Delegação para representante (aluno é único diretor): entra a MÉDIA
+        // dos representantes que avaliaram (1 ou 2), como uma única nota.
         if (!empty($gruposDelegar)) {
             $stmt = $this->conn->prepare("
                 SELECT valor_numerico FROM avaliacoes
                 WHERE criterio_id = ? AND aluno_id = ? AND tipo = 'representante'
             ");
             $stmt->execute([(int) $criterio['id'], $alunoId]);
-            $v = $stmt->fetchColumn();
-            if ($v !== false) $valores[] = (float) $v;
+            $reps = array_map('floatval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+            if ($reps) $valores[] = array_sum($reps) / count($reps);
         }
 
         return empty($valores) ? null : array_sum($valores) / count($valores);
@@ -233,10 +234,22 @@ class NotaService
 
         $media = $somaPeso > 0 ? $somaNotaPeso / $somaPeso : null;
 
+        // Descontos por critério obrigatório não preenchido (pontos na escala 0–100)
+        require_once __DIR__ . '/../Models/DescontoNota.php';
+        $descontos = (new DescontoNota())->doAlunoNoProjeto($projetoId, $alunoId);
+        $totalDesc = array_sum(array_map(fn($d) => (float) $d['pontos'], $descontos));
+        $mediaSemDesconto = $media;
+        if ($media !== null && $totalDesc > 0) {
+            $media = max(0.0, $media - $totalDesc);
+        }
+
         return [
-            'linhas'          => $linhas,
-            'media_ponderada' => $media,
-            'conceito_final'  => $media === null ? null : self::conceitoPorValor($media, $cfg),
+            'linhas'             => $linhas,
+            'media_ponderada'    => $media,
+            'media_sem_desconto' => $mediaSemDesconto,
+            'descontos'          => $descontos,
+            'total_desconto'     => $totalDesc,
+            'conceito_final'     => $media === null ? null : self::conceitoPorValor($media, $cfg),
         ];
     }
 

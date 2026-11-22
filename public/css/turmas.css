@@ -1,0 +1,271 @@
+/* ============================================================
+   TURMAS — estilos específicos
+   Carregado em /turmas e /turmas/*
+   ============================================================ */
+
+/* ---------- Grid de cards de turma (index) ---------- */
+.turmas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+/* Cartão de turma: uma "camiseta" pequena */
+.turma-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--text);
+    text-decoration: none;
+    overflow: hidden;
+    transition: border-color .15s ease-out, transform .15s ease-out;
+}
+.turma-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+.turma-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.turma-card-topo {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px;
+    background: var(--shell-bg);
+    color: var(--shell-text);
+    border-bottom: 3px solid var(--accent-on-dark);
+}
+.turma-card-logo {
+    width: 44px; height: 44px; flex: none;
+    display: grid; place-items: center;
+    border-radius: 10px; background: #fff; color: var(--shell-bg);
+    font-size: 20px; overflow: hidden;
+}
+.turma-card-logo img { width: 100%; height: 100%; object-fit: cover; }
+html[data-theme="dark"] .turma-card-logo { color: var(--primary); }
+.turma-card-sigla { font-size: 52px; line-height: .8; color: var(--shell-text); }
+html[data-theme="dark"] .turma-card-topo:not([style*="--shell-bg"]) .turma-card-sigla,
+html[data-theme="misto"] .turma-card-topo:not([style*="--shell-bg"]) .turma-card-sigla { color: var(--accent-on-dark); }
+.turma-card-selo {
+    margin-left: auto; align-self: flex-start;
+    padding: 4px 9px; border-radius: 999px;
+    background: color-mix(in srgb, var(--shell-text) 16%, transparent);
+    font-size: 12px; font-weight: 700; text-transform: capitalize;
+}
+.turma-card-selo.erro { background: var(--red); color: #fff; text-transform: none; }
+.turma-card-corpo { padding: 14px 16px 16px; display: grid; gap: 8px; }
+.turma-card-corpo > strong { font-size: 16px; font-weight: 700; overflow-wrap: anywhere; padding-right: 28px; }
+.turma-card-info { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
+.turma-card-info b { font-size: 17px; color: var(--text); margin-right: 2px; }
+.turma-card-info code { font-family: var(--font-num); font-size: 14px; letter-spacing: .04em; color: var(--text); }
+.turma-card-seta { position: absolute; right: 16px; bottom: 18px; color: var(--muted); transition: color .15s, transform .15s; }
+.turma-card:hover .turma-card-seta { color: var(--primary); transform: translateX(3px); }
+@media (prefers-reduced-motion: reduce) { .turma-card, .turma-card-seta { transition: none; } .turma-card:hover { transform: none; } }
+
+/* ---------- Cabeçalho do detalhe da turma ---------- */
+.turma-hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    align-items: center;
+    color: var(--muted);
+    font-size: 12.5px;
+    margin-top: 4px;
+}
+
+.turma-hero-meta code {
+    background: var(--surface-2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.92em;
+    color: var(--text);
+}
+
+/* ---------- Painel de ações (master/rep) ---------- */
+.turma-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.turma-acoes form {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* ---------- Lista de representantes / alunos ---------- */
+.turma-membros-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.turma-membro-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.turma-membro-item .membro-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.turma-membro-item strong {
+    display: block;
+    font-size: 12.5px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.turma-membro-item small {
+    display: block;
+    color: var(--muted);
+    font-size: 10.5px;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---------- Bloco "último representante" ---------- */
+.aviso-ultimo-rep {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: rgba(245, 166, 72, .12);
+    color: #d48b1c;
+    font-size: 11.5px;
+    line-height: 1.5;
+    border-left: 3px solid var(--orange);
+}
+.aviso-ultimo-rep i {
+    flex-shrink: 0;
+    font-size: 13px;
+}
+
+/* ---------- Bloco de turma bloqueada ---------- */
+.turma-bloqueada-hero {
+    text-align: center;
+    padding: 30px 20px;
+}
+
+.turma-bloqueada-hero .icon-ban {
+    font-size: 4rem;
+    color: var(--red);
+    display: block;
+    margin-bottom: 20px;
+}
+
+.turma-bloqueada-hero h1 {
+    margin-bottom: 6px;
+}
+
+/* ---------- Formulário "entrar com código" ---------- */
+.form-codigo-acesso {
+    max-width: 460px;
+    margin: 0 auto;
+}
+
+.form-codigo-acesso input[name="codigo_acesso"] {
+    text-transform: uppercase;
+    font-size: 18px;
+    text-align: center;
+    letter-spacing: 3px;
+    font-weight: 700;
+    min-height: 52px;
+    padding: 0 16px;
+}
+
+/* ---------- Empty state customizado ---------- */
+.turma-empty {
+    text-align: center;
+    padding: 40px 20px;
+}
+.turma-empty h2 { margin-bottom: 8px; }
+.turma-empty p  { color: var(--muted); max-width: 480px; margin: 0 auto 20px; line-height: 1.6; }
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 800px) {
+    .turmas-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+
+    .turma-membro-item {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .turma-acoes { flex-direction: column; align-items: stretch; }
+    .turma-acoes form { width: 100%; }
+    .turma-acoes .button { width: 100%; }
+    .turma-acoes input[type="text"] { width: 100% !important; }
+}
+/* ============ IDENTIDADE DA TURMA ============ */
+.paleta { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 8px; }
+.paleta-cor {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 3px solid var(--surface); background: var(--c);
+    box-shadow: 0 0 0 1px var(--border-strong); cursor: pointer; padding: 0;
+}
+.paleta-cor.ativa { box-shadow: 0 0 0 3px var(--text); }
+.paleta-cor:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.paleta-outra {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 40px; padding: 0 12px 0 6px;
+    border: 1px solid var(--border-strong); border-radius: 20px;
+    font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer;
+}
+.paleta-outra input { width: 28px; height: 28px; border: 0; padding: 0; background: none; cursor: pointer; }
+.identidade-dica { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+.identidade-check { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 14px; }
+.turma-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.turma-faixa code { background: color-mix(in srgb, var(--shell-text) 14%, transparent); color: var(--shell-text); padding: 1px 6px; border-radius: 5px; }
+
+/* ============ PROJETOS DENTRO DA TURMA ============ */
+.turma-projetos { margin-bottom: 26px; }
+.turma-projetos .bloco-titulo h2 { font-size: 18px; color: var(--text); }
+.projetos-cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+@media (max-width: 640px) { .projetos-cartoes { grid-template-columns: 1fr; } }
+.projeto-cartao {
+    border: 1px solid var(--border); border-radius: 14px;
+    background: var(--surface); overflow: hidden;
+    transition: border-color .15s ease-out;
+}
+.projeto-cartao:hover { border-color: var(--primary); }
+.projeto-cartao-topo {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px; color: var(--text); text-decoration: none;
+}
+.projeto-cartao-titulo { flex: 1; min-width: 0; }
+.projeto-cartao-titulo strong { display: block; font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+.projeto-cartao-titulo small { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.projeto-cartao-seta { color: var(--muted); transition: transform .15s, color .15s; }
+.projeto-cartao-topo:hover .projeto-cartao-seta { color: var(--primary); transform: translateX(3px); }
+.projeto-cartao-atalhos {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-top: 1px solid var(--border);
+}
+.projeto-cartao-atalhos a {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    padding: 10px 4px;
+    border-right: 1px solid var(--border);
+    color: var(--muted); text-decoration: none; text-align: center;
+    font-size: 11.5px; font-weight: 600; line-height: 1.2;
+}
+.projeto-cartao-atalhos a:last-child { border-right: 0; }
+.projeto-cartao-atalhos a i { font-size: 15px; color: var(--primary); }
+.projeto-cartao-atalhos a:hover { background: var(--primary-soft); color: var(--primary); }
+.projeto-cartao.encerrado .projeto-cartao-titulo strong { color: var(--muted); }

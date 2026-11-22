@@ -180,9 +180,13 @@ class ProjetoController
         }
 
         require_once __DIR__ . '/../Models/Etapa.php';
+        require_once __DIR__ . '/../Models/Criterio.php';
         $etapa = new Etapa();
+        $critModel = new Criterio();
 
         $this->render('projetos/detalhe', [
+            'totalCriterios' => count($critModel->listarPorProjeto($id)),
+            'somaPesos'      => $critModel->somaPesos($id),
             'projeto'  => $projeto,
             'turma'    => $turma,
             'etapas'   => $etapa->listarPorProjeto($id),

@@ -7,6 +7,8 @@ require_once __DIR__ . '/../Models/Criterio.php';
 require_once __DIR__ . '/../Models/AvaliacaoArquivada.php';
 require_once __DIR__ . '/../Models/TurmaUsuario.php';
 require_once __DIR__ . '/../Models/Auditoria.php';
+require_once __DIR__ . '/../Models/DescontoNota.php';
+require_once __DIR__ . '/../Models/Notificacao.php';
 require_once __DIR__ . '/../Helpers/ViewHelper.php';
 require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
 
@@ -42,6 +44,19 @@ class CriterioController
         $criterios = $this->criterio->listarPorProjeto($projetoId);
         $soma      = $this->criterio->somaPesos($projetoId);
 
+        // Critérios obrigatórios: quem ainda não preencheu e descontos já aplicados (só representante/master vê)
+        $faltamPreencher = [];
+        $descontos       = [];
+        if ($this->podeEditarProjeto($projeto)) {
+            $descModel = new DescontoNota();
+            foreach ($criterios as $c) {
+                if (!empty($c['obrigatorio'])) {
+                    $faltamPreencher[(int) $c['id']] = $this->criterio->quemFaltaPreencher($c, (int) $projeto['turma_id']);
+                    $descontos[(int) $c['id']]       = $descModel->doCriterio((int) $c['id']);
+                }
+            }
+        }
+
         $statusPeso = 'incompleto';
         if (abs($soma - 10.0) < 0.01) $statusPeso = 'completo';
         elseif ($soma > 10.0)         $statusPeso = 'excedido';
@@ -52,6 +67,9 @@ class CriterioController
             'somaPesos'  => $soma,
             'statusPeso' => $statusPeso,
             'podeEditar' => $this->podeEditarProjeto($projeto) && !$projeto['encerrado'],
+            'podeReabrir'=> !$projeto['encerrado'] && $this->podeReabrir([], $projeto),
+            'faltamPreencher' => $faltamPreencher,
+            'descontos'       => $descontos,
         ]);
     }
 
@@ -67,6 +85,7 @@ class CriterioController
 
         $this->render('criterios/criar', [
             'projeto'    => $projeto,
+            'somaPesos'  => $this->criterio->somaPesos($projetoId),
             'etapas'     => $this->etapa->listarPorProjeto($projetoId),
             'tipos'      => Criterio::TIPOS,
             'aplicaveis' => Criterio::APLICAVEIS,
@@ -86,6 +105,9 @@ class CriterioController
         }
 
         $dados = $this->validarDados($_POST, $projetoId);
+        if ($dados['prazo_avaliacao'] && strtotime($dados['prazo_avaliacao']) <= time()) {
+            $dados['_erros'][] = 'O prazo de avaliação precisa ser no futuro.';
+        }
         if (!empty($dados['_erros'])) {
             $this->flash(implode(' | ', $dados['_erros']));
             $this->redirect('/projetos/' . $projetoId . '/criterios/criar');
@@ -114,6 +136,8 @@ class CriterioController
         $this->render('criterios/editar', [
             'criterio'   => $criterio,
             'projeto'    => $projeto,
+            'somaPesos'  => $this->criterio->somaPesos((int) $projeto['id']) - (float) $criterio['peso'],
+            'temAvaliacoes' => $this->criterio->totalAvaliacoes($id) > 0,
             'etapas'     => $this->etapa->listarPorProjeto((int) $projeto['id']),
             'tipos'      => Criterio::TIPOS,
             'aplicaveis' => Criterio::APLICAVEIS,
@@ -134,6 +158,10 @@ class CriterioController
         }
 
         $dados = $this->validarDados($_POST, (int) $projeto['id']);
+        // Com notas lançadas, trocar o tipo deixaria essas notas órfãs (outro avaliador, outro cálculo).
+        if ($dados['tipo_avaliacao'] !== $criterio['tipo_avaliacao'] && $this->criterio->totalAvaliacoes($id) > 0) {
+            $dados['_erros'][] = 'Este critério já tem notas lançadas, então o tipo de avaliação não pode mudar. Exclua e crie outro se precisar.';
+        }
         if (!empty($dados['_erros'])) {
             $this->flash(implode(' | ', $dados['_erros']));
             $this->redirect('/criterios/' . $id . '/editar');
@@ -250,6 +278,70 @@ class CriterioController
         $this->redirect('/projetos/' . $projeto['id'] . '/criterios');
     }
 
+    // ============ DESCONTO POR NÃO PREENCHER CRITÉRIO OBRIGATÓRIO ============
+
+    public function descontar(int $id)
+    {
+        [$criterio, $projeto] = $this->criterioParaDesconto($id);
+
+        $pontos = (float) str_replace(',', '.', $_POST['pontos'] ?? '0');
+        $alunos = array_map('intval', (array) ($_POST['alunos'] ?? []));
+        $voltar = '/projetos/' . $projeto['id'] . '/criterios';
+
+        if ($pontos <= 0 || $pontos > 100) { $this->flash('Informe um desconto entre 0,1 e 100 pontos.'); $this->redirect($voltar); }
+        if (!$alunos)                      { $this->flash('Marque pelo menos um aluno.');               $this->redirect($voltar); }
+
+        // Só quem de fato não preencheu pode receber o desconto
+        $faltam = $this->criterio->quemFaltaPreencher($criterio, (int) $projeto['turma_id']);
+        $alunos = array_values(array_filter($alunos, fn($a) => isset($faltam[$a])));
+        if (!$alunos) { $this->flash('Nenhum dos alunos marcados está na lista de quem não preencheu.'); $this->redirect($voltar); }
+
+        $motivo = "Não preencheu o critério obrigatório '{$criterio['nome']}'";
+        $desc   = new DescontoNota();
+        $notif  = new Notificacao();
+        $pts    = number_format($pontos, 1, ',', '.');
+        foreach ($alunos as $aid) {
+            $desc->aplicar($id, $aid, $pontos, $motivo, (int) $_SESSION['usuario']['id']);
+            $notif->criar($aid, 'avaliacao', 'Desconto na sua nota',
+                "Você perdeu {$pts} ponto(s) na nota do projeto '{$projeto['nome']}' porque não preencheu o critério obrigatório '{$criterio['nome']}' até o prazo.",
+                '/projetos/' . $projeto['id'] . '/avaliacoes/minhas', $id);
+        }
+        $this->audit->registrar('desconto_aplicado', 'criterios', $id, null, ['alunos' => $alunos, 'pontos' => $pontos]);
+
+        $this->flash('Desconto de ' . $pts . ' ponto(s) aplicado a ' . count($alunos) . ' aluno(s). Eles foram avisados.', 'sucesso');
+        $this->redirect($voltar);
+    }
+
+    public function removerDesconto(int $id)
+    {
+        [$criterio, $projeto] = $this->criterioParaDesconto($id);
+        $alunoId = (int) ($_POST['aluno_id'] ?? 0);
+
+        if ((new DescontoNota())->remover($id, $alunoId)) {
+            $this->audit->registrar('desconto_removido', 'criterios', $id, ['aluno_id' => $alunoId], null);
+            $this->flash('Desconto removido.', 'sucesso');
+        }
+        $this->redirect('/projetos/' . $projeto['id'] . '/criterios');
+    }
+
+    /** Critério obrigatório, já encerrado, de um projeto aberto que o usuário gerencia. */
+    private function criterioParaDesconto(int $id): array
+    {
+        $criterio = $this->criterio->porId($id);
+        if (!$criterio) { $this->flash('Critério não encontrado.'); $this->redirect('/turmas'); }
+
+        $projeto = $this->projeto->porId((int) $criterio['projeto_id']);
+        $this->exigirPodeEditarProjeto($projeto);
+        CsrfMiddleware::validate();
+
+        $voltar = '/projetos/' . $projeto['id'] . '/criterios';
+        if ($projeto['encerrado'])         { $this->flash('Projeto encerrado: as notas estão congeladas.'); $this->redirect($voltar); }
+        if (empty($criterio['obrigatorio'])) { $this->flash('Desconto só vale para critério obrigatório.');  $this->redirect($voltar); }
+        if (empty($criterio['bloqueado']))   { $this->flash('Espere o prazo do critério fechar para aplicar desconto.'); $this->redirect($voltar); }
+
+        return [$criterio, $projeto];
+    }
+
     // ============ HELPERS ============
 
     private function validarDados(array $post, int $projetoId): array
@@ -276,6 +368,11 @@ class CriterioController
             }
         }
 
+        $obrigatorio = !empty($post['obrigatorio']) && in_array($tipo, Criterio::TIPOS_DO_ALUNO, true);
+        if ($obrigatorio && $prazo === '') {
+            $erros[] = 'Critério obrigatório precisa de prazo: é até ele que os alunos devem preencher.';
+        }
+
         $prazoSql = null;
         if ($prazo !== '') {
             $dt = DateTime::createFromFormat('Y-m-d\TH:i', $prazo);
@@ -295,6 +392,7 @@ class CriterioController
             'tipo_avaliacao'  => $tipo,
             'aplicavel_a'     => $aplicavel,
             'prazo_avaliacao' => $prazoSql,
+            'obrigatorio'     => $obrigatorio ? 1 : 0,
             '_erros'          => $erros,
         ];
     }
@@ -311,7 +409,7 @@ class CriterioController
         }
 
         // Diretor ativo de algum grupo do projeto
-        $stmt = $this->tu->conn->prepare("
+        $stmt = Database::getConnection()->prepare("
             SELECT 1
             FROM grupo_diretores gd
             INNER JOIN grupos g ON g.id = gd.grupo_id

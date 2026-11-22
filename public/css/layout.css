@@ -18,7 +18,11 @@
     border-right: 1px solid var(--border);
     padding: 25px 16px 18px;
     display: flex;
+    overflow-y: auto;
+    overflow-x: hidden;
     flex-direction: column;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;   /* ← ADICIONADO: evita scroll vazar pro body */
     z-index: 5;
 }
 
@@ -39,7 +43,7 @@
     place-items: center;
     font-size: 19px;
     font-weight: 800;
-    box-shadow: 0 8px 15px rgba(113, 101, 232, .26);
+    box-shadow: 0 6px 14px color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
 .brand strong {
@@ -268,37 +272,39 @@
     border: 1px solid var(--bg);
 }
 
-.theme-switch {
-    display: flex;
-    align-items: center;
-    gap: 7px;
+/* Seletor de tema: três botões (claro, escuro, misto) */
+.theme-picker {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-2);
+}
+
+.theme-picker button {
+    width: 32px;
+    height: 30px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
     color: var(--muted);
     font-size: 14px;
     cursor: pointer;
-    user-select: none;
+    transition: background .15s, color .15s;
 }
 
-.switch-track {
-    width: 31px;
-    height: 17px;
-    padding: 2px;
-    border-radius: 20px;
-    background: var(--border-strong);
-    transition: background .2s;
-}
+.theme-picker button:hover { color: var(--text); }
 
-.switch-thumb {
-    display: block;
-    width: 13px;
-    height: 13px;
-    border-radius: 50%;
+.theme-picker button.ativo {
     background: var(--surface);
-    transition: .2s;
+    color: var(--primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
 }
 
-html[data-theme="dark"] .switch-thumb {
-    transform: translateX(14px);
-    background: var(--primary);
+.theme-picker button:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
 }
 
 .page-wrap {
@@ -460,7 +466,7 @@ html[data-theme="dark"] .logout-btn:hover {
 }
 .user-menu > .avatar:hover {
     transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(113, 101, 232, .3);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent);
 }
 .user-menu > .avatar:focus {
     outline: 2px solid var(--primary);
@@ -565,11 +571,160 @@ html[data-theme="dark"] .user-menu-logout:hover {
     background: rgba(228, 109, 120, .2);
 }
 
-/* Mobile — esconde o menu do usuário no topbar se preferir usar o drawer */
 @media (max-width: 800px) {
-    /* Aqui mantemos o avatar visível, mas ajustado */
-    .user-menu-dropdown {
-        right: -8px;
-        min-width: 220px;
+    .sidebar .help-card {
+        padding: 10px 12px;
+        margin-bottom: 8px;
+    }
+    .sidebar .help-card .help-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+    .sidebar .profile-mini {
+        padding-top: 12px;
     }
 }
+
+/* ============================================================
+   SHELL PRUMO (direção "Camiseta de Turma")
+   Barra superior na cor do tema, fixa ao rolar; barra inferior no celular.
+   ============================================================ */
+.topbar {
+    background: var(--shell-bg);
+    border-bottom: 1px solid var(--shell-border);
+    backdrop-filter: none;
+    color: var(--shell-text);
+}
+.topbar .breadcrumb,
+.topbar .breadcrumb strong { color: var(--shell-text); }
+.topbar .breadcrumb > span { color: var(--shell-muted); }
+.topbar .hamburger,
+.topbar .icon-button { color: var(--shell-text); }
+.topbar .theme-picker {
+    background: color-mix(in srgb, var(--shell-text) 10%, transparent);
+    border-color: var(--shell-border);
+}
+.topbar .theme-picker button { color: var(--shell-muted); }
+.topbar .theme-picker button:hover { color: var(--shell-text); }
+.topbar .theme-picker button.ativo { background: var(--shell-text); color: var(--shell-bg); }
+.topbar .avatar { box-shadow: 0 0 0 2px var(--shell-border); }
+
+/* Numerais condensados (siglas, prazos, contagens) */
+.num {
+    font-family: var(--font-num);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.01em;
+    line-height: 1;
+}
+
+/* Barra inferior: só no celular */
+.bottom-nav { display: none; }
+
+@media (max-width: 768px) {
+    .bottom-nav {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        z-index: 6;
+        height: calc(64px + env(safe-area-inset-bottom));
+        padding-bottom: env(safe-area-inset-bottom);
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+    }
+    .bottom-nav a,
+    .bottom-nav button {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        border: 0;
+        background: none;
+        color: var(--muted);
+        font: 600 11px/1 var(--sans);
+        text-decoration: none;
+        cursor: pointer;
+    }
+    .bottom-nav i { font-size: 19px; }
+    .bottom-nav .ativo { color: var(--primary); }
+    .bottom-nav .ativo::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        width: 36px;
+        height: 3px;
+        border-radius: 0 0 3px 3px;
+        background: var(--primary);
+    }
+    .bottom-nav .badge-dot {
+        position: absolute;
+        top: 10px;
+        left: calc(50% + 6px);
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: var(--red);
+    }
+}
+
+.brand-mark .marca-prumo { width: 20px; height: 20px; }
+
+/* ============ BUSCA RÁPIDA (Ctrl+K) ============ */
+.busca-botao {
+    display: inline-flex; align-items: center; gap: 10px;
+    height: 36px; min-width: 260px; padding: 0 8px 0 12px;
+    border: 1px solid var(--shell-border); border-radius: 10px;
+    background: color-mix(in srgb, var(--shell-text) 10%, transparent);
+    color: var(--shell-muted);
+    font: 500 13px/1 var(--sans); cursor: pointer;
+}
+.busca-botao:hover { color: var(--shell-text); border-color: color-mix(in srgb, var(--shell-text) 35%, transparent); }
+.busca-botao span { flex: 1; text-align: left; }
+.busca-botao kbd, .busca-campo kbd {
+    font: 600 11px/1 var(--sans); padding: 4px 6px; border-radius: 5px;
+    background: color-mix(in srgb, currentColor 14%, transparent);
+}
+@media (max-width: 900px) {
+    .busca-botao { min-width: 0; width: 36px; padding: 0; justify-content: center; }
+    .busca-botao span, .busca-botao kbd { display: none; }
+}
+
+.busca-rapida {
+    width: min(620px, calc(100vw - 32px));
+    margin: 12vh auto auto;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .3);
+}
+.busca-rapida::backdrop { background: rgba(8, 10, 18, .5); }
+.busca-campo {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; border-bottom: 1px solid var(--border); color: var(--muted);
+}
+.busca-campo input {
+    flex: 1; border: 0; outline: 0; background: none; color: var(--text);
+    font: 500 16px/1.3 var(--sans);
+}
+.busca-rapida ul { list-style: none; margin: 0; padding: 8px; max-height: 50vh; overflow-y: auto; }
+.busca-rapida li a {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 9px;
+    color: var(--text); text-decoration: none;
+}
+.busca-rapida li a i {
+    width: 34px; height: 34px; flex: none; display: grid; place-items: center;
+    border-radius: 8px; background: var(--primary-soft); color: var(--primary);
+}
+.busca-rapida li a strong { display: block; font-size: 14px; }
+.busca-rapida li a small { display: block; font-size: 12px; color: var(--muted); }
+.busca-rapida li a.ativo, .busca-rapida li a:hover { background: var(--primary-soft); }
+.busca-vazia { padding: 18px 12px; color: var(--muted); font-size: 14px; }
+/* Logo Prumo: símbolo na cor da marca, sem caixa */
+.brand-mark { background: none; box-shadow: none; color: var(--primary); }
+.brand-mark .marca-prumo { width: 30px; height: 30px; }
