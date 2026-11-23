@@ -3,6 +3,8 @@
 // HTML para TCPDF — estilos inline, sem dependência de CSS externo.
 
 $congelado = !empty($boletim['congelado']);
+// o PDF não passa pelo cabeçalho do site, onde h() é definida
+if (!function_exists('h')) { function h($s) { return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); } }
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">

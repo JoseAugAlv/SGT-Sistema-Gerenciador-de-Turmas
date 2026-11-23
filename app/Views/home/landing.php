@@ -25,18 +25,36 @@ $menorPreco = $planosLanding ? min(array_map(fn($p) => (float) $p['preco'], $pla
 ?><!doctype html>
 <html lang="pt-BR" data-type="software" data-radius="soft" data-ground="sky" data-buttons="arrow" data-motion>
 <head>
+<?php $v = fn($rel) => '?v=' . (@filemtime(__DIR__ . '/../../../public/' . $rel) ?: 1); /* força o navegador a baixar a versão nova após cada atualização */ ?>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title><?= $e($appName) ?>: organização de turmas e grêmios escolares</title>
 <meta name="description" content="Projetos, critérios, avaliações entre alunos, atas e agenda da turma num só lugar. O representante paga pela turma por Pix, a partir de R$ 99,90.">
+<?php $urlSite = rtrim(App::getUrl(), '/'); /* WhatsApp/Google exigem endereços completos (https://...) */ ?>
+<link rel="canonical" href="<?= $e($urlSite) ?>/">
+<meta name="robots" content="index, follow">
 <meta property="og:type" content="website">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:site_name" content="<?= $e($appName) ?>">
+<meta property="og:url" content="<?= $e($urlSite) ?>/">
 <meta property="og:title" content="<?= $e($appName) ?>: organização de turmas e grêmios escolares">
 <meta property="og:description" content="O representante monta projetos e avaliações; cada aluno acompanha pelo celular.">
-<meta property="og:image" content="<?= $basePath ?>/img/share.jpg">
+<meta property="og:image" content="<?= $e($urlSite) ?>/img/share.png<?= $v('img/share.png') ?>">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="<?= $e($appName) ?>: painel da turma com agenda, avisos e notas">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="<?= $e($urlSite) ?>/img/share.png<?= $v('img/share.png') ?>">
+<script type="application/ld+json"><?= json_encode([
+    '@context' => 'https://schema.org', '@type' => 'SoftwareApplication', 'name' => $appName,
+    'applicationCategory' => 'EducationalApplication', 'operatingSystem' => 'Web, Android, iOS', 'url' => $urlSite . '/',
+    'description' => 'Organização de turmas e grêmios escolares: projetos, critérios, avaliações entre alunos, atas e agenda.',
+    'inLanguage' => 'pt-BR', 'author' => ['@type' => 'Person', 'name' => 'Jose Augusto Alves', 'url' => 'https://josealvesdev.com'],
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?></script>
 <link rel="icon" href="<?= $basePath ?>/img/logo-prumo.png" type="image/png">
 <link rel="manifest" href="<?= $basePath ?>/manifest.webmanifest">
 <meta name="app-base" content="<?= $e($basePath) ?>">
+<?php if (!empty($_SESSION['usuario']['id'])): ?><meta name="usuario-id" content="<?= (int) $_SESSION['usuario']['id'] ?>"><?php endif; ?>
 <link rel="apple-touch-icon" href="<?= $basePath ?>/public/img/logo-prumo.png">
 <meta name="theme-color" content="#f6f7fb">
 <meta name="site-kind" content="software">
@@ -80,9 +98,9 @@ html[data-theme="dark"] {
 </script>
 <script>document.documentElement.classList.add('sc-js');setTimeout(()=>document.documentElement.classList.add('sc-safe'),2500)</script>
 <link rel="stylesheet" href="<?= $a ?>/scenes/scenes.css">
-<link rel="stylesheet" href="<?= $basePath ?>/css/landing-camadas.css">
-<link rel="stylesheet" href="<?= $basePath ?>/css/landing-rolagem.css">
-<link rel="stylesheet" href="<?= $basePath ?>/css/landing-efeitos.css">
+<link rel="stylesheet" href="<?= $basePath ?>/css/landing-camadas.css<?= $v('css/landing-camadas.css') ?>">
+<link rel="stylesheet" href="<?= $basePath ?>/css/landing-rolagem.css<?= $v('css/landing-rolagem.css') ?>">
+<link rel="stylesheet" href="<?= $basePath ?>/css/landing-efeitos.css<?= $v('css/landing-efeitos.css') ?>">
 <script>document.documentElement.classList.add('m-enter');setTimeout(()=>document.documentElement.classList.add('m-enter-done'),700)</script>
 <script src="<?= $a ?>/backgrounds/backgrounds.js"></script>
 <script>document.documentElement.classList.add('mo-js');setTimeout(()=>document.documentElement.classList.add('mo-safe'),2500)</script>
@@ -584,10 +602,10 @@ html[data-theme="dark"] .cm__tela { box-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 2
 <script type="module" src="<?= $a ?>/system.js"></script>
 <script type="module" src="<?= $a ?>/motion/motion.js"></script>
 <script type="module" src="<?= $a ?>/layout/layout.js"></script>
-<script type="module" src="<?= $basePath ?>/js/landing-camadas.js"></script>
-<script src="<?= $basePath ?>/public/js/pwa.js"></script>
-<script src="<?= $basePath ?>/js/landing-tema.js"></script>
-<script src="<?= $basePath ?>/js/landing-rolagem.js" defer></script>
-<script src="<?= $basePath ?>/js/landing-efeitos.js" defer></script>
+<script type="module" src="<?= $basePath ?>/js/landing-camadas.js<?= $v('js/landing-camadas.js') ?>"></script>
+<script src="<?= $basePath ?>/public/js/pwa.js<?= $v('js/pwa.js') ?>"></script>
+<script src="<?= $basePath ?>/js/landing-tema.js<?= $v('js/landing-tema.js') ?>"></script>
+<script src="<?= $basePath ?>/js/landing-rolagem.js<?= $v('js/landing-rolagem.js') ?>" defer></script>
+<script src="<?= $basePath ?>/js/landing-efeitos.js<?= $v('js/landing-efeitos.js') ?>" defer></script>
 </body>
 </html>

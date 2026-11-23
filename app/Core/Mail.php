@@ -45,11 +45,12 @@ class Mail
             $mail->SMTPAuth   = true;
             $mail->Username   = $this->user;
             $mail->Password   = $this->pass;
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->SMTPSecure = $this->port === 465 ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port       = $this->port;
             $mail->CharSet    = 'UTF-8';
 
-            $mail->setFrom($this->user, $this->fromName);
+            // MAIL_FROM: endereço que aparece como remetente (em serviços como o Brevo o login não é um email)
+            $mail->setFrom((string) App::get('MAIL_FROM', $this->user) ?: $this->user, $this->fromName);
             $mail->addAddress($para, $paraNome);
 
             $mail->isHTML(true);

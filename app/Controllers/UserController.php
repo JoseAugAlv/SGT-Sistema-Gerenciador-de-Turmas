@@ -10,6 +10,7 @@ require_once __DIR__ . '/../Helpers/SecurityHelper.php';
 require_once __DIR__ . '/../Helpers/ViewHelper.php';
 require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
 require_once __DIR__ . '/../Services/GoogleAuthService.php';
+require_once __DIR__ . '/../Services/LembrarLoginService.php';
 
 class UserController
 {
@@ -154,6 +155,10 @@ class UserController
         }
 
         $this->usuario->atualizarSenha($id, PasswordHelper::hash($nova));
+        // senha nova: desconecta os outros aparelhos; este continua conectado se estava
+        $estavaLembrado = LembrarLoginService::temCookie();
+        LembrarLoginService::esquecerTodos($id);
+        if ($estavaLembrado) LembrarLoginService::lembrar($id);
 
         $this->audit->registrar('usuario_alterou_senha', 'usuarios', $id, null, null);
 

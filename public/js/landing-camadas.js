@@ -1,8 +1,8 @@
 // public/js/landing-camadas.js
 // Cena "Como funciona" da landing (#como-funciona). Usa o motor de cenas do kit (assets/scenes/lib.js):
 // a seção fica presa por 3 telas e update(p) recebe o progresso suavizado da rolagem (0 a 1).
-// Transições contínuas (a camada que sai e a que entra se cruzam) e "ímã": ao parar de rolar, a página
-// desliza até o passo mais próximo, para cada passo ficar certinho na tela.
+// Transições contínuas (a camada que sai e a que entra se cruzam), presas direto à rolagem: nada puxa a página
+// sozinho, então a rolagem continua livre e fluida (dedo, roda do mouse e trackpad).
 //
 // Roteiro:
 //   0.00-0.16  a tela do boletim, de frente, inclina para trás e se abre em 4 camadas no espaço
@@ -56,12 +56,11 @@ function iniciar(root) {
             w = ease.inOut(clamp(w)) * abre;
             const z = (i - (N - 1) / 2) * gap + (estreita ? 110 : 170) * w;
             // destaque: a camada em foco sobe e cresce; as outras ficam quase transparentes (as de cima),
-            // apagadas (as de baixo), desfocadas e sem cor — tudo proporcional, sem saltos
+            // apagadas (as de baixo) — só transparência, proporcional e sem saltos (filtros travavam a rolagem)
             const apaga = ativo >= 0 ? abre * (1 - w / Math.max(abre, 0.001)) : 0;
             const op = 1 - apaga * (i > c ? 0.93 : 0.68);
             t.style.transform = `translate3d(0, 0, ${z.toFixed(1)}px) scale(${(1 + 0.07 * w).toFixed(4)})`;
             t.style.opacity = op.toFixed(3);
-            t.style.filter = apaga > 0.01 ? `blur(${(apaga * 2.2).toFixed(2)}px) grayscale(${(apaga * 0.85).toFixed(2)})` : '';
             t.style.setProperty('--brilho', w.toFixed(3));
             t.classList.toggle('is-ativa', i === ativo && abre > 0.5 && w > 0.5 * abre);
             const rot = t.querySelector('.cm__rotulo');
@@ -86,7 +85,7 @@ function iniciar(root) {
 
     function limpar() {
         pilha.style.transform = '';
-        telas.forEach((t) => { t.style.transform = ''; t.style.opacity = ''; t.style.filter = ''; t.style.removeProperty('--brilho'); t.classList.remove('is-ativa');
+        telas.forEach((t) => { t.style.transform = ''; t.style.opacity = ''; t.style.removeProperty('--brilho'); t.classList.remove('is-ativa');
             const rot = t.querySelector('.cm__rotulo'); if (rot) rot.style.opacity = ''; });
         passos.forEach((li) => { li.classList.remove('is-on', 'is-feito'); li.style.removeProperty('--f'); });
     }
@@ -107,38 +106,9 @@ function iniciar(root) {
     }
     if (!coarse()) window.addEventListener('pointermove', aoMover, { passive: true });
 
-    // ---------- "ímã": ao parar de rolar dentro da cena, desliza até o passo mais próximo
-    const paradas = [0, ...telas.map((_, i) => INI + LARG * (i + 0.5)), 1];
-    let espera = 0, deslizando = false, toque = false;
-    function geometria() {
-        const r = root.getBoundingClientRect(), palco = root.querySelector('.sc__stage');
-        const topo = r.top + window.scrollY, faixa = Math.max(1, root.offsetHeight - (palco ? palco.offsetHeight : window.innerHeight));
-        return { topo, faixa };
-    }
-    function assentar() {
-        if (!vivo || deslizando || toque || document.body.classList.contains('tour-aberto')) return;
-        const { topo, faixa } = geometria();
-        const p = (window.scrollY - topo) / faixa;
-        if (p <= 0.003 || p >= 0.997) return;                   // fora da cena (ou saindo dela): não segura
-        let alvo = paradas[0];
-        for (const q of paradas) if (Math.abs(q - p) < Math.abs(alvo - p)) alvo = q;
-        const y = Math.round(topo + alvo * faixa);
-        if (Math.abs(y - window.scrollY) < 6) return;
-        deslizando = true;
-        window.scrollTo({ top: y, behavior: 'smooth' });
-        setTimeout(() => { deslizando = false; }, 700);
-    }
-    function aoRolar() { if (deslizando) return; clearTimeout(espera); espera = setTimeout(assentar, 160); }
-    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        window.addEventListener('scroll', aoRolar, { passive: true });
-        window.addEventListener('touchstart', () => { toque = true; clearTimeout(espera); }, { passive: true });
-        window.addEventListener('touchend', () => { toque = false; aoRolar(); }, { passive: true });
-    }
-
     scene(root, {
         hold: 3,                      // ~1 tela de rolagem por passo
         phone: { hold: 3 },           // celular também roda a cena (layout em coluna no CSS)
-        tau: 0.12,                    // suavização um pouco maior (movimento mais macio)
         minWidth: 0,
         minHeight: 520,              // celular deitado: composição parada
         enter() { vivo = true; },

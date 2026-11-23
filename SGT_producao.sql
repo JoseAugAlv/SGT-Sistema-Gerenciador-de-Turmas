@@ -1172,12 +1172,25 @@ CREATE TABLE tutorial_vistos (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
+CREATE TABLE login_lembrar (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id INT NOT NULL,
+  seletor CHAR(24) NOT NULL UNIQUE,
+  validador_hash CHAR(64) NOT NULL,
+  user_agent VARCHAR(255) DEFAULT NULL,
+  expira_em DATETIME NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_lembrar_usuario (usuario_id),
+  INDEX idx_lembrar_expira (expira_em),
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ---------------------------------------------------------------------
--- USUÁRIO MASTER — senha inicial Teste@1234: TROQUE logo no primeiro acesso
+-- USUÁRIO MASTER — senha inicial Teste@1234 (o sistema obriga a trocar no primeiro acesso)
 -- ---------------------------------------------------------------------
 SET @hash := '$2y$12$fgT/IQ/9F6/IgBBRj7HFWeZAxkchkDobGHs8UdZ8LT6K0pBm3Z2f.';
 INSERT INTO usuarios (id, nome, email, senha, tipo, email_confirmado, primeiro_login, ativo, lgpd_aceito, lgpd_data, created_at) VALUES
-(1, 'Jose', 'jose@adm.com', @hash, 'master', 1, 0, 1, 1, NOW(), NOW());
+(1, 'Jose', 'jose@adm.com', @hash, 'master', 1, 1, 1, 1, NOW(), NOW());  -- primeiro_login = 1: no 1º acesso o sistema obriga a trocar a senha
 INSERT IGNORE INTO preferencias_usuario (usuario_id) SELECT id FROM usuarios;
 
 INSERT INTO cursos (nome, sigla) VALUES

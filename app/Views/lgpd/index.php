@@ -24,6 +24,7 @@ require_once __DIR__ . '/../layouts/nav.php';
             <li><a href="#direitos">Seus direitos</a></li>
             <li><a href="#seguranca">Segurança</a></li>
             <li><a href="#cookies">Cookies e sessões</a></li>
+            <li><a href="#menores">Crianças e adolescentes</a></li>
             <li><a href="#contato">Contato</a></li>
         </ol>
     </nav>
@@ -231,16 +232,36 @@ require_once __DIR__ . '/../layouts/nav.php';
                 <h2>Cookies e sessões</h2>
             </div>
             <p>
-                Usamos apenas cookies de sessão <strong>estritamente necessários</strong>
-                para manter você logado. <strong>Não utilizamos</strong> cookies de
+                Usamos apenas cookies <strong>estritamente necessários</strong>: o de sessão, para manter você logado,
+                e, se você marcar <em>"Manter conectado neste aparelho"</em>, um cookie que guarda o acesso por até 30 dias
+                (ele é apagado ao sair da conta ou trocar a senha). <strong>Não utilizamos</strong> cookies de
                 rastreamento, publicidade ou analytics de terceiros.
             </p>
         </section>
 
-        <!-- ---------- 10. CONTATO ---------- -->
-        <section class="legal-section" id="contato">
+        <!-- ---------- 10. CRIANÇAS E ADOLESCENTES ---------- -->
+        <section class="legal-section" id="menores">
             <div class="legal-section-header">
                 <span class="legal-section-num">10</span>
+                <h2>Crianças e adolescentes</h2>
+            </div>
+            <p>
+                Grande parte de quem usa o <?= h($appName) ?> é estudante e pode ter menos de 18 anos. Por isso, seguindo o
+                art. 14 da LGPD e o Estatuto da Criança e do Adolescente:
+            </p>
+            <ul class="legal-list">
+                <li><i class="fas fa-child-reaching"></i><span><strong>Melhor interesse:</strong> os dados de alunos menores são tratados só para a organização escolar (turmas, projetos, avaliações, atas e agenda), nunca para publicidade ou criação de perfil de consumo.</span></li>
+                <li><i class="fas fa-user-shield"></i><span><strong>Responsáveis:</strong> menores de 18 anos usam o sistema com o conhecimento dos pais ou responsáveis. Abaixo de 12 anos, o uso depende do consentimento específico de um deles, dado por meio da escola ou diretamente a nós.</span></li>
+                <li><i class="fas fa-school"></i><span><strong>Escolas:</strong> quando a instituição contrata o sistema para seus alunos, ela é responsável por informar as famílias e obter as autorizações necessárias.</span></li>
+                <li><i class="fas fa-eye-slash"></i><span><strong>Mínimo e visível só para a turma:</strong> pedimos apenas o necessário; notas e avaliações aparecem só para o próprio aluno, o representante e quem avalia; a caixinha da turma é anônima.</span></li>
+                <li><i class="fas fa-envelope-open-text"></i><span><strong>Pedidos dos responsáveis:</strong> pais ou responsáveis podem pedir acesso, correção ou exclusão dos dados do aluno pelo contato abaixo ou pela página <a href="<?= $basePath ?>/lgpd/meus-direitos">Meus direitos</a> da conta do aluno.</span></li>
+            </ul>
+        </section>
+
+        <!-- ---------- 11. CONTATO ---------- -->
+        <section class="legal-section" id="contato">
+            <div class="legal-section-header">
+                <span class="legal-section-num">11</span>
                 <h2>Contato do encarregado</h2>
             </div>
             <p>

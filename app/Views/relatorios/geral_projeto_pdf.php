@@ -20,6 +20,8 @@ foreach ($alunos as $a) {
     ];
 }
 usort($ranking, fn($x, $y) => ($y['media'] ?? -1) <=> ($x['media'] ?? -1));
+// o PDF não passa pelo cabeçalho do site, onde h() é definida
+if (!function_exists('h')) { function h($s) { return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); } }
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">

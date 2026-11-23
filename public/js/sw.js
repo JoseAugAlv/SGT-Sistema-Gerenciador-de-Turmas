@@ -1,7 +1,12 @@
 // public/js/sw.js — service worker do Prumo (servido em __BASE__/sw.js pelo PwaController).
-// Guarda o básico para abrir rápido, mostra a página offline sem internet e recebe as notificações (Web Push).
+// Guarda o básico para abrir rápido, guarda as últimas páginas abertas para consultar sem internet
+// (apagadas ao sair da conta ou quando outra pessoa entra), mostra a página offline e recebe as notificações (Web Push).
 const BASE = '__BASE__';
-const CACHE = 'prumo-v1';
+const CACHE = 'prumo-v2';
+const PAGINAS = 'prumo-paginas';
+const MAX_PAGINAS = 25;
+// páginas que nunca são guardadas (login, saída, convites, pagamentos)
+const NAO_GUARDAR = /\/(login|logout|auth|convite|primeiro-acesso|completar-cadastro|webhooks|planos\/[^/]+\/pix)(\/|$|\?)/;
 const BASICO = [BASE + '/offline', BASE + '/public/img/logo-prumo.png'];
 
 self.addEventListener('install', (e) => {
@@ -9,7 +14,7 @@ self.addEventListener('install', (e) => {
 });
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE && k !== PAGINAS).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
 self.addEventListener('fetch', (e) => {
@@ -17,9 +22,18 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
-  // páginas: sempre da rede (dados do dia), com a página offline se cair
+  // páginas: sempre da rede (dados do dia); guarda a cópia; sem internet, a última cópia (ou a página offline)
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).catch(() => caches.match(BASE + '/offline')));
+    e.respondWith(fetch(req).then((r) => {
+      if (r.ok && r.type === 'basic' && !r.redirected && !NAO_GUARDAR.test(url.pathname) && !url.search.includes('saiu=1')) {
+        const copia = r.clone();
+        caches.open(PAGINAS).then((c) => c.put(req, copia).then(() => c.keys()).then((ks) => {
+          if (ks.length > MAX_PAGINAS) return Promise.all(ks.slice(0, ks.length - MAX_PAGINAS).map((k) => c.delete(k)));
+        })).catch(() => {});
+      }
+      return r;
+    }).catch(() => caches.open(PAGINAS).then((c) => c.match(req, { ignoreVary: true }))
+      .then((salva) => salva ? marcarCopia(salva) : caches.match(BASE + '/offline'))));
     return;
   }
   // CSS, JS e imagens do app: cache primeiro, atualizando por trás
@@ -29,6 +43,18 @@ self.addEventListener('fetch', (e) => {
       return cached || rede;
     })));
   }
+});
+
+// cópia salva: marca o HTML para a página mostrar o aviso "sem internet" (navigator.onLine nem sempre sabe)
+function marcarCopia(resp) {
+  return resp.text().then((html) => new Response(html.replace(/<head([^>]*)>/i, '<head$1><meta name="prumo-copia-offline" content="1">'), {
+    status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' },
+  }));
+}
+
+// a página pede para esquecer as cópias (saiu da conta / trocou de pessoa)
+self.addEventListener('message', (e) => {
+  if (e.data && e.data.tipo === 'limpar-paginas') e.waitUntil(caches.delete(PAGINAS));
 });
 
 self.addEventListener('push', (e) => {

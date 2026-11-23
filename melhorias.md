@@ -88,6 +88,29 @@ Também dá para **Desconectar** (aí entra só com email e senha).
 
 **Como testar:** entre com email e senha, abra Minha conta, clique em "Conectar com Google", escolha a conta; saia e entre com o Google.
 
+### ✅ Pacote "pronto para usuários reais"
+- **Código no GitHub:** tudo commitado e enviado (o `descricao.md` virou o seu `readme.md`, com as seções novas de planos).
+- **Publicação pelo Git na Hostinger:** passo a passo em `DEPLOY.md` (inclui o que fica fora do Git: `.env`, `vendor/`, uploads).
+- **Senha do master:** o `SGT_producao.sql` cria o master com `primeiro_login = 1` → o sistema obriga a trocar a senha no 1º acesso.
+- **Manter conectado (30 dias):** caixa marcada por padrão no login; com o Google fica conectado sempre. O código do aparelho muda a cada uso;
+  um cookie copiado derruba todos os acessos daquela conta; sair ou trocar a senha desconecta. Tabela nova `login_lembrar`
+  (migração `database/2026-11-24_lembrar_login.sql`).
+- **Email:** porta 465 (SSL) funciona e há `MAIL_FROM` separado do login → dá para usar email da Hostinger, Brevo ou Resend (exemplos no `.env.example`).
+- **Tarefas diárias:** `scripts/tarefas_diarias.php` (lembretes da agenda para todos, aviso de plano vencendo, limpeza). Cron em `DEPLOY.md`.
+- **Backup:** `scripts/backup_banco.php` gera `backups/prumo_*.sql.gz` (guarda 8). Testado: restaurado com as 70 tabelas e as mesmas linhas.
+- **Erros:** em produção os erros vão para `logs/php_errors.log` (antes nem eram gravados) e o usuário vê uma página amigável.
+  Master → **Erros do sistema** mostra os erros agrupados. Ela já achou um erro real: o **PDF do boletim e o relatório geral em PDF**
+  quebravam (`h()` indefinida) — corrigido e testado.
+- **LGPD:** nova seção "Crianças e adolescentes" (art. 14, responsáveis, escolas, pedidos dos pais) e o cookie de "manter conectado" explicado.
+- **Compartilhar o link:** imagem de prévia `public/img/share.png` (1200×630), endereços completos, `canonical`, dados estruturados.
+- **Sem internet:** o app guarda as últimas 25 páginas abertas; sem conexão mostra a última versão com aviso no topo (e recarrega quando a rede volta).
+  Login, pagamentos e convites nunca são guardados; as cópias somem ao sair da conta ou quando outra pessoa entra.
+- **Animação "Como funciona":** tirado o "ímã" (puxava a página e travava a rolagem) e os filtros de desfoque (dobravam o custo de cada quadro).
+  Os arquivos da landing agora levam a versão no endereço, para o navegador não usar a cópia antiga depois de atualizar.
+
+**Como testar:** entre marcando "Manter conectado", feche o navegador e abra de novo (continua logado); como master, abra **Erros do sistema**;
+baixe o boletim em PDF; no celular com o app, abra a agenda, ligue o modo avião e abra de novo.
+
 ---
 
 ## ✅ Landing page nova

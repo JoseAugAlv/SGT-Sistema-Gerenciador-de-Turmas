@@ -35,6 +35,11 @@ require_once __DIR__ . '/../layouts/auth_header.php';
         </div>
     </div>
 
+    <label class="auth-check">
+        <input type="checkbox" name="lembrar" value="1" checked>
+        <span>Manter conectado neste aparelho <small style="opacity:.7">(desmarque em computador compartilhado)</small></span>
+    </label>
+
     <button type="submit" class="auth-submit">
         <i class="fas fa-right-to-bracket"></i> Entrar
     </button>

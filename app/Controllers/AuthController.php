@@ -11,6 +11,7 @@ require_once __DIR__ . '/../Helpers/RateLimiter.php';
 require_once __DIR__ . '/../Helpers/ViewHelper.php';
 require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
 require_once __DIR__ . '/../Core/Mail.php';
+require_once __DIR__ . '/../Services/LembrarLoginService.php';
 require_once __DIR__ . '/../Services/GoogleAuthService.php';
 
 class AuthController
@@ -69,6 +70,7 @@ class AuthController
         session_regenerate_id(true);
 
         $this->montarSessao($user);
+        if (!empty($_POST['lembrar'])) LembrarLoginService::lembrar((int) $user['id']);
 
         $this->usuario->atualizarUltimoAcesso((int) $user['id']);
         SecurityHelper::logAuditoria('login', $user['id'], 'Login OK', 'info');
@@ -82,13 +84,14 @@ class AuthController
         if (!empty($_SESSION['usuario'])) {
             SecurityHelper::logAuditoria('logout', $_SESSION['usuario']['id'], 'Logout', 'info');
         }
+        LembrarLoginService::esquecer();
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {
             $p = session_get_cookie_params();
             setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], $p['secure'], $p['httponly']);
         }
         session_destroy();
-        $this->redirect('/');
+        $this->redirect('/?saiu=1');   // ?saiu=1: o app apaga as páginas guardadas para usar sem internet
     }
 
     // ============ CADASTRO ============
@@ -301,6 +304,7 @@ class AuthController
 
         $user = $this->usuario->findById((int) $reg['usuario_id']);
         $this->usuario->atualizarSenha((int) $user['id'], PasswordHelper::hash($senha));
+        LembrarLoginService::esquecerTodos((int) $user['id']);   // senha nova: desconecta os aparelhos
         $this->reset->marcarUsado((int) $reg['id']);
         $this->mail->emailSenhaAlterada($user['email'], $user['nome']);
 
@@ -432,6 +436,7 @@ class AuthController
         }
         session_regenerate_id(true);
         $this->montarSessao($user);
+        LembrarLoginService::lembrar((int) $user['id']);   // com o Google, fica conectado neste aparelho
         $this->usuario->atualizarUltimoAcesso((int) $user['id']);
         SecurityHelper::logAuditoria('login', $user['id'], 'Login com Google', 'info');
         $this->redirect($user['cadastro_pendente'] ? '/completar-cadastro' : $this->destinoPosLogin());

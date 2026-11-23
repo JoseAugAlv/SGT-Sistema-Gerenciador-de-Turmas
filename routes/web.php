@@ -469,6 +469,8 @@ $router->post('/assinaturas/{id}/cancelar',     'PlanoController@cancelar', ['ma
 
 $router->get ('/master/comercial',                        'ComercialController@index',         ['master']);
 $router->get ('/master/metricas',                         'MetricasController@index',          ['master']);
+$router->get ('/master/erros',                            'ErroLogController@index',           ['master']);
+$router->post('/master/erros/limpar',                     'ErroLogController@limpar',          ['master']);
 $router->post('/master/comercial/modo',                    'ComercialController@modo',          ['master']);
 $router->post('/master/comercial/config',                 'ComercialController@salvarConfig',  ['master']);
 $router->post('/master/comercial/cupons',                 'ComercialController@criarCupom',    ['master']);

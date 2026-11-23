@@ -122,8 +122,7 @@
   .cm.is-live .cm__dica {
     position: absolute; left: 50%; bottom: calc(var(--s-5) + env(safe-area-inset-bottom)); z-index: 5; translate: -50% 0;
     display: flex; align-items: center; gap: 10px; padding: 9px 14px 9px 10px; border-radius: 999px; white-space: nowrap;
-    background: color-mix(in oklab, var(--bg) 82%, transparent); border: 1px solid var(--line-strong);
-    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    background: color-mix(in oklab, var(--bg) 96%, transparent); border: 1px solid var(--line-strong);   /* sem backdrop-filter: era recalculado a cada quadro */
     box-shadow: 0 12px 30px -12px rgba(15, 18, 34, .35); font: 500 13px/1 var(--font-text); color: var(--ink);
     transition: opacity .35s ease, translate .35s ease;
   }
@@ -136,3 +135,5 @@
 }
 @keyframes cm-seta { 0%, 100% { transform: translateY(-2px); } 50% { transform: translateY(3px); } }
 @media (prefers-reduced-motion: reduce) { .cm__dica-seta svg { animation: none; } }
+
+/* camada fora de foco: só a transparência (feita no JS) — desfoque/filtro dobrava o custo de cada quadro e travava a rolagem */

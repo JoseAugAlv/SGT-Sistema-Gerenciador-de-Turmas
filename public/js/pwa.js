@@ -78,8 +78,38 @@
   });
   document.querySelectorAll('[data-instalar-app]').forEach(function (b) { b.hidden = false; });
 
-  // ---------- card "Baixe o app": 1ª vez que o usuário entra (neste aparelho), se ainda não instalou
   var uid = (document.querySelector('meta[name="usuario-id"]') || {}).content;
+
+  // ---------- páginas guardadas para usar sem internet: esquece ao sair da conta ou quando muda a pessoa
+  try {
+    var donoPaginas = localStorage.getItem('prumo-paginas-dono'), agora = uid || '';
+    if (window.caches && (/[?&]saiu=1/.test(location.search) || (donoPaginas !== null && donoPaginas !== agora))) caches.delete('prumo-paginas');
+    localStorage.setItem('prumo-paginas-dono', agora);
+  } catch (e) {}
+
+  // ---------- aviso "sem internet" (a página aberta pode ser a última cópia salva)
+  var copiaOffline = !!document.querySelector('meta[name="prumo-copia-offline"]');   // marcada pelo service worker
+  function avisoOffline(ev) {
+    var f = document.getElementById('pwa-offline');
+    var semRede = !navigator.onLine || (copiaOffline && !(ev && ev.type === 'online'));
+    if (!semRede) {
+      if (f) f.remove();
+      if (copiaOffline && ev && ev.type === 'online') location.reload();   // a conexão voltou: busca a versão atual
+      return;
+    }
+    if (f) return;
+    f = document.createElement('div'); f.id = 'pwa-offline'; f.setAttribute('role', 'status');
+    f.textContent = copiaOffline ? 'Sem internet · você está vendo a última versão salva desta página. Ações ficam para quando a conexão voltar.'
+      : 'Sem internet · ações ficam para quando a conexão voltar.';
+    f.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:100002;padding:9px 16px calc(9px);padding-top:calc(9px + env(safe-area-inset-top));'
+      + 'background:#1f2937;color:#fff;font:600 13px/1.4 system-ui,sans-serif;text-align:center;box-shadow:0 6px 18px -8px rgba(0,0,0,.5)';
+    (document.body || document.documentElement).appendChild(f);
+  }
+  window.addEventListener('online', avisoOffline);
+  window.addEventListener('offline', avisoOffline);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', avisoOffline); else avisoOffline();
+
+  // ---------- card "Baixe o app": 1ª vez que o usuário entra (neste aparelho), se ainda não instalou
   var chaveCard = 'prumo-card-app-' + uid;
   function lerVisto() { try { return localStorage.getItem(chaveCard) === '1'; } catch (e) { return true; } }
   function marcarVisto() { try { localStorage.setItem(chaveCard, '1'); } catch (e) {} }

@@ -110,6 +110,13 @@ return [
             'secao' => 'Visão geral',
         ],
         [
+            'label' => 'Erros do sistema',
+            'url'   => '/master/erros',
+            'icon'  => 'fas fa-bug',
+            'roles' => ['master'],
+            'secao' => 'Visão geral',
+        ],
+        [
             'label' => 'Minhas atividades',
             'url'   => '/minhas-atividades',
             'icon'  => 'fa-solid fa-clipboard-user',
