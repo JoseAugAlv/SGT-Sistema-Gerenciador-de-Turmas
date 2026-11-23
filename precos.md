@@ -112,61 +112,35 @@ Todos os pagamentos são **somente por Pix**.
 | 11x | R$ 101,81 | R$ 1.119,89 | R$ 71,27 | R$ 783,92 |
 | 12x | R$ 94,99 | R$ 1.139,89 | R$ 66,49 | R$ 797,92 |
 
-## GRÊMIOS (plano único anual, 12 meses, 10 projetos)
+## DIA A DIA (agenda, horário, aviso do dia e contagem)
 
-### Planos
+Incluso do **Anual para cima** (turma e grêmio). Nos planos menores, é um adicional pago uma vez e vale até o fim do plano, pensado para o Anual sair mais vantajoso.
 
-| Opção | Pessoas | À vista | Com cupom (-15%) | Piso mínimo |
-|---|---|---|---|---|
-| Grêmio 20 | até 20 | R$ 234,90 | R$ 199,67 | R$ 199,60 |
-| **Grêmio 25** | até 25 | **R$ 259,90** | R$ 220,92 | R$ 220,90 |
-| Grêmio 30 | até 30 | R$ 284,90 | R$ 242,17 | R$ 242,10 |
-| Grêmio 40 | até 40 | R$ 334,90 | R$ 284,67 | R$ 284,60 |
+| Plano | Dia a dia | Plano + adicional | Comparação |
+|---|---|---|---|
+| Trimestral | + R$ 39,90 | R$ 139,80 por 3 meses | Anual: R$ 279,90 por 12 meses, já incluso |
+| Semestral | + R$ 59,90 | R$ 227,80 por 6 meses | por + R$ 52,10 leva o Anual (o dobro do tempo) |
+| Grêmio Trimestral | + R$ 27,90 | R$ 97,80 por 3 meses | Grêmio Anual: R$ 194,90 por 12 meses |
+| Grêmio Semestral | + R$ 41,90 | R$ 159,80 por 6 meses | por + R$ 35,10 leva o Grêmio Anual |
 
-Máximo de 50 pessoas. Parcelas em até 4x (2x 5%, 3x 7%, 4x 10%).
+Cupom vale só sobre o plano; o adicional entra depois do desconto. O master muda tudo em Comercial › Planos (incluso / preço do adicional).
 
-### Adicionais
+## GRÊMIOS (até 50 pessoas)
 
-| Item | Preço |
-|---|---|
-| Projeto extra | R$ 34,90 (2 por R$ 67,90) |
-| Pessoa extra (acima da faixa, até 50) | R$ 5,00 |
+Mesmas durações e parcelas das turmas, cerca de 30% mais barato. Quem cria o grêmio é o **presidente**: cria as diretorias, escolhe o vice-presidente e cuida do plano.
 
-### Parcelas: Grêmio 20
+| Plano | Acesso | Projetos | À vista | Piso mínimo | Parcelas |
+|---|---|---|---|---|---|
+| Grêmio Trimestral | 3 meses | 2 | R$ 69,90 | R$ 48,90 | Só à vista |
+| Grêmio Semestral | 6 meses | 4 | R$ 117,90 | R$ 82,50 | até 2x |
+| Grêmio Anual | 12 meses | 8 | R$ 194,90 | R$ 136,40 | até 4x |
+| Grêmio Completo | 18 meses | 12 | R$ 249,90 | R$ 174,90 | até 6x |
+| Grêmio Estendido | 36 meses | 24 | R$ 369,90 | R$ 258,90 | até 12x (6x sem juros) |
+| Grêmio Vitalício | Sem vencimento | 36 | R$ 699,90 | R$ 489,90 | até 12x (6x sem juros) |
 
-| Parcelas | Parcela | Total | Parcela c/ cupom | Total c/ cupom |
-|---|---|---|---|---|
-| 1x | R$ 234,90 | R$ 234,90 | R$ 199,67 | R$ 199,67 |
-| 2x | R$ 123,32 | R$ 246,65 | R$ 104,82 | R$ 209,65 |
-| 3x | R$ 83,78 | R$ 251,34 | R$ 71,21 | R$ 213,64 |
-| 4x | R$ 64,60 | R$ 258,39 | R$ 54,91 | R$ 219,63 |
+Os planos antigos por faixa de pessoas (Grêmio 20/25/30/40) saíram de venda.
 
-### Parcelas: Grêmio 25
-
-| Parcelas | Parcela | Total | Parcela c/ cupom | Total c/ cupom |
-|---|---|---|---|---|
-| 1x | R$ 259,90 | R$ 259,90 | R$ 220,92 | R$ 220,92 |
-| 2x | R$ 136,45 | R$ 272,90 | R$ 115,98 | R$ 231,96 |
-| 3x | R$ 92,70 | R$ 278,09 | R$ 78,79 | R$ 236,38 |
-| 4x | R$ 71,47 | R$ 285,89 | R$ 60,75 | R$ 243,01 |
-
-### Parcelas: Grêmio 30
-
-| Parcelas | Parcela | Total | Parcela c/ cupom | Total c/ cupom |
-|---|---|---|---|---|
-| 1x | R$ 284,90 | R$ 284,90 | R$ 242,17 | R$ 242,17 |
-| 2x | R$ 149,57 | R$ 299,15 | R$ 127,14 | R$ 254,27 |
-| 3x | R$ 101,61 | R$ 304,84 | R$ 86,37 | R$ 259,11 |
-| 4x | R$ 78,35 | R$ 313,39 | R$ 66,60 | R$ 266,38 |
-
-### Parcelas: Grêmio 40
-
-| Parcelas | Parcela | Total | Parcela c/ cupom | Total c/ cupom |
-|---|---|---|---|---|
-| 1x | R$ 334,90 | R$ 334,90 | R$ 284,67 | R$ 284,67 |
-| 2x | R$ 175,82 | R$ 351,65 | R$ 149,45 | R$ 298,90 |
-| 3x | R$ 119,45 | R$ 358,34 | R$ 101,53 | R$ 304,59 |
-| 4x | R$ 92,10 | R$ 368,39 | R$ 78,28 | R$ 313,13 |
+**Desconto cruzado:** quem é representante/presidente com plano ativo de turma ganha 10% (configurável no master) no plano do grêmio, e vice-versa. Não soma com cupom: vale o maior.
 
 ## CONDIÇÕES
 
@@ -183,3 +157,4 @@ Máximo de 50 pessoas. Parcelas em até 4x (2x 5%, 3x 7%, 4x 10%).
 | Bloqueio prolongado | Depois de 30 dias, só leitura; depois de 90 dias, aviso e exclusão |
 | Multa e juros | 2% e 1% ao mês (confirme com seu contador) |
 | Arrependimento | 7 dias com reembolso integral |
+| Troca de plano | Só para plano mais caro, com o atual quitado. O novo começa no dia do pagamento com duração cheia; o tempo restante do atual vira crédito (proporcional ao valor pago à vista, já com desconto). Paga: preço do novo − crédito, nas parcelas do novo. Cupom não vale |

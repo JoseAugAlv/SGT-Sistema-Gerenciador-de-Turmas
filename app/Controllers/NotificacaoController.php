@@ -123,7 +123,8 @@ class NotificacaoController
             $this->prefs->criarPadrao((int) $u['id']);
         }
 
-        $this->prefs->atualizar((int) $u['id'], $_POST);
+        $this->prefs->definirNivel((int) $u['id'], (string) ($_POST['nivel_email'] ?? 'importantes'));
+        $this->prefs->definirResumo((int) $u['id'], !empty($_POST['resumo_semanal']));
 
         $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Preferências salvas.'];
         header('Location: ' . App::getBasePath() . '/notificacoes/preferencias');

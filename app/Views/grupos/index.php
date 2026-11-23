@@ -28,6 +28,69 @@ require_once __DIR__ . '/../layouts/flashes.php';
 
 <?php require __DIR__ . '/../projetos/_nav.php'; ?>
 
+<?php
+$pedeGrupo   = !empty($projeto['alunos_pedem_grupo']);
+$pedeDiretor = !empty($projeto['alunos_pedem_diretor']);
+$maxDir      = (int) ($projeto['diretores_por_grupo'] ?? 1);
+$semGrupo    = empty($meusGrupos);
+$pedidoEntrarPendente = null;
+foreach ($meusPedidos as $porTipo) if (!empty($porTipo['entrar'])) $pedidoEntrarPendente = $porTipo['entrar'];
+?>
+
+<!-- ============ REGRAS DO PROJETO ============ -->
+<div class="notice notice-blue regras-grupo">
+    <span><i class="fas fa-circle-info"></i></span>
+    <div>
+        <strong>Como funcionam os grupos neste projeto</strong>
+        <p class="mb-0">
+            <?= $pedeGrupo ? 'Os alunos pedem para entrar num grupo e o representante aprova.' : 'O representante monta os grupos.' ?>
+            <?= $pedeDiretor ? 'Membros podem pedir para ser diretor.' : 'O representante escolhe os diretores.' ?>
+            Até <?= $maxDir ?> diretor(es) por grupo.
+        </p>
+    </div>
+</div>
+<?php if ($podeEditar && !$projeto['encerrado']): ?>
+    <details class="panel mb-16 regras-editar">
+        <summary><strong><i class="fas fa-sliders"></i> Mudar as regras dos grupos</strong></summary>
+        <form method="POST" action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/regras-grupos" class="mt-16">
+            <?= ViewHelper::csrfField() ?>
+            <?php $regras = $projeto; require __DIR__ . '/../projetos/_config_grupos.php'; ?>
+            <p class="mt-16 mb-0"><button type="submit" class="button button-primary">Salvar regras</button></p>
+        </form>
+    </details>
+<?php endif; ?>
+
+<?php if ($podeEditar && $pedidos): ?>
+    <!-- ============ PEDIDOS PARA O REPRESENTANTE ============ -->
+    <section class="panel mb-16 pedidos-grupo">
+        <div class="panel-header"><div><h2><i class="fas fa-inbox"></i> Pedidos dos alunos (<?= count($pedidos) ?>)</h2></div></div>
+        <ul class="lista-tarefas">
+            <?php foreach ($pedidos as $p): ?>
+                <li>
+                    <span class="tarefa-icone"><i class="fas <?= $p['tipo'] === 'diretor' ? 'fa-crown' : 'fa-user-plus' ?>"></i></span>
+                    <div class="tarefa-info">
+                        <strong><?= h($p['usuario_nome']) ?></strong>
+                        <small><?= $p['tipo'] === 'diretor' ? 'quer ser diretor do' : 'quer entrar no' ?> grupo <?= h($p['grupo_nome']) ?> · <?= ViewHelper::data($p['created_at'], true) ?></small>
+                    </div>
+                    <form method="POST" action="<?= $basePath ?>/solicitacoes-grupo/<?= (int) $p['id'] ?>/responder" class="d-inline">
+                        <?= ViewHelper::csrfField() ?>
+                        <button type="submit" name="acao" value="aprovar" class="tarefa-acao primaria">Aprovar</button>
+                        <button type="submit" name="acao" value="recusar" class="tarefa-acao">Recusar</button>
+                    </form>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    </section>
+<?php endif; ?>
+
+<?php if (!$podeEditar && $pedeGrupo && $semGrupo && !$projeto['encerrado']): ?>
+    <div class="notice <?= $pedidoEntrarPendente ? 'notice-warning' : 'notice-blue' ?>">
+        <span><i class="fas fa-users"></i></span>
+        <div><strong><?= $pedidoEntrarPendente ? 'Seu pedido está aguardando o representante' : 'Você ainda não está em nenhum grupo' ?></strong>
+            <p class="mb-0"><?= $pedidoEntrarPendente ? 'Assim que ele aprovar, você entra no grupo.' : 'Escolha um grupo abaixo e peça para entrar.' ?></p></div>
+    </div>
+<?php endif; ?>
+
 <!-- ============================================================ -->
 <!-- Grid de grupos                                               -->
 <!-- ============================================================ -->
@@ -68,10 +131,41 @@ require_once __DIR__ . '/../layouts/flashes.php';
                 </div>
 
                 <div class="status-line">
-                    <strong><?= (int) $g['total_diretores'] ?></strong>
+                    <strong><?= (int) $g['total_diretores'] ?>/<?= $maxDir ?></strong>
                     <span>diretor(es)</span>
                 </div>
 
+                <?php
+                $gid      = (int) $g['id'];
+                $pedEntr  = $meusPedidos[$gid]['entrar'] ?? null;
+                $pedDir   = $meusPedidos[$gid]['diretor'] ?? null;
+                $souMemb  = array_key_exists($gid, $meusGrupos);
+                $souDir   = $meusGrupos[$gid] ?? false;
+                $lotadoDir = (int) $g['total_diretores'] >= $maxDir;
+                ?>
+                <?php if (!$podeEditar && !$projeto['encerrado']): ?>
+                    <?php if ($pedEntr || $pedDir): $pend = $pedEntr ?: $pedDir; ?>
+                        <form method="POST" action="<?= $basePath ?>/solicitacoes-grupo/<?= (int) $pend['id'] ?>/cancelar" class="grupo-pedido">
+                            <?= ViewHelper::csrfField() ?>
+                            <span><i class="fas fa-hourglass-half"></i> <?= $pedEntr ? 'Pedido para entrar enviado' : 'Pedido para ser diretor enviado' ?></span>
+                            <button type="submit" class="tarefa-acao">Cancelar</button>
+                        </form>
+                    <?php elseif ($pedeGrupo && $semGrupo && !$pedidoEntrarPendente): ?>
+                        <form method="POST" action="<?= $basePath ?>/grupos/<?= $gid ?>/solicitar" class="grupo-pedido">
+                            <?= ViewHelper::csrfField() ?>
+                            <input type="hidden" name="tipo" value="entrar">
+                            <button type="submit" class="button button-secondary full-width"><i class="fas fa-user-plus"></i> Pedir para entrar</button>
+                        </form>
+                    <?php elseif ($pedeDiretor && $souMemb && !$souDir && !$lotadoDir): ?>
+                        <form method="POST" action="<?= $basePath ?>/grupos/<?= $gid ?>/solicitar" class="grupo-pedido">
+                            <?= ViewHelper::csrfField() ?>
+                            <input type="hidden" name="tipo" value="diretor">
+                            <button type="submit" class="button button-secondary full-width"><i class="fas fa-crown"></i> Pedir para ser diretor</button>
+                        </form>
+                    <?php elseif ($souMemb): ?>
+                        <p class="grupo-pedido"><i class="fas fa-check"></i> <?= $souDir ? 'Você é diretor deste grupo' : 'Você está neste grupo' ?></p>
+                    <?php endif; ?>
+                <?php endif; ?>
                 <a class="button button-primary full-width" href="<?= $basePath ?>/grupos/<?= (int) $g['id'] ?>">
                     <i class="fas fa-arrow-right"></i> Abrir grupo
                 </a>

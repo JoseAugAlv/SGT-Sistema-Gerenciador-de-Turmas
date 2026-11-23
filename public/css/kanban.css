@@ -1,0 +1,45 @@
+/* public/css/kanban.css — quadro de tarefas do grupo */
+.kb-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; margin-top: 12px; }
+.kb-form label { display: grid; gap: 6px; font-weight: 500; }
+.kb-larga { grid-column: 1 / -1; }
+@media (max-width: 640px) { .kb-form { grid-template-columns: 1fr; } }
+
+.kb-quadro { display: grid; grid-template-columns: repeat(4, minmax(240px, 1fr)); gap: 14px; overflow-x: auto; padding-bottom: 6px; align-items: start; }
+@media (max-width: 900px) { .kb-quadro { grid-template-columns: repeat(4, 82vw); scroll-snap-type: x mandatory; } .kb-coluna { scroll-snap-align: start; } }
+.kb-coluna { background: var(--surface-2, var(--surface)); border: 1px solid var(--border); border-radius: 16px; padding: 10px; min-height: 220px; }
+.kb-coluna > header { display: flex; align-items: center; gap: 8px; font-weight: 700; padding: 4px 6px 10px; }
+.kb-coluna > header b { margin-left: auto; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--surface); color: var(--muted); }
+.kb-a_fazer > header i { color: var(--muted); } .kb-fazendo > header i { color: var(--primary); }
+.kb-revisao > header i { color: var(--orange); } .kb-feito > header i { color: var(--green); }
+.kb-lista { display: grid; gap: 10px; min-height: 120px; border-radius: 12px; transition: background-color .2s; }
+.kb-lista.alvo { background: color-mix(in srgb, var(--primary) 8%, transparent); outline: 2px dashed color-mix(in srgb, var(--primary) 40%, transparent); }
+
+.kb-cartao { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; cursor: grab; display: grid; gap: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .05); transition: transform .2s ease, box-shadow .2s ease, opacity .2s; }
+.kb-cartao:hover { box-shadow: 0 10px 24px -14px rgba(0, 0, 0, .35); }
+.kb-cartao.arrastando { opacity: .45; transform: rotate(2deg) scale(.98); }
+.kb-cartao.chegou { animation: kb-chegou .45s cubic-bezier(.34, 1.56, .64, 1); }
+.kb-cartao.atrasada { border-left: 4px solid var(--red); }
+.kb-cartao.feito h3 { text-decoration: line-through; color: var(--muted); }
+.kb-cartao h3 { margin: 0; font-size: 15px; line-height: 1.3; }
+.kb-cartao p { margin: 0; font-size: 13px; color: var(--muted); }
+.kb-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+.kb-prazo { color: var(--muted); } .atrasada .kb-prazo { color: var(--red); font-weight: 700; }
+.kb-ata { color: var(--primary); text-decoration: none; font-weight: 600; }
+.kb-resp { margin-left: auto; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; background: var(--primary); color: #fff; }
+.kb-mover { display: flex; align-items: flex-start; gap: 6px; }
+.kb-mover > button { border: 1px solid var(--border); background: transparent; color: var(--text); border-radius: 8px; width: 30px; height: 28px; cursor: pointer; flex: none; }
+.kb-mover > button:disabled { opacity: .3; cursor: default; }
+.kb-editar { flex: 1; text-align: center; font-size: 13px; }
+.kb-editar summary { cursor: pointer; color: var(--muted); padding: 4px; list-style: none; }
+.kb-editar[open] { text-align: left; }
+.kb-editar form + form { margin-top: 8px; }
+
+.kb-h2 { margin: 0 0 4px; font-size: 16px; }
+.kb-part { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+.kb-part li { display: grid; grid-template-columns: 180px 1fr auto; gap: 12px; align-items: center; }
+.kb-part small { color: var(--muted); }
+.kb-part-barra { display: flex; height: 10px; border-radius: 5px; background: var(--surface-2, var(--surface)); overflow: hidden; }
+.kb-part-barra .f { background: var(--green); } .kb-part-barra .a { background: color-mix(in srgb, var(--primary) 45%, transparent); }
+@media (max-width: 640px) { .kb-part li { grid-template-columns: 1fr; gap: 4px; } }
+@keyframes kb-chegou { from { transform: scale(.9); opacity: .4; } }

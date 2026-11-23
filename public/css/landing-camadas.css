@@ -1,0 +1,138 @@
+/* public/css/landing-camadas.css
+   Cena "Como funciona" da landing: as telas do Prumo empilhadas em 3D, uma camada por passo.
+   Parada (celular, movimento reduzido, sem script): os passos ao lado da tela do boletim.
+   Viva (.is-live, scenes/lib.js): a seção fica presa por 2 telas e landing-camadas.js move a pilha. */
+
+.cm { overflow: clip; }
+.cm__stage {
+  display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gutter, 24px); align-items: center;
+  width: 100%; max-width: calc(var(--container) + 2 * var(--pad)); margin-inline: auto; padding-inline: var(--pad);
+}
+.cm.is-live > .cm__stage { padding-top: calc(var(--nav, 72px) + var(--s-5)); padding-bottom: var(--s-6); }
+
+/* ---------- texto e passos */
+.cm__texto { grid-column: 1 / 6; display: grid; gap: var(--s-5); align-content: center; position: relative; z-index: 2; }
+.cm__texto h2 { max-width: 13ch; margin: 0; }
+.cm__texto .t-label { color: var(--accent); margin: 0; }
+.cm__passos { list-style: none; margin: var(--s-3) 0 0; padding: 0; display: grid; gap: var(--s-2); }
+.cm__passos li {
+  --f: 0; position: relative; display: grid; grid-template-columns: 36px 1fr; gap: var(--s-4); align-items: start;
+  padding: var(--s-4) var(--s-4) var(--s-4) var(--s-3); border-radius: var(--r-md); color: var(--muted);
+  transition: background-color .35s var(--ease), color .35s var(--ease);
+}
+.cm__passos li b { display: block; font-weight: 500; font-size: var(--t-h3, 20px); line-height: 1.25; color: inherit; }
+.cm__passos li span:not(.cm__n) { display: block; margin-top: 2px; font-size: var(--t-small); }
+.cm__n {
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font: 500 14px/1 var(--font-mono);
+  border: 1px solid var(--line-strong); color: var(--muted); transition: background-color .35s var(--ease), color .35s var(--ease), border-color .35s var(--ease);
+}
+/* a barra fina do passo enche conforme a rolagem avança dentro dele */
+.cm__passos li::after {
+  content: ""; position: absolute; left: var(--s-3); right: var(--s-4); bottom: 6px; height: 2px; border-radius: 2px;
+  background: var(--accent); transform-origin: 0 50%; transform: scaleX(var(--f)); opacity: 0; transition: opacity .3s;
+}
+.cm__passos li.is-on { background: var(--surface); color: var(--ink); }
+.cm__passos li.is-on::after { opacity: 1; }
+.cm__passos li.is-on .cm__n { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.cm__passos li.is-feito { color: var(--ink); }
+.cm__passos li.is-feito .cm__n { border-color: var(--accent); color: var(--accent); }
+/* parada: todos os passos legíveis */
+.cm:not(.is-live) .cm__passos li { color: var(--ink); }
+.cm:not(.is-live) .cm__n { border-color: var(--accent); color: var(--accent); }
+
+/* ---------- a pilha 3D */
+.cm__cena { grid-column: 6 / 13; position: relative; display: grid; place-items: center; perspective: 2200px; perspective-origin: 50% 40%; }
+.cm.is-live .cm__cena { height: min(74svh, 640px); }
+.cm__pilha { position: relative; width: min(600px, 100%); aspect-ratio: 16 / 10.4; transform-style: preserve-3d; will-change: transform; }
+.cm__tela {
+  position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr; border: 1px solid var(--line); border-radius: 14px;
+  background: var(--bg); transform-style: preserve-3d; backface-visibility: hidden;
+  box-shadow: 0 1px 2px rgba(15, 18, 34, .06), 0 24px 48px -24px rgba(15, 18, 34, .28);
+  --brilho: 0;
+}
+.cm__tela::before {   /* contorno de destaque da camada ativa */
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 0 7px color-mix(in oklab, var(--accent) 16%, transparent),
+              0 40px 90px -20px color-mix(in oklab, var(--accent) 55%, transparent); opacity: var(--brilho);
+}
+.cm__tela.is-ativa { box-shadow: 0 2px 4px rgba(15, 18, 34, .08), 0 50px 80px -30px rgba(15, 18, 34, .45); }
+.cm__corpo { padding: 16px 18px; display: grid; align-content: start; gap: 8px; overflow: hidden; min-height: 0; }
+.cm__topo { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 4px; }
+.cm__topo h4 { margin: 2px 0 0; font: 500 17px/1.2 var(--font-display); letter-spacing: -0.01em; }
+.cm__crit { display: grid; grid-template-columns: 1fr 120px 34px; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.cm__crit > b { text-align: right; font: 500 12px var(--font-mono); }
+.cm .bar { position: relative; display: block; height: 8px; border-radius: 4px; background: var(--surface); overflow: clip; }
+.cm .bar b { position: absolute; inset: 0; width: calc(var(--v) * 100%); background: var(--accent); border-radius: 4px; }
+.cm__escala { display: inline-flex; padding: 3px; border-radius: 8px; background: var(--surface); gap: 2px; }
+.cm__escala i { font-style: normal; font-size: 11px; padding: 3px 8px; border-radius: 6px; color: var(--muted); }
+.cm__escala i.on { background: var(--bg); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, .08); }
+.cm__mes { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.cm__mes span { display: grid; place-items: center; height: 34px; border-radius: 7px; font: 400 12px var(--font-mono); color: var(--muted); background: var(--surface); }
+.cm__mes .ev { color: #fff; font-weight: 500; }
+.cm__mes .ev.alta { background: #e08a00; } .cm__mes .ev.urg { background: #d63548; } .cm__mes .ev.med { background: var(--accent); color: var(--accent-ink); } .cm__mes .ev.baixa { background: #29946e; }
+/* etiqueta de cada camada, à esquerda, só com a pilha aberta */
+.cm__rotulo {
+  position: absolute; left: -14px; top: 50%; transform: translate(-100%, -50%); padding: 5px 12px; border-radius: 999px; white-space: nowrap;
+  font: 500 12px/1 var(--font-text); color: var(--ink); background: var(--bg); border: 1px solid var(--line-strong); opacity: 0; pointer-events: none;
+}
+.cm__tela.is-ativa .cm__rotulo { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+/* parada: só a tela do boletim, de frente */
+.cm:not(.is-live) .cm__tela:not([data-camada="3"]) { display: none; }
+.cm:not(.is-live) .cm__pilha { will-change: auto; }
+
+/* ---------- telas menores */
+@media (max-width: 1023px) {
+  .cm__stage { grid-template-columns: 1fr; row-gap: var(--s-7); }
+  .cm__texto, .cm__cena { grid-column: 1; }
+  .cm__texto h2 { max-width: 18ch; }
+}
+@media (max-width: 639px) {
+  .cm__passos li { padding: var(--s-3) 0; grid-template-columns: 32px 1fr; gap: var(--s-3); }
+  .cm__passos li b { font-size: 17px; }
+  .cm__n { width: 32px; height: 32px; }
+  .cm__corpo { padding: 12px; }
+  .cm__crit { grid-template-columns: 1fr 64px 30px; gap: 8px; }
+  .cm__pilha { aspect-ratio: auto; }
+  .cm:not(.is-live) .cm__tela { position: relative; }
+}
+
+/* ---------- celular e tablet com a cena rodando: coluna (título e passo atual em cima, pilha embaixo) */
+@media (max-width: 1023px) {
+  .cm.is-live > .cm__stage {
+    grid-template-rows: auto minmax(0, 1fr); row-gap: var(--s-4); align-items: stretch;
+    padding-top: calc(var(--nav, 56px) + var(--s-5)); padding-bottom: var(--s-5);
+  }
+  .cm.is-live .cm__texto { gap: var(--s-3); align-content: start; }
+  .cm.is-live .cm__texto h2 { font-size: clamp(26px, 7vw, 40px); max-width: none; }
+  .cm.is-live .cm__passos { margin: 0; min-height: 84px; }
+  .cm.is-live .cm__passos li:not(.is-on) { display: none; }
+  .cm.is-live .cm__passos li.is-on { animation: cm-passo .45s cubic-bezier(.34, 1.56, .64, 1); }
+  .cm.is-live .cm__cena { height: auto; min-height: 0; perspective: 1400px; }
+  .cm.is-live .cm__pilha { width: min(560px, 90%); aspect-ratio: 16 / 15; }
+  .cm.is-live .cm__rotulo { left: 12px; top: -13px; transform: none; }
+  .cm.is-live .cm__tela { font-size: 12px; }
+}
+@keyframes cm-passo { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
+
+/* ---------- dica de rolagem (celular e tablet): a seção fica presa por 3 telas, então a pessoa
+   precisa saber que é só continuar rolando; some quando a cena termina */
+.cm__dica { display: none; }
+@media (min-width: 0px) {
+  .cm.is-live .cm__dica {
+    position: absolute; left: 50%; bottom: calc(var(--s-5) + env(safe-area-inset-bottom)); z-index: 5; translate: -50% 0;
+    display: flex; align-items: center; gap: 10px; padding: 9px 14px 9px 10px; border-radius: 999px; white-space: nowrap;
+    background: color-mix(in oklab, var(--bg) 82%, transparent); border: 1px solid var(--line-strong);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    box-shadow: 0 12px 30px -12px rgba(15, 18, 34, .35); font: 500 13px/1 var(--font-text); color: var(--ink);
+    transition: opacity .35s ease, translate .35s ease;
+  }
+  .cm.is-live .cm__dica.is-fim { opacity: 0; translate: -50% 16px; pointer-events: none; }
+  .cm__dica-seta { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); }
+  .cm__dica-seta svg { width: 16px; height: 16px; animation: cm-seta 1.2s ease-in-out infinite; }
+  .cm__dica-pts { display: inline-flex; gap: 4px; margin-left: 2px; }
+  .cm__dica-pts i { width: 6px; height: 6px; border-radius: 50%; background: var(--line-strong); transition: background-color .3s, width .3s; }
+  .cm__dica-pts i.on { background: var(--accent); width: 14px; border-radius: 3px; }
+}
+@keyframes cm-seta { 0%, 100% { transform: translateY(-2px); } 50% { transform: translateY(3px); } }
+@media (prefers-reduced-motion: reduce) { .cm__dica-seta svg { animation: none; } }

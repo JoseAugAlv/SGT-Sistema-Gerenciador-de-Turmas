@@ -25,7 +25,8 @@ $tipoLabel = [
 ];
 $aplicavelLabel = ['apenas_diretores' => 'só diretores', 'apenas_representantes' => 'só representantes'];
 
-$fmt = fn($v) => $v === null || $v === '' ? '' : rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
+require_once __DIR__ . '/../../Helpers/EscalaNota.php';
+$fmt = EscalaNota::fmt($cfg); // valor no esquema do projeto (menção/0–100 ou 0–10)
 $conceitoDe = fn($v) => $v === null ? '' : NotaService::conceitoPorValor((float) $v, $cfg);
 ?>
 
@@ -55,7 +56,7 @@ $conceitoDe = fn($v) => $v === null ? '' : NotaService::conceitoPorValor((float)
 
 <form method="POST" id="form-avaliacao" class="aval-app"
       action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/avaliacoes/representante/salvar"
-      data-i-max="<?= (float) $cfg['limite_i_max'] ?>" data-r-max="<?= (float) $cfg['limite_r_max'] ?>"
+      data-esquema="<?= EscalaNota::esquema($cfg) ?>" data-max="<?= EscalaNota::maximo($cfg) ?>" data-i-max="<?= (float) $cfg['limite_i_max'] ?>" data-r-max="<?= (float) $cfg['limite_r_max'] ?>"
       data-b-max="<?= (float) $cfg['limite_b_max'] ?>" data-chave="aval-rep-<?= (int) $projeto['id'] ?>">
     <?= ViewHelper::csrfField() ?>
 
@@ -151,7 +152,7 @@ $conceitoDe = fn($v) => $v === null ? '' : NotaService::conceitoPorValor((float)
                                         <?php endforeach; ?>
                                     </span>
                                     <input type="text" inputmode="decimal" class="aval-valor" name="<?= $nome ?>[valor]"
-                                           value="<?= h($val) ?>" placeholder="—" maxlength="6" aria-label="Valor de 0 a 100 de <?= h($a['nome']) ?>">
+                                           value="<?= h($val) ?>" placeholder="—" maxlength="6" aria-label="Valor de 0 a <?= EscalaNota::maximo($cfg) ?> de <?= h($a['nome']) ?>">
                                     <button type="button" class="aval-limpar" data-limpar title="Tirar nota" aria-label="Tirar nota de <?= h($a['nome']) ?>"><i class="fas fa-xmark"></i></button>
                                 </span>
                             <?php else:

@@ -1,0 +1,53 @@
+/* public/css/caixa.css — controle de caixa da turma/grêmio (prefixo cx2-: cx- é da caixinha) */
+.cx2-resumo { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+@media (max-width: 800px) { .cx2-resumo { grid-template-columns: 1fr 1fr; } .cx2-saldo { grid-column: 1 / -1; } }
+.cx2-resumo .panel { margin: 0; display: grid; gap: 4px; }
+.cx2-resumo span { color: var(--muted); font-size: 14px; }
+.cx2-resumo b { font-size: 26px; font-variant-numeric: tabular-nums; }
+.cx2-saldo b { font-size: 34px; color: var(--green); }
+.cx2-saldo.negativo b { color: var(--red); }
+.cx2-resumo small { color: var(--muted); }
+.txt-e { color: var(--green); } .txt-s { color: var(--red); }
+
+.cx2-grafico { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; align-items: end; margin-bottom: 14px; }
+.cx2-mes { display: grid; gap: 6px; justify-items: center; text-decoration: none; color: var(--muted); padding: 6px 0; border-radius: 10px; }
+.cx2-mes:hover, .cx2-mes.ativo { background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--text); }
+.cx2-barras { display: flex; gap: 4px; align-items: flex-end; height: 120px; }
+.cx2-barras i { width: 16px; min-height: 2px; border-radius: 4px 4px 0 0; animation: cx2-sobe .7s cubic-bezier(.2, .8, .2, 1); }
+.cx2-barras .e, .cx2-legenda .e { background: var(--green); } .cx2-barras .s, .cx2-legenda .s { background: var(--red); }
+.cx2-legenda { grid-column: 1 / -1; margin: 0; font-size: 13px; color: var(--muted); display: flex; gap: 6px; align-items: center; justify-content: center; }
+.cx2-legenda span { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-left: 8px; }
+
+.cx2-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; margin-top: 12px; }
+.cx2-form label { display: grid; gap: 6px; font-weight: 500; }
+.cx2-form small { color: var(--muted); font-weight: 400; }
+.cx2-larga { grid-column: 1 / -1; }
+@media (max-width: 640px) { .cx2-form { grid-template-columns: 1fr; } }
+.cx2-tipo { display: flex; gap: 8px; }
+.cx2-tipo input { position: absolute; opacity: 0; pointer-events: none; }
+.cx2-tipo span { display: inline-flex; gap: 6px; align-items: center; padding: 9px 16px; border: 1.5px solid var(--border); border-radius: 999px; cursor: pointer; font-weight: 600; }
+.cx2-tipo input:checked + .e { border-color: var(--green); color: var(--green); background: color-mix(in srgb, var(--green) 10%, transparent); }
+.cx2-tipo input:checked + .s { border-color: var(--red); color: var(--red); background: color-mix(in srgb, var(--red) 10%, transparent); }
+
+.cx2-grade { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .cx2-grade { grid-template-columns: 1fr; } }
+.cx2-grade .panel { margin: 0; }
+.cx2-h2 { margin: 0 0 10px; font-size: 16px; } .cx2-h2 a { font-size: 13px; font-weight: 500; }
+.cx2-vazio { color: var(--muted); margin: 0; }
+.cx2-lista { list-style: none; margin: 0; padding: 0; display: grid; }
+.cx2-lista li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.cx2-lista li:last-child { border-bottom: 0; }
+.cx2-ico { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; }
+.entrada .cx2-ico { background: color-mix(in srgb, var(--green) 14%, transparent); color: var(--green); }
+.saida .cx2-ico { background: color-mix(in srgb, var(--red) 12%, transparent); color: var(--red); }
+.cx2-info { flex: 1; min-width: 0; display: grid; }
+.cx2-info small { color: var(--muted); }
+.cx2-valor { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.entrada .cx2-valor { color: var(--green); } .saida .cx2-valor { color: var(--red); }
+.cx2-comp { color: var(--primary); }
+.cx2-del { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 4px; }
+.cx2-contrib { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cx2-contrib li { display: grid; grid-template-columns: 1fr auto; }
+.cx2-contrib small { grid-column: 1 / -1; color: var(--muted); }
+.cx2-faltam { margin-top: 12px; font-size: 14px; } .cx2-faltam summary { cursor: pointer; color: var(--orange); font-weight: 600; }
+@keyframes cx2-sobe { from { height: 0; } }

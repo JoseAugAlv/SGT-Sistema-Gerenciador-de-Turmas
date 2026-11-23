@@ -141,13 +141,29 @@ class NotaService
 
     private function notaRepresentante(array $criterio, int $alunoId): ?float
     {
+        $valores = $this->valoresRepresentantes($criterio, $alunoId);
+        return empty($valores) ? null : array_sum($valores) / count($valores);
+    }
+
+    /**
+     * Notas dos representantes (principal e vice) para o critério.
+     * Projeto "compartilhada": vale só a última nota lançada (os dois editam a mesma nota).
+     * Projeto "media": todas, e a nota final é a média delas.
+     */
+    private function valoresRepresentantes(array $criterio, int $alunoId): array
+    {
+        $st = $this->conn->prepare("SELECT avaliacao_reps FROM projetos WHERE id = ?");
+        $st->execute([(int) $criterio['projeto_id']]);
+        $compartilhada = $st->fetchColumn() === 'compartilhada';
+
         $stmt = $this->conn->prepare("
             SELECT valor_numerico FROM avaliacoes
             WHERE criterio_id = ? AND aluno_id = ? AND tipo = 'representante'
+            ORDER BY COALESCE(editado_em, updated_at, created_at) DESC, id DESC
         ");
         $stmt->execute([(int) $criterio['id'], $alunoId]);
         $valores = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        return empty($valores) ? null : array_sum($valores) / count($valores);
+        return $compartilhada ? array_slice($valores, 0, 1) : $valores;
     }
 
     private function notaPares(int $criterioId, int $alunoId): ?float
@@ -182,12 +198,7 @@ class NotaService
         $stmt->execute([(int) $criterio['id'], $alunoId]);
         $dir = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-        $stmt = $this->conn->prepare("
-            SELECT valor_numerico FROM avaliacoes
-            WHERE criterio_id = ? AND aluno_id = ? AND tipo = 'representante'
-        ");
-        $stmt->execute([(int) $criterio['id'], $alunoId]);
-        $rep = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $rep = $this->valoresRepresentantes($criterio, $alunoId);
 
         if (empty($dir) && empty($rep)) return null;
         $mDir = empty($dir) ? 0 : array_sum($dir) / count($dir);
@@ -250,6 +261,7 @@ class NotaService
             'descontos'          => $descontos,
             'total_desconto'     => $totalDesc,
             'conceito_final'     => $media === null ? null : self::conceitoPorValor($media, $cfg),
+            'cfg'                => $cfg, // esquema de notas para exibir
         ];
     }
 

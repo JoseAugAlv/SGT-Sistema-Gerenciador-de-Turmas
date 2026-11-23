@@ -1416,3 +1416,25 @@
         font-size: 12px;
     }
 }
+/* Tours guiados nas telas (tutorial/index.php) */
+.tut-tours { margin: 8px 0 28px; }
+.tut-tours-topo { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.tut-tours-topo h2 { margin: 0 0 4px; font-size: 22px; display: flex; gap: 10px; align-items: center; } .tut-tours-topo h2 i { color: var(--primary); }
+.tut-tours-topo p { margin: 0; color: var(--muted); max-width: 640px; }
+.tut-tours-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.tut-tour { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; display: grid; grid-template-rows: auto 1fr; align-content: start; transition: transform .2s ease, box-shadow .2s ease; }
+.tut-tour:hover { transform: translateY(-3px); box-shadow: 0 18px 36px -22px rgba(0, 0, 0, .35); }
+.tut-tour-print { position: relative; height: 110px; background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 16%, var(--surface)), var(--surface-2, var(--surface))); display: flex; align-items: center; gap: 14px; padding: 0 20px; overflow: hidden; }
+.tut-tour-ico { width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center; background: var(--primary); color: #fff; font-size: 22px; flex: none; position: relative; z-index: 1; }
+.tut-tour-linhas { display: grid; gap: 8px; flex: 1; } .tut-tour-linhas i { display: block; height: 9px; border-radius: 5px; background: color-mix(in srgb, var(--text) 14%, transparent); }
+.tut-tour-linhas i:nth-child(2) { width: 75%; } .tut-tour-linhas i:nth-child(3) { width: 50%; }
+.tut-tour-foco { position: absolute; left: 14px; top: 23px; width: 64px; height: 64px; border-radius: 18px; box-shadow: 0 0 0 3px var(--primary), 0 0 0 999px rgba(8, 10, 20, .18); animation: tut-foco 2.6s ease-in-out infinite; }
+@keyframes tut-foco { 50% { left: calc(100% - 140px); width: 120px; height: 22px; top: 44px; border-radius: 8px; } }
+.tut-tour-corpo { padding: 16px; display: grid; gap: 8px; align-content: start; }
+.tut-tour-corpo h3 { margin: 0; font-size: 17px; } .tut-tour-corpo h3 small { color: var(--green); font-size: 12px; font-weight: 600; }
+.tut-tour-corpo p { margin: 0; color: var(--muted); font-size: 14px; }
+.tut-tour-corpo ol { margin: 0 0 4px; padding-left: 18px; font-size: 13px; color: var(--muted); }
+.tut-tour-corpo .button { justify-self: start; }
+.tut-tour-falta { color: var(--muted); font-size: 13px; }
+.tut-tour.feito .tut-tour-ico { background: var(--green); }
+@media (prefers-reduced-motion: reduce) { .tut-tour-foco { animation: none; } }

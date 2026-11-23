@@ -3,6 +3,12 @@
 // Fuso do Brasil, igual ao do MySQL: prazos e vencimentos comparam datas do PHP com as do banco
 date_default_timezone_set('America/Sao_Paulo');
 
+// Hospedagem atrás de proxy/CDN (https termina no proxy): o PHP passa a saber que a conexão é segura,
+// para cookies "secure" e links gerados (QR de presença, Pix, emails) saírem com https
+if ((($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https' || ($_SERVER['HTTP_X_FORWARDED_SSL'] ?? '') === 'on') && empty($_SERVER['HTTPS'])) {
+    $_SERVER['HTTPS'] = 'on';
+}
+
 // 1. PRIMEIRO: Carregar o App para poder usar as configurações
 require_once __DIR__ . '/../app/Config/SessionConfig.php';
 SessionConfig::configure();

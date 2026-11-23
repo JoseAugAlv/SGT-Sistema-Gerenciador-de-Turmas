@@ -53,13 +53,21 @@ class Alerta extends Model
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /** Avisos com contagem regressiva que o usuário vê na turma (inclui os que zeraram há menos de 1 dia). */
+    public function contagensVisiveis(int $turmaId, int $usuarioId): array
+    {
+        $agora = time();
+        return array_values(array_filter($this->listarVisiveis($turmaId, $usuarioId), fn($a) =>
+            !empty($a['contagem_ate']) && strtotime($a['contagem_ate']) > $agora - 86400));
+    }
+
     public function criar(array $d): int
     {
         $stmt = $this->conn->prepare("
             INSERT INTO alertas
-                (autor_id, turma_id, projeto_id, grupo_id, titulo, mensagem, urgente, expira_em)
+                (autor_id, turma_id, projeto_id, grupo_id, titulo, mensagem, urgente, contagem_ate, do_dia, expira_em)
             VALUES
-                (:autor_id, :turma_id, :projeto_id, :grupo_id, :titulo, :mensagem, :urgente, :expira_em)
+                (:autor_id, :turma_id, :projeto_id, :grupo_id, :titulo, :mensagem, :urgente, :contagem_ate, :do_dia, :expira_em)
         ");
         $stmt->execute([
             ':autor_id'   => $d['autor_id'],
@@ -69,6 +77,8 @@ class Alerta extends Model
             ':titulo'     => $d['titulo'],
             ':mensagem'   => $d['mensagem'],
             ':urgente'    => $d['urgente'] ?? 0,
+            ':contagem_ate' => $d['contagem_ate'] ?? null,
+            ':do_dia'     => $d['do_dia'] ?? null,
             ':expira_em'  => $d['expira_em'] ?: null,
         ]);
         return (int) $this->conn->lastInsertId();

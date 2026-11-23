@@ -1,0 +1,43 @@
+/* public/css/metricas.css — painel de métricas do master */
+.mt-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 14px; }
+@media (max-width: 1000px) { .mt-kpis { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 520px) { .mt-kpis { grid-template-columns: 1fr; } }
+.mt-kpis .panel { margin: 0; display: grid; gap: 2px; }
+.mt-kpis span { color: var(--muted); font-size: 14px; }
+.mt-kpis b { font-size: 28px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.mt-kpis small { color: var(--muted); font-size: 13px; }
+.sobe { color: var(--green) !important; font-weight: 600; } .desce { color: var(--red) !important; font-weight: 600; }
+.mt-bloco { margin-bottom: 14px; }
+.mt-h2 { margin: 0 0 14px; font-size: 16px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.mt-h2 i { color: var(--primary); } .mt-h2 small { margin-left: auto; color: var(--muted); font-weight: 400; font-size: 13px; }
+.mt-h3 { margin: 18px 0 8px; font-size: 14px; }
+.mt-vazio { color: var(--muted); font-size: 14px; margin: 0; }
+.mt-serie { display: grid; grid-template-columns: repeat(12, 1fr); gap: 8px; align-items: end; height: 200px; }
+.mt-col { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; gap: 4px; }
+.mt-col i { width: 70%; max-width: 38px; border-radius: 6px 6px 0 0; background: linear-gradient(180deg, var(--primary), color-mix(in srgb, var(--primary) 55%, transparent)); animation: mt-sobe .8s cubic-bezier(.2, .8, .2, 1); }
+.mt-col small { color: var(--muted); font-size: 11px; } .mt-valor { font-size: 11px; color: var(--muted); }
+.mt-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 1000px) { .mt-grade { grid-template-columns: 1fr; } }
+.mt-grade .panel { margin: 0; }
+.mt-pilha { display: flex; height: 18px; border-radius: 9px; overflow: hidden; background: var(--surface-2, var(--surface)); }
+.mt-pilha i, .mt-legenda span { display: block; }
+.ok { background: var(--green); } .atencao { background: var(--orange); } .ruim { background: var(--red); } .neutro { background: #9aa0ad; } .isenta { background: color-mix(in srgb, var(--primary) 45%, transparent); }
+.mt-legenda { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; }
+.mt-legenda li { display: flex; gap: 6px; align-items: center; } .mt-legenda span { width: 10px; height: 10px; border-radius: 3px; }
+.mt-taxas { display: grid; gap: 10px; margin-top: 16px; }
+.mt-taxas div { display: grid; grid-template-columns: 70px 1fr; gap: 10px; align-items: center; }
+.mt-taxas b { font-size: 22px; color: var(--primary); } .mt-taxas span { font-size: 13px; color: var(--muted); }
+.mt-tabela { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.mt-tabela th { text-align: left; color: var(--muted); font-weight: 500; padding: 6px 4px; border-bottom: 1px solid var(--border); }
+.mt-tabela td { padding: 7px 4px; border-bottom: 1px solid var(--border); }
+.mt-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.mt-lista li { display: flex; gap: 10px; align-items: center; } .mt-lista small { color: var(--muted); flex: 1; } .mt-lista b { font-variant-numeric: tabular-nums; }
+.mt-uso { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.mt-uso li { display: grid; grid-template-columns: 170px 1fr 40px; gap: 10px; align-items: center; font-size: 14px; }
+.mt-uso div { height: 8px; border-radius: 4px; background: var(--surface-2, var(--surface)); overflow: hidden; }
+.mt-uso div i { display: block; height: 100%; background: var(--primary); border-radius: 4px; }
+.mt-uso b { text-align: right; font-variant-numeric: tabular-nums; }
+.mt-usuarios { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.mt-usuarios div { text-align: center; padding: 10px 4px; border-radius: 12px; background: var(--surface-2, var(--surface)); display: grid; }
+.mt-usuarios b { font-size: 22px; } .mt-usuarios span { font-size: 12px; color: var(--muted); }
+@keyframes mt-sobe { from { height: 0; } }

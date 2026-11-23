@@ -209,6 +209,111 @@ class RelatorioController
         ]);
     }
 
+    /**
+     * Painel analítico do projeto (representante/master): indicadores, distribuição das notas,
+     * média por critério, comparação entre grupos, alunos em risco, presença nas atas e ranking filtrável.
+     */
+    public function analitico(int $projetoId)
+    {
+        $projeto = $this->projeto->porId($projetoId);
+        if (!$projeto) { $this->flash('Projeto não encontrado.'); $this->redirect('/turmas'); }
+        $u = $_SESSION['usuario'];
+        $this->exigirAcesso($projeto);
+        if ($u['tipo'] !== 'master' && !$this->tu->ehRepresentante((int) $projeto['turma_id'], (int) $u['id'])) {
+            http_response_code(403); exit('Apenas representante ou master vê o painel analítico.');
+        }
+
+        require_once __DIR__ . '/../Helpers/EscalaNota.php';
+        require_once __DIR__ . '/../Models/Grupo.php';
+        $pdo    = Database::getConnection();
+        $cfg    = (new NotaService())->carregarCfg($projetoId);
+        $alunos = $this->tu->listarAlunos((int) $projeto['turma_id']);
+
+        // Grupos de cada aluno neste projeto
+        $st = $pdo->prepare("SELECT ga.usuario_id, g.id, g.nome FROM grupo_alunos ga INNER JOIN grupos g ON g.id = ga.grupo_id WHERE g.projeto_id = ? AND ga.saiu_em IS NULL");
+        $st->execute([$projetoId]);
+        $gruposDe = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) $gruposDe[(int) $r['usuario_id']][(int) $r['id']] = $r['nome'];
+
+        // Presença nas atas dos grupos do projeto
+        $st = $pdo->prepare("
+            SELECT ap.aluno_id, COUNT(*) AS total, SUM(ap.presente = 1) AS presentes
+            FROM ata_participantes ap INNER JOIN atas a ON a.id = ap.ata_id INNER JOIN grupos g ON g.id = a.grupo_id
+            WHERE g.projeto_id = ? GROUP BY ap.aluno_id
+        ");
+        $st->execute([$projetoId]);
+        $presenca = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) $presenca[(int) $r['aluno_id']] = $r['total'] ? round($r['presentes'] / $r['total'] * 100) : null;
+
+        $linhasAlunos = []; $porCriterio = []; $celulas = 0; $avaliadas = 0;
+        foreach ($alunos as $a) {
+            $aid = (int) $a['id'];
+            $b = $this->snap->boletimEfetivo($projetoId, $aid);
+            $feitos = 0;
+            foreach ($b['linhas'] as $l) {
+                $cid = (int) $l['criterio']['id'];
+                $porCriterio[$cid]['criterio'] = $l['criterio'];
+                $porCriterio[$cid]['notas'] = $porCriterio[$cid]['notas'] ?? [];
+                $celulas++;
+                if ($l['nota'] !== null) { $porCriterio[$cid]['notas'][] = (float) $l['nota']; $avaliadas++; $feitos++; }
+            }
+            $media = $b['media_ponderada'];
+            $linhasAlunos[] = [
+                'id' => $aid, 'nome' => $a['nome'], 'grupos' => $gruposDe[$aid] ?? [],
+                'media' => $media, 'conceito' => $b['conceito_final'],
+                'feitos' => $feitos, 'total' => count($b['linhas']),
+                'presenca' => $presenca[$aid] ?? null,
+                'risco' => $media !== null && $media <= (float) $cfg['limite_i_max'],
+            ];
+        }
+        usort($linhasAlunos, fn($x, $y) => ($y['media'] ?? -1) <=> ($x['media'] ?? -1));
+
+        // Média por critério
+        $criterios = [];
+        foreach ($porCriterio as $c) {
+            $n = $c['notas'];
+            $criterios[] = ['nome' => $c['criterio']['nome'], 'peso' => (float) $c['criterio']['peso'],
+                'media' => $n ? array_sum($n) / count($n) : null, 'avaliados' => count($n)];
+        }
+
+        // Grupos: média dos membros
+        $grupos = [];
+        foreach ((new Grupo())->listarPorProjeto($projetoId) as $g) {
+            $medias = array_values(array_filter(array_map(fn($l) => isset($l['grupos'][(int) $g['id']]) ? $l['media'] : null, $linhasAlunos), fn($m) => $m !== null));
+            $grupos[] = ['nome' => $g['nome'], 'membros' => (int) $g['total_membros'],
+                'media' => $medias ? array_sum($medias) / count($medias) : null];
+        }
+        usort($grupos, fn($x, $y) => ($y['media'] ?? -1) <=> ($x['media'] ?? -1));
+
+        // Distribuição: menções ou faixas de 10 em 10 (no esquema)
+        $comNota = array_values(array_filter($linhasAlunos, fn($l) => $l['media'] !== null));
+        $dist = [];
+        if (!EscalaNota::ehNumerico($cfg)) {
+            foreach (['I', 'R', 'B', 'MB'] as $k) $dist[$k] = count(array_filter($comNota, fn($l) => $l['conceito'] === $k));
+        } else {
+            for ($f = 0; $f < 10; $f++) {
+                $rot = EscalaNota::exibir($f * 10, $cfg) . '–' . EscalaNota::exibir($f === 9 ? 100 : $f * 10 + 9.99, $cfg);
+                $dist[$rot] = count(array_filter($comNota, fn($l) => min(9, (int) floor($l['media'] / 10)) === $f));
+            }
+        }
+
+        $this->render('relatorios/analitico', [
+            'projeto'   => $projeto,
+            'cfg'       => $cfg,
+            'linhas'    => $linhasAlunos,
+            'criterios' => $criterios,
+            'grupos'    => $grupos,
+            'dist'      => $dist,
+            'kpi'       => [
+                'media'      => $comNota ? array_sum(array_column($comNota, 'media')) / count($comNota) : null,
+                'progresso'  => $celulas ? round($avaliadas / $celulas * 100) : 0,
+                'risco'      => count(array_filter($linhasAlunos, fn($l) => $l['risco'])),
+                'sem_nota'   => count($linhasAlunos) - count($comNota),
+                'alunos'     => count($linhasAlunos),
+            ],
+        ]);
+    }
+
     public function geralProjetoPdf(int $projetoId)
     {
         $projeto = $this->projeto->porId($projetoId);

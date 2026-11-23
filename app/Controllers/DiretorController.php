@@ -275,6 +275,13 @@ class DiretorController
             $this->redirect('/grupos/' . $grupoId . '/diretores');
         }
 
+        // Limite de diretores por grupo definido na configuração do projeto
+        $max = (int) ($projeto['diretores_por_grupo'] ?? 1);
+        if (count($this->diretor->listarAtivos($grupoId)) >= $max) {
+            $this->flash("Este projeto permite até {$max} diretor(es) por grupo. Remova um antes de nomear outro.");
+            $this->redirect('/grupos/' . $grupoId . '/diretores');
+        }
+
         $meuId = (int) $_SESSION['usuario']['id'];
         $this->diretor->nomear($grupoId, $usuarioId, $meuId);
         $this->audit->registrar('diretor_nomeado', 'grupo_diretores', $grupoId, null,

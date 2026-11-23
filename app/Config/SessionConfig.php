@@ -11,7 +11,8 @@ class SessionConfig
             return;
         }
 
-        $isProduction = isset($_ENV['APP_ENV']) && $_ENV['APP_ENV'] === 'production';
+        // App::get carrega o .env (antes, $_ENV ainda estava vazio aqui e o cookie nunca ficava "secure")
+        $isProduction = App::get('APP_ENV') === 'production';
         $isHttps = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
 
         session_set_cookie_params([

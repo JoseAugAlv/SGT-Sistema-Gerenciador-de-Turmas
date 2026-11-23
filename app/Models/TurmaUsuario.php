@@ -28,7 +28,7 @@ class TurmaUsuario extends Model
 
         if ($id) {
             $this->conn->prepare("
-                UPDATE turma_usuarios SET ativo = 1, papel = ?, saiu_em = NULL WHERE id = ?
+                UPDATE turma_usuarios SET ativo = 1, papel = ?, vice = 0, saiu_em = NULL WHERE id = ?
             ")->execute([$papel, $id]);
             return (int) $id;
         }
@@ -53,11 +53,11 @@ class TurmaUsuario extends Model
     public function listarRepresentantes(int $turmaId): array
     {
         $stmt = $this->conn->prepare("
-            SELECT tu.usuario_id, tu.entrou_em, u.nome, u.email
+            SELECT tu.usuario_id, tu.entrou_em, tu.vice, u.nome, u.email
             FROM turma_usuarios tu
             INNER JOIN usuarios u ON u.id = tu.usuario_id
             WHERE tu.turma_id = ? AND tu.papel = 'representante' AND tu.ativo = 1
-            ORDER BY tu.entrou_em ASC
+            ORDER BY tu.vice ASC, tu.entrou_em ASC
         ");
         $stmt->execute([$turmaId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -89,8 +89,59 @@ class TurmaUsuario extends Model
     public function definirPapel(int $turmaId, int $usuarioId, string $papel): bool
     {
         return $this->conn->prepare("
-            UPDATE turma_usuarios SET papel = ?, ativo = 1, saiu_em = NULL
+            UPDATE turma_usuarios SET papel = ?, vice = 0, ativo = 1, saiu_em = NULL
             WHERE turma_id = ? AND usuario_id = ?
         ")->execute([$papel, $turmaId, $usuarioId]);
+    }
+
+    // ============ VICE-REPRESENTANTE ============
+
+    /** Representante principal (não vice): o único que cuida do plano e escolhe o vice. */
+    public function ehRepresentantePrincipal(int $turmaId, int $usuarioId): bool
+    {
+        $stmt = $this->conn->prepare("
+            SELECT 1 FROM turma_usuarios
+            WHERE turma_id = ? AND usuario_id = ? AND papel = 'representante' AND vice = 0 AND ativo = 1 LIMIT 1
+        ");
+        $stmt->execute([$turmaId, $usuarioId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    public function ehVice(int $turmaId, int $usuarioId): bool
+    {
+        $stmt = $this->conn->prepare("
+            SELECT 1 FROM turma_usuarios
+            WHERE turma_id = ? AND usuario_id = ? AND papel = 'representante' AND vice = 1 AND ativo = 1 LIMIT 1
+        ");
+        $stmt->execute([$turmaId, $usuarioId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    public function vice(int $turmaId): ?array
+    {
+        $stmt = $this->conn->prepare("
+            SELECT tu.usuario_id, u.nome, u.email FROM turma_usuarios tu INNER JOIN usuarios u ON u.id = tu.usuario_id
+            WHERE tu.turma_id = ? AND tu.papel = 'representante' AND tu.vice = 1 AND tu.ativo = 1 LIMIT 1
+        ");
+        $stmt->execute([$turmaId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    /** Vira vice: representante com a marcação vice (avalia e gerencia, sem acesso a plano/pagamento). */
+    public function definirVice(int $turmaId, int $usuarioId): void
+    {
+        $this->conn->prepare("
+            UPDATE turma_usuarios SET papel = 'representante', vice = 1, ativo = 1, saiu_em = NULL
+            WHERE turma_id = ? AND usuario_id = ?
+        ")->execute([$turmaId, $usuarioId]);
+    }
+
+    /** Deixa de ser vice e volta a ser aluno. */
+    public function removerVice(int $turmaId, int $usuarioId): void
+    {
+        $this->conn->prepare("
+            UPDATE turma_usuarios SET papel = 'aluno', vice = 0
+            WHERE turma_id = ? AND usuario_id = ? AND vice = 1
+        ")->execute([$turmaId, $usuarioId]);
     }
 }

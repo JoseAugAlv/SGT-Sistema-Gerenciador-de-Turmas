@@ -24,11 +24,16 @@ require_once __DIR__ . '/../layouts/flashes.php';
 
     <?php if ($podeGerenciar): ?>
         <div class="hero-actions">
-            <a class="button button-secondary" href="<?= $basePath ?>/alunos/massa">
-                <i class="fas fa-layer-group"></i> Criar em massa
-            </a>
-            <a class="button button-primary" href="<?= $basePath ?>/alunos/criar">
-                <i class="fas fa-user-plus"></i> Novo aluno
+            <?php if ($isMaster): ?>
+                <a class="button button-secondary" href="<?= $basePath ?>/alunos/massa">
+                    <i class="fas fa-layer-group"></i> Criar em massa
+                </a>
+                <a class="button button-secondary" href="<?= $basePath ?>/alunos/criar">
+                    <i class="fas fa-user-plus"></i> Novo aluno
+                </a>
+            <?php endif; ?>
+            <a class="button button-primary" href="<?= $basePath ?>/alunos/convidar">
+                <i class="fas fa-envelope"></i> Convidar por email
             </a>
         </div>
     <?php endif; ?>
@@ -49,8 +54,8 @@ require_once __DIR__ . '/../layouts/flashes.php';
         </p>
 
         <?php if ($podeGerenciar && !empty($minhasTurmas)): ?>
-            <a class="button button-primary" href="<?= $basePath ?>/alunos/criar">
-                <i class="fas fa-user-plus"></i> Cadastrar aluno
+            <a class="button button-primary" href="<?= $basePath ?>/alunos/convidar">
+                <i class="fas fa-envelope"></i> Convidar alunos por email
             </a>
         <?php endif; ?>
     </section>

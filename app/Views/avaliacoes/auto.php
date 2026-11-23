@@ -5,7 +5,8 @@ require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 require_once __DIR__ . '/../layouts/flashes.php';
 
-$fmt = fn($v) => $v === null || $v === '' ? '' : rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
+require_once __DIR__ . '/../../Helpers/EscalaNota.php';
+$fmt = EscalaNota::fmt($cfg); // valor no esquema do projeto (menção/0–100 ou 0–10)
 ?>
 
 <section class="hero-section">
@@ -35,7 +36,7 @@ $fmt = fn($v) => $v === null || $v === '' ? '' : rtrim(rtrim(number_format((floa
 
 <form method="POST" id="form-avaliacao" class="aval-app aval-app-simples"
       action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/avaliacoes/auto/salvar"
-      data-i-max="<?= (float) $cfg['limite_i_max'] ?>" data-r-max="<?= (float) $cfg['limite_r_max'] ?>"
+      data-esquema="<?= EscalaNota::esquema($cfg) ?>" data-max="<?= EscalaNota::maximo($cfg) ?>" data-i-max="<?= (float) $cfg['limite_i_max'] ?>" data-r-max="<?= (float) $cfg['limite_r_max'] ?>"
       data-b-max="<?= (float) $cfg['limite_b_max'] ?>" data-chave="aval-auto-<?= (int) $projeto['id'] ?>">
     <?= ViewHelper::csrfField() ?>
 
@@ -68,7 +69,7 @@ $fmt = fn($v) => $v === null || $v === '' ? '' : rtrim(rtrim(number_format((floa
                             <?php endforeach; ?>
                         </span>
                         <input type="text" inputmode="decimal" class="aval-valor" name="aval[<?= $cid ?>][valor]"
-                               value="<?= h($val) ?>" placeholder="—" maxlength="6" aria-label="Valor de 0 a 100 em <?= h($c['nome']) ?>">
+                               value="<?= h($val) ?>" placeholder="—" maxlength="6" aria-label="Valor de 0 a <?= EscalaNota::maximo($cfg) ?> em <?= h($c['nome']) ?>">
                         <button type="button" class="aval-limpar" data-limpar title="Tirar nota" aria-label="Tirar nota de <?= h($c['nome']) ?>"><i class="fas fa-xmark"></i></button>
                     </span>
                 </li>

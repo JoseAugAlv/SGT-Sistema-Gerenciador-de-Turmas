@@ -10,16 +10,20 @@ $linhas    = $boletim['linhas'] ?? [];
 $avaliados = count(array_filter($linhas, fn($l) => $l['nota'] !== null));
 $media     = $boletim['media_ponderada'] ?? null;
 $final     = $boletim['conceito_final'] ?? null;
-$br        = fn($n) => number_format((float) $n, 1, ',', '.');
+// Esquema de notas do projeto: em 0–10 / 0–100 mostra números no lugar das menções
+require_once __DIR__ . '/../../Helpers/EscalaNota.php';
+$cfgB      = $cfg ?? ($boletim['cfg'] ?? null);
+$numerico  = EscalaNota::ehNumerico($cfgB);
+$br        = fn($n) => number_format(EscalaNota::paraEscala((float) $n, $cfgB), EscalaNota::esquema($cfgB) === '0a100' ? 0 : 1, ',', '.');
 $legendaParcial = $legendaParcial ?? 'Parcial: muda conforme as avaliações chegam';
 ?>
 
     <!-- Resultado -->
     <section class="nota-resumo <?= $final ? 'c-' . strtolower($final) : '' ?>">
         <div class="nota-final">
-            <span class="nota-final-conceito num"><?= $final ? h($final) : '—' ?></span>
+            <span class="nota-final-conceito num"><?= $numerico ? ($media === null ? '—' : $br($media)) : ($final ? h($final) : '—') ?></span>
             <span class="nota-final-texto">
-                <strong><?= $media === null ? 'Ainda sem nota' : 'Média ' . $br($media) ?></strong>
+                <strong><?= $media === null ? 'Ainda sem nota' : ($numerico ? 'Média de 0 a ' . EscalaNota::maximo($cfgB) : 'Média ' . $br($media)) ?></strong>
                 <small><?= !empty($boletim['congelado']) ? 'Resultado final do projeto' : h($legendaParcial) ?></small>
             </span>
         </div>
@@ -52,7 +56,7 @@ $legendaParcial = $legendaParcial ?? 'Parcial: muda conforme as avaliações che
                             <span class="txt-mudo">aguardando</span>
                         <?php else: ?>
                             <span class="num"><?= $br($n) ?></span>
-                            <span class="conceito-chip"><?= h($cc) ?></span>
+                            <?php if (!$numerico): ?><span class="conceito-chip"><?= h($cc) ?></span><?php endif; ?>
                         <?php endif; ?>
                     </div>
                 </li>

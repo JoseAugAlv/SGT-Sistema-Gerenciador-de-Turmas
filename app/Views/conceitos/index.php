@@ -56,162 +56,18 @@ $pctMB = round($wMB / $total * 100, 2);
     </div>
 <?php endif; ?>
 
-<!-- ============ PREVIEW VISUAL ============ -->
-<section class="panel mb-16">
-    <div class="panel-header">
-        <div>
-            <h2>Como as faixas estão distribuídas</h2>
-            <p>Pré-visualização da divisão de notas de 0 a 100.</p>
-        </div>
-    </div>
-
-    <div class="faixa-visual">
-        <?php if ($wI > 0): ?>
-            <div class="faixa i" style="width: <?= $pctI ?>%;">
-                I
-                <small><?= $iMax ?></small>
-            </div>
-        <?php endif; ?>
-        <?php if ($wR > 0): ?>
-            <div class="faixa r" style="width: <?= $pctR ?>%;">
-                R
-                <small><?= $rMin ?>–<?= $rMax ?></small>
-            </div>
-        <?php endif; ?>
-        <?php if ($wB > 0): ?>
-            <div class="faixa b" style="width: <?= $pctB ?>%;">
-                B
-                <small><?= $bMin ?>–<?= $bMax ?></small>
-            </div>
-        <?php endif; ?>
-        <?php if ($wMB > 0): ?>
-            <div class="faixa mb" style="width: <?= $pctMB ?>%;">
-                MB
-                <small><?= $mbMin ?>+</small>
-            </div>
-        <?php endif; ?>
-    </div>
-
-    <div class="faixa-legenda">
-        <span>0</span>
-        <span>25</span>
-        <span>50</span>
-        <span>75</span>
-        <span>100</span>
-    </div>
-
-    <div class="vis-legenda">
-        <div class="legenda-linha">
-            <span class="legenda-icone"><i class="fas fa-circle" style="color:#d63548;"></i></span>
-            <span><strong>I — Insuficiente</strong>: de 0 até <?= $iMax ?>.</span>
-        </div>
-        <div class="legenda-linha">
-            <span class="legenda-icone"><i class="fas fa-circle" style="color:#d48b1c;"></i></span>
-            <span><strong>R — Regular</strong>: de <?= $rMin ?> até <?= $rMax ?>.</span>
-        </div>
-        <div class="legenda-linha">
-            <span class="legenda-icone"><i class="fas fa-circle" style="color:#1c6fd6;"></i></span>
-            <span><strong>B — Bom</strong>: de <?= $bMin ?> até <?= $bMax ?>.</span>
-        </div>
-        <div class="legenda-linha">
-            <span class="legenda-icone"><i class="fas fa-circle" style="color:#29946e;"></i></span>
-            <span><strong>MB — Muito Bom</strong>: de <?= $mbMin ?> até 100.</span>
-        </div>
-    </div>
-</section>
-
-<!-- ============ FORMULÁRIO ============ -->
+<!-- ============ ESQUEMA E FAIXAS ============ -->
 <form method="POST" action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/conceitos/salvar">
     <?= ViewHelper::csrfField() ?>
 
-    <!-- ============ FAIXAS DE NOTA ============ -->
     <section class="panel mb-16">
-        <div class="panel-header">
-            <div>
-                <h2>Faixas de nota</h2>
-                <p>Cada faixa define o conceito final de uma média ponderada. Os limites devem estar em ordem crescente e não podem se sobrepor.</p>
-            </div>
-        </div>
+        <div class="panel-header"><div><h2>Esquema de notas</h2><p>Escolha como as notas são lançadas e lidas. Os pesos dos critérios continuam valendo em qualquer esquema.</p></div></div>
+        <?php require __DIR__ . '/../projetos/_esquema_nota.php'; ?>
+    </section>
 
-        <div class="faixas-grid">
-            <!-- I -->
-            <div class="faixa-card i">
-                <div class="faixa-card-header">
-                    <strong>I — Insuficiente</strong>
-                    <span class="faixa-range">0 → <strong><?= $iMax ?></strong></span>
-                </div>
-                <div class="faixa-inputs">
-                    <div style="flex:1;">
-                        <label class="field-label">Nota máxima</label>
-                        <input type="number" name="limite_i_max" class="field"
-                               min="0" max="100" value="<?= $iMax ?>" required>
-                    </div>
-                </div>
-                <p class="faixa-desc">Qualquer média até este valor será <strong>Insuficiente</strong>.</p>
-            </div>
-
-            <!-- R -->
-            <div class="faixa-card r">
-                <div class="faixa-card-header">
-                    <strong>R — Regular</strong>
-                    <span class="faixa-range">
-                        <strong><?= $rMin ?></strong> → <strong><?= $rMax ?></strong>
-                    </span>
-                </div>
-                <div class="faixa-inputs">
-                    <div style="flex:1;">
-                        <label class="field-label">Mínimo</label>
-                        <input type="number" name="limite_r_min" class="field"
-                               min="0" max="100" value="<?= $rMin ?>" required>
-                    </div>
-                    <div style="flex:1;">
-                        <label class="field-label">Máximo</label>
-                        <input type="number" name="limite_r_max" class="field"
-                               min="0" max="100" value="<?= $rMax ?>" required>
-                    </div>
-                </div>
-                <p class="faixa-desc">Deve ser maior que o máximo de I.</p>
-            </div>
-
-            <!-- B -->
-            <div class="faixa-card b">
-                <div class="faixa-card-header">
-                    <strong>B — Bom</strong>
-                    <span class="faixa-range">
-                        <strong><?= $bMin ?></strong> → <strong><?= $bMax ?></strong>
-                    </span>
-                </div>
-                <div class="faixa-inputs">
-                    <div style="flex:1;">
-                        <label class="field-label">Mínimo</label>
-                        <input type="number" name="limite_b_min" class="field"
-                               min="0" max="100" value="<?= $bMin ?>" required>
-                    </div>
-                    <div style="flex:1;">
-                        <label class="field-label">Máximo</label>
-                        <input type="number" name="limite_b_max" class="field"
-                               min="0" max="100" value="<?= $bMax ?>" required>
-                    </div>
-                </div>
-                <p class="faixa-desc">Deve ser maior que o máximo de R.</p>
-            </div>
-
-            <!-- MB -->
-            <div class="faixa-card mb">
-                <div class="faixa-card-header">
-                    <strong>MB — Muito Bom</strong>
-                    <span class="faixa-range"><strong><?= $mbMin ?></strong> → 100</span>
-                </div>
-                <div class="faixa-inputs">
-                    <div style="flex:1;">
-                        <label class="field-label">Nota mínima</label>
-                        <input type="number" name="limite_mb_min" class="field"
-                               min="0" max="100" value="<?= $mbMin ?>" required>
-                    </div>
-                </div>
-                <p class="faixa-desc">Deve ser maior que o máximo de B.</p>
-            </div>
-        </div>
+    <section class="panel mb-16">
+        <div class="panel-header"><div><h2>Avaliação dos representantes</h2><p>Vale para os critérios avaliados pelo representante (e a parte dele nos critérios mistos).</p></div></div>
+        <?php $avaliacaoReps = $projeto['avaliacao_reps'] ?? 'compartilhada'; require __DIR__ . '/../projetos/_avaliacao_reps.php'; ?>
     </section>
 
     <!-- ============ VISIBILIDADE ============ -->

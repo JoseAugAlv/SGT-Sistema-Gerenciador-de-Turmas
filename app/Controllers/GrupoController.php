@@ -69,11 +69,28 @@ class GrupoController
     $stmt->execute([$projetoId, (int) $projeto['turma_id']]);
     $alunosComGrupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // Pedidos (entrar no grupo / ser diretor), conforme a configuração do projeto
+    require_once __DIR__ . '/../Models/SolicitacaoGrupo.php';
+    $solic = new SolicitacaoGrupo();
+    $meuId = (int) $_SESSION['usuario']['id'];
+    $st = $pdo->prepare("
+        SELECT ga.grupo_id, EXISTS(SELECT 1 FROM grupo_diretores gd WHERE gd.grupo_id = ga.grupo_id AND gd.usuario_id = ga.usuario_id AND gd.ativo = 1) AS diretor
+        FROM grupo_alunos ga INNER JOIN grupos g ON g.id = ga.grupo_id
+        WHERE g.projeto_id = ? AND ga.usuario_id = ? AND ga.saiu_em IS NULL
+    ");
+    $st->execute([$projetoId, $meuId]);
+    $meusGrupos = [];
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) $meusGrupos[(int) $r['grupo_id']] = (bool) $r['diretor'];
+
+    $podeEditar = $this->podeEditarProjeto($projeto);
     $this->render('grupos/index', [
         'projeto'         => $projeto,
         'grupos'          => $this->grupo->listarPorProjeto($projetoId),
         'alunosComGrupos' => $alunosComGrupos,
-        'podeEditar'      => $this->podeEditarProjeto($projeto),
+        'podeEditar'      => $podeEditar,
+        'pedidos'         => $podeEditar ? $solic->pendentesDoProjeto($projetoId) : [],
+        'meusPedidos'     => $solic->minhasNoProjeto($projetoId, $meuId),
+        'meusGrupos'      => $meusGrupos,
     ]);
 }
 

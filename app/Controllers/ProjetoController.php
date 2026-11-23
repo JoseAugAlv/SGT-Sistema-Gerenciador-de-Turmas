@@ -9,6 +9,8 @@ require_once __DIR__ . '/../Models/Auditoria.php';
 require_once __DIR__ . '/../Helpers/ViewHelper.php';
 require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
 require_once __DIR__ . '/../Services/SnapshotService.php';
+require_once __DIR__ . '/../Helpers/PlanoGuard.php';
+require_once __DIR__ . '/../Helpers/EscalaNota.php';
 
 class ProjetoController
 {
@@ -80,6 +82,7 @@ class ProjetoController
             $this->render('turmas/bloqueada', ['turma' => $turma]);
             return;
         }
+        PlanoGuard::exigir($turma);
 
         $this->render('projetos/index', [
             'turma'    => $turma,
@@ -93,7 +96,6 @@ class ProjetoController
 
     public function criarForm()
     {
-        $this->exigirMaster();
         $turmaId = (int) ($_GET['turma_id'] ?? 0);
 
         $turma = $this->turma->porId($turmaId);
@@ -101,8 +103,12 @@ class ProjetoController
             $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Turma inválida.'];
             $this->redirect('/turmas');
         }
+        $this->exigirPodeCriarProjeto($turma);
 
+        $antigo = $_SESSION['projeto_form'] ?? [];
+        unset($_SESSION['projeto_form']);
         $this->render('projetos/criar', [
+            'antigo' => $antigo,
             'turma' => $turma,
             'modos' => self::MODOS,
         ]);
@@ -110,17 +116,24 @@ class ProjetoController
 
     public function salvar()
     {
-        $this->exigirMaster();
         CsrfMiddleware::validate();
 
         $turmaId = (int) ($_POST['turma_id'] ?? 0);
+        $turmaPlano = $this->turma->porId($turmaId);
+        if ($turmaPlano) $this->exigirPodeCriarProjeto($turmaPlano);
         $nome    = trim($_POST['nome'] ?? '');
         $desc    = trim($_POST['descricao'] ?? '') ?: null;
         $prazo   = trim($_POST['prazo'] ?? '') ?: null;
         $modo    = $_POST['modo_avaliacao'] ?? 'cronograma';
 
         $turma = $this->turma->porId($turmaId);
-        $erros = [];
+        // Configuração feita antes de criar: grupos/diretores e esquema de notas
+        $regras = self::lerRegrasGrupos($_POST);
+        [$notas, $erros] = EscalaNota::lerDoPost($_POST);
+        $nomesGrupos = array_values(array_unique(array_filter(array_map(
+            fn($l) => mb_substr(trim($l), 0, 150), preg_split('/\R/', (string) ($_POST['grupos'] ?? ''))
+        ), fn($l) => $l !== '')));
+        if (count($nomesGrupos) > 30)                   $erros[] = 'Crie no máximo 30 grupos de uma vez.';
         if (!$turma)                                    $erros[] = 'Turma inválida.';
         if (strlen($nome) < 3)                          $erros[] = 'Nome muito curto.';
         if (!array_key_exists($modo, self::MODOS))      $erros[] = 'Modo de avaliação inválido.';
@@ -130,6 +143,7 @@ class ProjetoController
         }
 
         if ($erros) {
+            $_SESSION['projeto_form'] = $_POST;
             $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => implode(' | ', $erros)];
             $this->redirect('/projetos/criar?turma_id=' . $turmaId);
         }
@@ -140,17 +154,54 @@ class ProjetoController
             'descricao'      => $desc,
             'prazo'          => $prazo,
             'modo_avaliacao' => $modo,
+        ] + $regras + ['avaliacao_reps' => ($_POST['avaliacao_reps'] ?? '') === 'media' ? 'media' : 'compartilhada']);
+
+        // Configuração de conceito: esquema de notas e faixas escolhidos no formulário
+        $cfgAtual = $this->cfg->garantir($id);
+        $this->cfg->atualizar($id, $notas + [
+            'visibilidade_diretor' => $cfgAtual['visibilidade_diretor'],
+            'visibilidade_aluno'   => $cfgAtual['visibilidade_aluno'],
         ]);
 
-        // Garante configuração de conceito com defaults
-        $this->cfg->garantir($id);
+        // Grupos iniciais (opcional)
+        require_once __DIR__ . '/../Models/Grupo.php';
+        $grupoModel = new Grupo();
+        foreach ($nomesGrupos as $gn) $grupoModel->criar(['projeto_id' => $id, 'nome' => $gn]);
 
         $this->audit->registrar('projeto_criado', 'projetos', $id, null, [
             'nome' => $nome, 'turma_id' => $turmaId, 'modo' => $modo,
         ]);
 
-        $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Projeto criado.'];
+        $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Projeto criado' . ($nomesGrupos ? ' com ' . count($nomesGrupos) . ' grupo(s)' : '') . '. Agora cadastre os critérios de avaliação.'];
         $this->redirect('/projetos/' . $id);
+    }
+
+    /** Regras dos grupos vindas do formulário (_config_grupos.php). */
+    public static function lerRegrasGrupos(array $post): array
+    {
+        return [
+            'alunos_pedem_grupo'   => !empty($post['alunos_pedem_grupo']) ? 1 : 0,
+            'alunos_pedem_diretor' => !empty($post['alunos_pedem_diretor']) ? 1 : 0,
+            'diretores_por_grupo'  => max(1, min(5, (int) ($post['diretores_por_grupo'] ?? 1))),
+        ];
+    }
+
+    /** POST /projetos/{id}/regras-grupos — o representante muda as regras depois de criado. */
+    public function salvarRegrasGrupos(int $id)
+    {
+        CsrfMiddleware::validate();
+        $projeto = $this->projeto->porId($id);
+        if (!$projeto) { $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Projeto não encontrado.']; $this->redirect('/turmas'); }
+        $u = $_SESSION['usuario'];
+        if ($u['tipo'] !== 'master' && !$this->tu->ehRepresentante((int) $projeto['turma_id'], (int) $u['id'])) {
+            http_response_code(403); exit('Só o representante muda as regras dos grupos.');
+        }
+        $regras = self::lerRegrasGrupos($_POST);
+        $this->projeto->atualizarRegrasGrupos($id, $regras);
+        $this->audit->registrar('projeto_regras_grupos', 'projetos', $id,
+            array_intersect_key($projeto, $regras), $regras);
+        $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Regras dos grupos salvas.'];
+        $this->redirect('/projetos/' . $id . '/grupos');
     }
 
     // ============ DETALHE ============
@@ -178,6 +229,7 @@ class ProjetoController
             $this->render('turmas/bloqueada', ['turma' => $turma]);
             return;
         }
+        PlanoGuard::exigir($turma);
 
         require_once __DIR__ . '/../Models/Etapa.php';
         require_once __DIR__ . '/../Models/Criterio.php';
@@ -185,6 +237,8 @@ class ProjetoController
         $critModel = new Criterio();
 
         $this->render('projetos/detalhe', [
+            'cfgNotas'       => $this->cfg->garantir($id),
+            'representantes' => $this->tu->listarRepresentantes((int) $projeto['turma_id']),
             'totalCriterios' => count($critModel->listarPorProjeto($id)),
             'somaPesos'      => $critModel->somaPesos($id),
             'projeto'  => $projeto,
@@ -375,6 +429,23 @@ class ProjetoController
 
 
     // ============ HELPERS ============
+
+    /**
+     * Master cria em qualquer turma. O representante cria na turma dele, dentro do limite de projetos do plano.
+     */
+    private function exigirPodeCriarProjeto(array $turma): void
+    {
+        $u = $_SESSION['usuario'];
+        if ($u['tipo'] === 'master') return;
+        if (!$this->tu->ehRepresentante((int) $turma['id'], (int) $u['id'])) {
+            http_response_code(403);
+            exit('Só o representante da turma (ou o master) cria projetos.');
+        }
+        if ($motivo = PlanoGuard::podeCriarProjeto($turma)) {
+            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => $motivo];
+            $this->redirect('/turmas/' . (int) $turma['id']);
+        }
+    }
 
     private function exigirMaster(): void
     {

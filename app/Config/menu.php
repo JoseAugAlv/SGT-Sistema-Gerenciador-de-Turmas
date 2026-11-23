@@ -29,6 +29,13 @@ return [
             'secao'      => null,
         ],
         [
+            'label'      => 'Preços',
+            'url'        => '/precos',
+            'icon'       => 'fas fa-tags',
+            'roles'      => [],
+            'secao'      => null,
+        ],
+        [
             'label'      => 'Entrar',
             'url'        => '/login',
             'icon'       => 'fas fa-right-to-bracket',
@@ -59,6 +66,13 @@ return [
             'secao' => 'Visão geral',
         ],
         [
+            'label' => 'Agenda',
+            'url'   => '/agenda',
+            'icon'  => 'fas fa-calendar-days',
+            'roles' => ['master', 'aluno'],
+            'secao' => 'Visão geral',
+        ],
+        [
             'label' => 'Notificações',
             'url'   => '/notificacoes',
             'icon'  => 'fas fa-bell',
@@ -72,6 +86,27 @@ return [
             'icon'  => 'fa-solid fa-diagram-project',
             'roles' => ['master', 'aluno'],
             'type'  => 'notif',
+            'secao' => 'Visão geral',
+        ],
+        [
+            'label' => 'Planos',
+            'url'   => '/planos',
+            'icon'  => 'fas fa-crown',
+            'roles' => ['aluno'],
+            'secao' => 'Visão geral',
+        ],
+        [
+            'label' => 'Comercial',
+            'url'   => '/master/comercial',
+            'icon'  => 'fas fa-crown',
+            'roles' => ['master'],
+            'secao' => 'Visão geral',
+        ],
+        [
+            'label' => 'Métricas',
+            'url'   => '/master/metricas',
+            'icon'  => 'fas fa-chart-line',
+            'roles' => ['master'],
             'secao' => 'Visão geral',
         ],
         [

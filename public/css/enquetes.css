@@ -1,0 +1,51 @@
+/* public/css/enquetes.css — enquetes e votações da turma/grêmio */
+
+/* ---------- criar */
+.enq-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; margin-top: 14px; }
+.enq-form label { display: grid; gap: 6px; font-weight: 500; }
+.enq-larga { grid-column: 1 / -1; }
+.enq-rotulo { display: block; font-weight: 500; margin-bottom: 6px; }
+.enq-rotulo small, .enq-form label small { color: var(--muted); font-weight: 400; }
+.enq-opcoes { display: grid; gap: 8px; margin-bottom: 8px; }
+.enq-opcao { display: flex; gap: 8px; }
+.enq-opcao .field { flex: 1; }
+.enq-form .enq-check { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+@media (max-width: 640px) { .enq-form { grid-template-columns: 1fr; } }
+
+/* ---------- lista */
+.enq-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.enq-card { display: grid; gap: 10px; color: var(--text); text-decoration: none; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.enq-card:hover { transform: translateY(-2px); border-color: var(--primary); box-shadow: 0 12px 28px -18px color-mix(in srgb, var(--primary) 60%, transparent); }
+.enq-card.encerrada { opacity: .78; }
+.enq-card h3 { margin: 0; font-size: 17px; line-height: 1.3; }
+.enq-card-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; color: var(--muted); font-size: 13px; }
+.enq-status { padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.enq-status.aberta { background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green); }
+.enq-status.fechada { background: var(--surface); color: var(--muted); }
+.enq-votei { color: var(--primary); }
+.enq-participacao small { color: var(--muted); }
+.enq-barra { height: 6px; border-radius: 3px; background: var(--surface); overflow: hidden; margin-bottom: 6px; }
+.enq-barra i { display: block; height: 100%; background: var(--primary); border-radius: 3px; }
+
+/* ---------- votar e resultado */
+.enq-dica { color: var(--muted); margin: 0 0 12px; }
+.enq-opcoes-voto { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px; }
+.enq-op { border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 14px; transition: border-color .2s, background-color .2s; }
+.enq-op label { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.enq-op input { width: 18px; height: 18px; accent-color: var(--primary); flex: none; }
+.enq-op:has(input:checked) { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 6%, transparent); }
+.enq-op.vence { border-color: var(--green); }
+.enq-op-texto { flex: 1; font-weight: 500; }
+.enq-op-texto small { font-weight: 500; margin-left: 6px; }
+.enq-meu { color: var(--primary); }
+.enq-vence { color: var(--green); }
+.enq-op-num { font-weight: 700; font-variant-numeric: tabular-nums; }
+.enq-op-num small { color: var(--muted); font-weight: 400; }
+.enq-op-barra { height: 8px; border-radius: 4px; background: var(--surface); overflow: hidden; margin-top: 10px; }
+.enq-op-barra i { display: block; height: 100%; width: var(--p); background: var(--primary); border-radius: 4px; animation: enq-encher .8s cubic-bezier(.2, .8, .2, 1); }
+.enq-op.vence .enq-op-barra i { background: var(--green); }
+.enq-nomes { display: block; margin-top: 6px; color: var(--muted); }
+.enq-rodape { color: var(--muted); margin: 14px 0 0; font-size: 14px; }
+.enq-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+@keyframes enq-encher { from { width: 0; } }
+@media (prefers-reduced-motion: reduce) { .enq-op-barra i { animation: none; } }

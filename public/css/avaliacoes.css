@@ -593,3 +593,9 @@ button.conceito-chip:hover { background: var(--conceito); color: #fff; }
 .conceito-chip.mini { height: 20px; min-width: 0; padding: 0 6px; font-size: 11px; cursor: default; }
 .aval-linha.sou-eu { background: var(--surface-2); }
 @media (max-width: 640px) { .aval-dica { display: none; } }
+
+/* ============ Esquema de notas numérico (0–10 ou 0–100): sem botões de menção ============ */
+[data-esquema="0a10"] .conceito-grupo, [data-esquema="0a100"] .conceito-grupo,
+[data-esquema="0a10"] .aval-preencher, [data-esquema="0a100"] .aval-preencher,
+[data-esquema="0a10"] .aval-nota-leitura .conceito-chip, [data-esquema="0a100"] .aval-nota-leitura .conceito-chip { display: none; }
+[data-esquema="0a10"] .aval-valor, [data-esquema="0a100"] .aval-valor { width: 84px; font-size: 16px; font-weight: 700; text-align: center; }

@@ -23,6 +23,34 @@ require_once __DIR__ . '/../layouts/flashes.php';
 <?php require __DIR__ . '/../projetos/_nav.php'; ?>
 
 <section class="relatorios-grid">
+    <!-- Portfólio do projeto (PDF de várias páginas, sem notas individuais) -->
+    <article class="panel relatorio-card">
+        <div class="panel-header">
+            <div>
+                <h2><i class="fas fa-book-bookmark"></i> Portfólio do projeto</h2>
+                <p>PDF com capa, linha do tempo, critérios, uma página por grupo (integrantes, atas, tarefas),
+                   desempenho da turma e orçamento. Sem notas individuais.</p>
+            </div>
+        </div>
+        <div class="status-line"><strong>Todos</strong><span>da turma</span></div>
+        <a class="button button-primary full-width" href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/portfolio.pdf" target="_blank" rel="noopener">
+            <i class="fas fa-file-pdf"></i> Abrir portfólio
+        </a>
+    </article>
+    <article class="panel relatorio-card relatorio-destaque">
+        <div class="panel-header">
+            <div>
+                <h2><i class="fas fa-chart-column"></i> Painel analítico</h2>
+                <p>Média da turma, distribuição das notas, média por critério, comparação entre grupos,
+                   alunos em risco, presença nas atas e ranking com filtro e exportação.</p>
+            </div>
+        </div>
+        <div class="status-line"><strong>Representante</strong><span>e master</span></div>
+        <a class="button button-primary full-width" href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/relatorios/analitico">
+            <i class="fas fa-arrow-right"></i> Abrir painel
+        </a>
+    </article>
+
     <article class="panel relatorio-card">
         <div class="panel-header">
             <div>

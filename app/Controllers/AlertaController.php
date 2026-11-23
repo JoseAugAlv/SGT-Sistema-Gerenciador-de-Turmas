@@ -1,5 +1,7 @@
 <?php
 // app/Controllers/AlertaController.php
+require_once __DIR__ . '/../Core/Mail.php';
+require_once __DIR__ . '/../Models/Turma.php';
 require_once __DIR__ . '/../Core/App.php';
 require_once __DIR__ . '/../Models/Alerta.php';
 require_once __DIR__ . '/../Models/Notificacao.php';
@@ -51,6 +53,7 @@ class AlertaController
 
         $this->render('alertas/index', [
             'turmaId' => $turmaId,
+            'turma'   => (new Turma())->porId($turmaId),
             'alertas' => $alertas,
             'isRep'   => $this->tu->ehRepresentante($turmaId, (int) $u['id']),
             'isMaster'=> $isMaster,
@@ -71,7 +74,7 @@ class AlertaController
 
         // Dados da turma
         $pdo  = Database::getConnection();
-        $stmt = $pdo->prepare("SELECT id, nome, codigo_acesso FROM turmas WHERE id = ? LIMIT 1");
+        $stmt = $pdo->prepare("SELECT id, nome, tipo, codigo_acesso FROM turmas WHERE id = ? LIMIT 1");
         $stmt->execute([$turmaId]);
         $turma = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$turma) { $this->flash('Turma não encontrada.'); $this->redirect('/turmas'); }
@@ -82,7 +85,9 @@ class AlertaController
             $grupos[$p['id']] = $this->grupo->listarPorProjeto((int) $p['id']);
         }
 
+        require_once __DIR__ . '/../Helpers/PlanoGuard.php';
         $this->render('alertas/criar', [
+            'temDia'   => $isMaster || PlanoGuard::temDiaADia((new Turma())->porId($turmaId)),
             'turma'    => $turma,
             'projetos' => $projetos,
             'gruposPorProjeto' => $grupos,
@@ -108,6 +113,9 @@ class AlertaController
         $grupoId    = (int) ($_POST['grupo_id'] ?? 0) ?: null;
         $urgente    = !empty($_POST['urgente']);
         $expiraEm   = trim($_POST['expira_em'] ?? '') ?: null;
+        $contagem   = !empty($_POST['tem_contagem']) ? (trim($_POST['contagem_ate'] ?? '') ?: null) : null;
+        // Aviso do dia: aparece só no dia escolhido (some à meia-noite)
+        $doDia      = ($_POST['tipo_aviso'] ?? '') === 'dia' ? (trim($_POST['do_dia'] ?? '') ?: date('Y-m-d')) : null;
 
         $erros = [];
         if (strlen($titulo) < 3)     $erros[] = 'Título muito curto.';
@@ -124,9 +132,41 @@ class AlertaController
             else $expiraEm = str_replace('T', ' ', $expiraEm) . ':00';
         }
 
+        if (!empty($_POST['tem_contagem'])) {
+            $dt = $contagem ? DateTime::createFromFormat('Y-m-d\TH:i', $contagem) : false;
+            if (!$dt)                        $erros[] = 'Informe a data e a hora da contagem regressiva.';
+            elseif ($dt->getTimestamp() <= time()) $erros[] = 'A contagem regressiva precisa terminar no futuro.';
+            else {
+                $contagem = $dt->format('Y-m-d H:i:00');
+                // Sem expiração informada: o aviso some 1 dia depois de a contagem zerar
+                if (!$expiraEm) $expiraEm = date('Y-m-d H:i:00', $dt->getTimestamp() + 86400);
+            }
+        }
+
+        // Aviso do dia e contagem regressiva fazem parte do Dia a dia (Anual para cima, ou adicional)
+        require_once __DIR__ . '/../Helpers/PlanoGuard.php';
+        $turmaAv = (new Turma())->porId($turmaId);
+        if (($doDia || !empty($_POST['tem_contagem'])) && !$isMaster && $turmaAv && !PlanoGuard::temDiaADia($turmaAv)) {
+            $erros[] = 'Aviso do dia e contagem regressiva fazem parte do Dia a dia (incluso a partir do plano Anual).';
+        }
+        if ($doDia) {
+            if (!DateTime::createFromFormat('Y-m-d', $doDia) || $doDia < date('Y-m-d')) $erros[] = 'O aviso do dia precisa ser para hoje ou uma data futura.';
+            else $expiraEm = $doDia . ' 23:59:59';
+        }
+
         if ($erros) {
             $this->flash(implode(' | ', $erros));
             $this->redirect('/turmas/' . $turmaId . '/alertas/criar');
+        }
+
+        // Clique repetido (o envio de emails demora): o mesmo aviso nos últimos 2 minutos não é criado de novo
+        $dup = Database::getConnection()->prepare("
+            SELECT id FROM alertas WHERE turma_id = ? AND autor_id = ? AND titulo = ? AND mensagem = ? AND created_at > NOW() - INTERVAL 2 MINUTE LIMIT 1
+        ");
+        $dup->execute([$turmaId, (int) $u['id'], $titulo, $mensagem]);
+        if ($dup->fetchColumn()) {
+            $this->flash('Esse aviso já foi enviado agora há pouco.', 'aviso');
+            $this->redirect('/turmas/' . $turmaId . '/alertas');
         }
 
         // Normaliza: se escopo é turma, zera projeto/grupo
@@ -141,6 +181,8 @@ class AlertaController
             'titulo'     => $titulo,
             'mensagem'   => $mensagem,
             'urgente'    => $urgente ? 1 : 0,
+            'contagem_ate' => $contagem,
+            'do_dia'     => $doDia,
             'expira_em'  => $expiraEm,
         ]);
 
@@ -153,24 +195,44 @@ class AlertaController
             $destinatarios, 'alerta', "[Alerta] {$titulo}", $mensagem, $link
         );
 
-        // Emails
+        $this->audit->registrar('alerta_criado', 'alertas', $id, null, [
+            'titulo' => $titulo, 'escopo' => $escopo,
+            'urgente' => $urgente, 'destinatarios' => $total,
+        ]);
+        $this->flash("Aviso enviado para {$total} pessoa(s).", 'sucesso');
+
+        // Responde já e manda os emails depois: a página não fica presa esperando o servidor de email
+        $this->redirecionarEContinuar('/turmas/' . $turmaId . '/alertas');
         foreach ($destinatarios as $uid) {
             $this->mail->notificar(
                 (int) $uid,
                 'Novo alerta: ' . $titulo,
-                '<p>' . nl2br(htmlspecialchars($mensagem)) . '</p><p><a href="' . App::getUrl() . $link . '">Ver no sistema</a></p>',
+                Mail::modelo([
+                    'previa' => $mensagem, 'selo' => $urgente ? 'Aviso urgente' : 'Aviso da turma', 'cor' => $urgente ? '#d63548' : '#2563eb',
+                    'titulo' => $titulo, 'corpo' => '<p>' . nl2br(Mail::e($mensagem)) . '</p>',
+                    'destaque' => $contagem ? 'Contagem: ' . date('d/m/Y \à\s H:i', strtotime($contagem)) : ($doDia ? 'Aviso do dia: ' . date('d/m/Y', strtotime($doDia)) : null),
+                    'botao' => ['Ver o aviso', '/turmas/' . $turmaId . '/alertas'],
+                    'rodape' => $urgente ? 'Avisos urgentes chegam para todos, independente da preferência de email.' : null,
+                ]),
                 'alertas',
                 $urgente // urgente ignora preferências
             );
         }
 
-        $this->audit->registrar('alerta_criado', 'alertas', $id, null, [
-            'titulo' => $titulo, 'escopo' => $escopo,
-            'urgente' => $urgente, 'destinatarios' => $total,
-        ]);
+        exit;
+    }
 
-        $this->flash("Alerta enviado para {$total} usuário(s).", 'sucesso');
-        $this->redirect('/turmas/' . $turmaId . '/alertas');
+    /** Manda o redirecionamento ao navegador e continua rodando (para tarefas lentas, como emails). */
+    private function redirecionarEContinuar(string $path): void
+    {
+        ignore_user_abort(true);
+        @set_time_limit(300);
+        session_write_close();
+        header('Location: ' . App::getBasePath() . $path);
+        header('Connection: close');
+        header('Content-Length: 0');
+        while (ob_get_level() > 0) ob_end_flush();
+        flush();
     }
 
     // ============ HELPERS ============

@@ -5,7 +5,8 @@ require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 require_once __DIR__ . '/../layouts/flashes.php';
 
-$fmt = fn($v) => $v === null || $v === '' ? '' : rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
+require_once __DIR__ . '/../../Helpers/EscalaNota.php';
+$fmt = EscalaNota::fmt($cfg); // valor no esquema do projeto (menção/0–100 ou 0–10)
 $blocos = array_values(array_filter($dados, fn($b) => !empty($b['colegas'])));
 ?>
 
@@ -42,7 +43,7 @@ $blocos = array_values(array_filter($dados, fn($b) => !empty($b['colegas'])));
 <form method="POST" id="form-avaliacao" class="aval-app"
       action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/avaliacoes/pares/salvar"
       data-autosave="1"
-      data-i-max="<?= (float) $cfg['limite_i_max'] ?>" data-r-max="<?= (float) $cfg['limite_r_max'] ?>"
+      data-esquema="<?= EscalaNota::esquema($cfg) ?>" data-max="<?= EscalaNota::maximo($cfg) ?>" data-i-max="<?= (float) $cfg['limite_i_max'] ?>" data-r-max="<?= (float) $cfg['limite_r_max'] ?>"
       data-b-max="<?= (float) $cfg['limite_b_max'] ?>" data-chave="aval-pares-<?= (int) $projeto['id'] ?>">
     <?= ViewHelper::csrfField() ?>
 
@@ -105,7 +106,7 @@ $blocos = array_values(array_filter($dados, fn($b) => !empty($b['colegas'])));
                                     <?php endforeach; ?>
                                 </span>
                                 <input type="text" inputmode="decimal" class="aval-valor" name="<?= $nome ?>[valor]"
-                                       value="<?= h($val) ?>" placeholder="—" maxlength="6" aria-label="Valor de 0 a 100 de <?= h($col['nome']) ?>">
+                                       value="<?= h($val) ?>" placeholder="—" maxlength="6" aria-label="Valor de 0 a <?= EscalaNota::maximo($cfg) ?> de <?= h($col['nome']) ?>">
                                 <button type="button" class="aval-limpar" data-limpar title="Tirar nota" aria-label="Tirar nota de <?= h($col['nome']) ?>"><i class="fas fa-xmark"></i></button>
                             </span>
                             <button type="button" class="aval-comentar" data-comentar><i class="fas fa-comment"></i> Comentar (opcional)</button>

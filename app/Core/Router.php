@@ -62,6 +62,8 @@ class Router
             if (session_status() === PHP_SESSION_NONE) session_start();
             $usuario = $_SESSION['usuario'] ?? null;
             if (!$usuario) {
+                // volta para a página pedida depois do login (ex.: QR de presença escaneado sem estar logado)
+                if ($method === 'GET' && $path !== '/') $_SESSION['voltar_depois_login'] = $path;
                 header('Location: ' . App::getBasePath() . '/login');
                 exit;
             }
@@ -82,7 +84,15 @@ class Router
                 '/auth/confirmar-email',
                 '/auth/reenviar-confirmacao',
                 '/auth/confirmar-email-pendente',
+                '/completar-cadastro',
+                '/lgpd',
             ];
+
+            // Entrou pelo Google/convite e falta nome e telefone → completar cadastro
+            if (!empty($_SESSION['usuario']['cadastro_pendente']) && !in_array($path, $rotasLivres, true)) {
+                header('Location: ' . App::getBasePath() . '/completar-cadastro');
+                exit;
+            }
 
             // Email não confirmado → página de confirmação
             if (empty($_SESSION['usuario']['email_confirmado']) && !in_array($path, $rotasLivres, true)) {

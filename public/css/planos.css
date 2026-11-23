@@ -121,3 +121,160 @@
     .plano-barra .plano-botao { width: auto; }
     .plano-barra .plano-resumo-total strong { font-size: 20px; }
 }
+
+/* ============ Criar minha turma ============ */
+.nova-turma { border: 1px solid var(--border); margin: 0 0 20px; }
+.nova-turma-campos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.nova-turma-campos .field { margin-bottom: 0; }
+.nova-turma-nome { margin: 14px 0 0; font-size: 14px; color: var(--muted); }
+.nova-turma-nome strong { color: var(--text); font-family: ui-monospace, monospace; }
+.nova-passo { margin: 0 0 8px; }
+
+/* ============ Página de preços (pública) ============ */
+.precos-hero { max-width: 720px; margin: 8px auto 28px; text-align: center; }
+.precos-hero h1 { font-size: clamp(28px, 4vw, 40px); margin: 10px 0 8px; }
+.precos-hero p { color: var(--muted); font-size: 16px; margin: 0; }
+.precos-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.precos-card { cursor: default; }
+.precos-card.destaque { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.precos-card h2 { margin: 0; }
+.precos-itens { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.precos-itens i { color: var(--green); width: 16px; }
+.precos-botao { margin-top: 12px; justify-content: center; }
+.precos-gremio { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 24px; }
+.precos-gremio h2 { margin: 0 0 4px; font-size: 18px; }
+.precos-gremio p { margin: 0; color: var(--muted); }
+.precos-gremio-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.precos-gremio-lista li { display: flex; flex-direction: column; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; }
+.precos-gremio-lista span { color: var(--muted); font-size: 12px; }
+.precos-condicoes h2 { font-size: 18px; margin: 0 0 12px; }
+.precos-condicoes ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.precos-condicoes li { display: flex; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.precos-condicoes li i { color: var(--primary); font-size: 18px; margin-top: 2px; }
+.precos-condicoes strong { display: block; font-size: 14px; }
+.precos-condicoes span { font-size: 13px; color: var(--muted); }
+.precos-cta { margin-top: 18px; color: var(--muted); font-size: 14px; }
+
+@media (max-width: 760px) {
+    .nova-turma-campos { grid-template-columns: 1fr 1fr; }
+}
+
+/* Master: planos editáveis e isenção */
+.tabela-planos .field { margin: 0; padding: 6px 8px; }
+.tabela-planos .tp-num { width: 96px; text-align: right; }
+.tabela-planos .tp-int { width: 64px; }
+.tabela-planos .tp-tipo { display: block; font-size: 11px; color: var(--muted); }
+.tabela-planos tr.inativo td { opacity: .55; }
+.lista-isencao { max-height: 420px; overflow-y: auto; }
+.mat-link { color: inherit; }
+
+/* ============ Master: editar cupom/parcela, novo plano, troca ============ */
+.lista-cupons li, .lista-parcelas li { flex-wrap: wrap; }
+.cupom-editar > summary { list-style: none; cursor: pointer; }
+.cupom-editar > summary::-webkit-details-marker { display: none; }
+.cupom-editar[open] { flex-basis: 100%; }
+.cupom-editar-form, .novo-plano-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; align-items: end; margin-top: 10px; }
+.cupom-editar-form label, .novo-plano-form label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.novo-plano > summary, .troca-plano > summary { cursor: pointer; }
+.tp-nome { min-width: 130px; }
+.venda-status.trocada { color: var(--primary); }
+.troca-plano[open] > summary { margin-bottom: 10px; }
+
+/* ============ Dados de cobrança ============ */
+.cobranca { border: 1px solid var(--border); margin: 0 0 20px; }
+.cobranca-campos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.cobranca-campos .cb-largo { grid-column: span 2; }
+.cb-msg { display: block; min-height: 16px; margin-top: 4px; font-size: 12px; font-weight: 600; }
+.cb-msg.ok { color: var(--green); }
+.cb-msg.erro { color: var(--red, #c0392b); }
+.cobranca-campos input[readonly] { background: var(--surface-2, rgba(0,0,0,.03)); }
+@media (max-width: 760px) {
+    .cobranca-campos { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+    .cobranca-campos { grid-template-columns: 1fr; }
+    .cobranca-campos .cb-largo { grid-column: auto; }
+}
+
+/* ============ Meus planos ============ */
+.meus-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.meus-card { display: flex; flex-direction: column; gap: 8px; }
+.meus-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.meus-turma { font-size: 17px; word-break: break-word; }
+.meus-plano { margin: 0; font-weight: 700; }
+.meus-plano .fa-crown { color: var(--orange); }
+.meus-dados { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.meus-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 8px; }
+.meus-selo { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; background: var(--border); color: var(--muted); }
+.meus-selo.ok { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
+.meus-selo.aviso { background: color-mix(in srgb, var(--orange) 15%, transparent); color: var(--orange); }
+.meus-selo.perigo { background: color-mix(in srgb, var(--red, #c0392b) 15%, transparent); color: var(--red, #c0392b); }
+.meus-vazio { display: flex; gap: 16px; align-items: flex-start; }
+.meus-vazio > .fa-crown { font-size: 28px; color: var(--orange); }
+.meus-vazio p { margin: 4px 0 12px; color: var(--muted); }
+.meus-cobranca { max-width: 960px; }
+
+
+/* ============ Indicação ============ */
+.indicacao-topo { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; }
+.indicacao-topo h2 { margin: 0 0 4px; font-size: 18px; }
+.indicacao-topo h2 i { color: var(--primary); }
+.indicacao-topo p { margin: 0; color: var(--muted); max-width: 560px; }
+.indicacao-codigo { display: flex; align-items: center; gap: 8px; }
+.indicacao-codigo code { font-size: 20px; font-weight: 700; letter-spacing: .08em; padding: 8px 14px; border: 2px dashed var(--primary); border-radius: 10px; background: var(--surface-2); }
+
+/* ============ Master: regras do cupom por plano e pacotes ============ */
+.cupom-regras { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
+.cupom-regras th, .cupom-regras td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+.cupom-regras th { font-size: 11px; text-transform: uppercase; color: var(--muted); }
+.cupom-regras .field { margin: 0; min-width: 0; }
+.cupom-regras select.field { width: 72px; } .cupom-regras input[type=number] { width: 96px; }
+.cupom-regras tr.off td:not(:first-child) { opacity: .45; }
+.pacote-codigos { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; margin: 10px 0; padding: 0; list-style: none; }
+.pacote-codigos li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
+.pacote-codigos code { font-weight: 700; }
+.pacote-codigos .usado { color: var(--green); font-size: 12px; }
+.pacote-codigos .livre { color: var(--muted); font-size: 12px; }
+.cupom-regras-editar { grid-column: 1 / -1; }
+details.inativo > summary { opacity: .6; }
+.precos-hero-gremio { margin-top: 40px; }
+
+/* ============ Dia a dia (adicional / incluso) ============ */
+.plano-dia { font-size: 12px; font-weight: 600; color: var(--muted); }
+.plano-dia.incluso { color: var(--green); }
+.dia-addon { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; margin-top: 12px; padding: 12px; border: 1.5px dashed var(--primary); border-radius: 10px; cursor: pointer; background: color-mix(in srgb, var(--primary) 5%, transparent); }
+.dia-addon input { margin-top: 3px; width: 18px; height: 18px; }
+.dia-addon small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.dia-addon-dica { color: var(--primary) !important; font-weight: 600; }
+.dia-oferta { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start; border: 1.5px solid color-mix(in srgb, var(--primary) 35%, var(--border)); }
+.dia-oferta-ico { width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center; font-size: 24px; color: #fff; background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 60%, #7a4fd6)); }
+.dia-oferta h2 { margin: 0 0 4px; font-size: 18px; } .dia-oferta p { margin: 0 0 12px; color: var(--muted); max-width: 640px; }
+.dia-oferta .dia-teste-ativo { color: var(--text); background: color-mix(in srgb, var(--primary) 10%, transparent); padding: 8px 12px; border-radius: 10px; display: inline-flex; gap: 8px; align-items: center; }
+.dia-oferta-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.dia-ok { color: var(--green); font-weight: 600; }
+@media (max-width: 560px) { .dia-oferta { grid-template-columns: 1fr; } }
+.tp-dia { display: grid; gap: 4px; } .tp-dia label { font-size: 12px; white-space: nowrap; }
+
+/* Renovação: cupom automático em destaque */
+.renovar-plano .renovar-cupom { display: flex; gap: 12px; align-items: center; padding: 12px 14px; margin-bottom: 12px; border-radius: 12px;
+  background: color-mix(in srgb, var(--success, #29946e) 12%, transparent); border: 1px dashed color-mix(in srgb, var(--success, #29946e) 55%, transparent); }
+.renovar-plano .renovar-cupom > i { font-size: 22px; color: var(--success, #29946e); }
+.renovar-plano .renovar-cupom strong { display: block; font-family: var(--font-mono, monospace); letter-spacing: .02em; }
+.renovar-plano .renovar-cupom span { color: var(--muted); font-size: 14px; }
+
+/* Nova turma: contratar para uma turma que a pessoa já tem */
+.ja-tenho { border: 1.5px solid color-mix(in srgb, var(--primary) 40%, var(--border)); }
+.ja-tenho h2 { margin: 0 0 6px; font-size: 18px; display: flex; gap: 8px; align-items: center; } .ja-tenho h2 i { color: var(--primary); }
+.ja-tenho p { margin: 0 0 12px; color: var(--muted); }
+.ja-tenho-lista { display: grid; gap: 8px; }
+.ja-tenho-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); color: var(--text); text-decoration: none; transition: border-color .2s, background-color .2s; }
+.ja-tenho-item:hover { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 6%, transparent); }
+.ja-tenho-item strong, .ja-tenho-item small { display: block; } .ja-tenho-item small { color: var(--orange); }
+.ja-tenho-item i { color: var(--primary); }
+.ja-tenho-ou { margin: 12px 0 0 !important; font-size: 14px; }
+
+/* Pix real (Mercado Pago) */
+.pix-qr.real { background: #fff; padding: 10px; } .pix-qr.real img { display: block; width: 100%; height: auto; }
+.pix-esperando { display: flex; gap: 10px; align-items: center; margin: 12px 0 0; font-weight: 600; color: var(--primary); }
+.pix-pulso { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); animation: pix-pulso 1.2s ease-in-out infinite; }
+@keyframes pix-pulso { 50% { transform: scale(1.6); opacity: .4; } }

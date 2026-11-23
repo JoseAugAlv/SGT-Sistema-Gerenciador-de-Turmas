@@ -26,6 +26,13 @@ require_once __DIR__ . '/../layouts/flashes.php';
             <a class="button button-primary" href="<?= $basePath ?>/turmas/criar">
                 <i class="fas fa-plus"></i> Nova turma
             </a>
+        <?php else: ?>
+            <a class="button button-secondary" href="<?= $basePath ?>/gremios/novo">
+                <i class="fas fa-landmark"></i> Criar grêmio
+            </a>
+            <a class="button button-primary" href="<?= $basePath ?>/turmas/nova">
+                <i class="fas fa-plus"></i> Criar minha turma
+            </a>
         <?php endif; ?>
     </div>
 </section>
@@ -54,6 +61,9 @@ require_once __DIR__ . '/../layouts/flashes.php';
         <?php else: ?>
             <a class="button button-primary" href="<?= $basePath ?>/turmas/entrar">
                 <i class="fas fa-right-to-bracket"></i> Entrar em uma turma com código
+            </a>
+            <a class="button button-secondary" href="<?= $basePath ?>/turmas/nova">
+                <i class="fas fa-plus"></i> Sou representante: criar a turma
             </a>
         <?php endif; ?>
     </section>

@@ -36,11 +36,12 @@ class ConfiguracaoConceito extends Model
     {
         return $this->conn->prepare("
             UPDATE configuracoes_conceito
-            SET limite_i_max = ?, limite_r_min = ?, limite_r_max = ?,
+            SET esquema_nota = ?, limite_i_max = ?, limite_r_min = ?, limite_r_max = ?,
                 limite_b_min = ?, limite_b_max = ?, limite_mb_min = ?,
                 visibilidade_diretor = ?, visibilidade_aluno = ?
             WHERE projeto_id = ?
         ")->execute([
+            $d['esquema_nota'] ?? 'mencao',
             (int) $d['limite_i_max'],
             (int) $d['limite_r_min'], (int) $d['limite_r_max'],
             (int) $d['limite_b_min'], (int) $d['limite_b_max'],

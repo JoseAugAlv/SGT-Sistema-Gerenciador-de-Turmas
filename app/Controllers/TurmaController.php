@@ -12,6 +12,9 @@ require_once __DIR__ . '/../Models/Periodo.php';
 require_once __DIR__ . '/../Models/Notificacao.php';
 require_once __DIR__ . '/../Helpers/ViewHelper.php';
 require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
+require_once __DIR__ . '/../Helpers/PlanoGuard.php';
+require_once __DIR__ . '/../Models/Alerta.php';
+require_once __DIR__ . '/../Models/Calendario.php';
 
 class TurmaController
 {
@@ -135,6 +138,7 @@ class TurmaController
             $this->render('turmas/bloqueada', ['turma' => $turma]);
             return;
         }
+        PlanoGuard::exigir($turma);
 
         $this->render('turmas/detalhe', [
             'turma'          => $turma,
@@ -142,7 +146,15 @@ class TurmaController
             'alunos'         => $this->tu->listarAlunos($id),
             'isMaster'       => $souMaster,
             'isRep'          => $souRep,
+            'isPrincipal'    => $souRep && $this->tu->ehRepresentantePrincipal($id, (int) $u['id']),
+            'isVice'         => $souRep && $this->tu->ehVice($id, (int) $u['id']),
+            'vice'           => $this->tu->vice($id),
             'projetos'       => (new Projeto())->listarPorTurma($id),
+            'contagens'      => (new Alerta())->contagensVisiveis($id, (int) $u['id']),
+            'avisos'         => (new Alerta())->listarVisiveis($id, (int) $u['id']),
+            'temDia'         => $souMaster || PlanoGuard::temDiaADia($turma),
+            'proximasDatas'  => ($souMaster || PlanoGuard::temDiaADia($turma)) ? (new Calendario())->proximos($id, 4) : [],
+            'aulasHoje'      => ($souMaster || PlanoGuard::temDiaADia($turma)) ? ((new Calendario())->horarios($id)[(int) date('N')] ?? []) : [],
         ]);
     }
 
@@ -530,6 +542,62 @@ class TurmaController
 
         $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Representante removido.'];
         $this->redirect('/turmas/' . $id . '/representantes');
+    }
+
+    // ============ VICE-REPRESENTANTE (escolhido pelo principal) ============
+
+    /** POST /turmas/{id}/vice — o representante principal (ou o master) escolhe o vice. */
+    public function definirVice(int $id)
+    {
+        CsrfMiddleware::validate();
+        $turma = $this->exigirPrincipal($id);
+        $alvo  = (int) ($_POST['usuario_id'] ?? 0);
+
+        if ($this->tu->vice($id)) { $this->flashVolta($id, 'A turma já tem um vice. Remova o atual antes de escolher outro.'); }
+        if (!$alvo || !$this->tu->estaAtivo($id, $alvo) || $this->tu->ehRepresentante($id, $alvo)) {
+            $this->flashVolta($id, 'Escolha um aluno da turma.');
+        }
+        if ($this->tu->contarRepresentantes($id) >= 2) {
+            $this->flashVolta($id, 'A turma já tem 2 representantes. Peça ao master para liberar uma vaga.');
+        }
+
+        $this->tu->definirVice($id, $alvo);
+        $this->audit->registrar('vice_nomeado', 'turma_usuarios', $id, null, ['usuario_id' => $alvo, 'por' => (int) $_SESSION['usuario']['id']]);
+        (new Notificacao())->criar($alvo, 'papel', 'Você agora é vice-representante',
+            "Você foi escolhido como vice-representante da turma {$turma['nome']}. Você avalia e organiza a turma junto com o representante.",
+            '/turmas/' . $id);
+        $this->flashVolta($id, 'Vice-representante escolhido.', 'sucesso');
+    }
+
+    /** POST /turmas/{id}/vice/remover */
+    public function removerVice(int $id)
+    {
+        CsrfMiddleware::validate();
+        $this->exigirPrincipal($id);
+        $vice = $this->tu->vice($id);
+        if (!$vice) $this->flashVolta($id, 'A turma não tem vice.');
+        $this->tu->removerVice($id, (int) $vice['usuario_id']);
+        $this->audit->registrar('vice_removido', 'turma_usuarios', $id, ['usuario_id' => (int) $vice['usuario_id']], null);
+        (new Notificacao())->criar((int) $vice['usuario_id'], 'papel', 'Você não é mais vice-representante',
+            'Você voltou a ser aluno da turma.', '/turmas/' . $id);
+        $this->flashVolta($id, "{$vice['nome']} deixou de ser vice.", 'sucesso');
+    }
+
+    private function exigirPrincipal(int $id): array
+    {
+        $turma = $this->turma->porId($id);
+        if (!$turma) $this->flashVolta(0, 'Turma não encontrada.');
+        $u = $_SESSION['usuario'];
+        if ($u['tipo'] !== 'master' && !$this->tu->ehRepresentantePrincipal($id, (int) $u['id'])) {
+            http_response_code(403); exit('Só o representante principal escolhe o vice.');
+        }
+        return $turma;
+    }
+
+    private function flashVolta(int $id, string $msg, string $tipo = 'erro'): void
+    {
+        $_SESSION['flash'] = ['tipo' => $tipo, 'mensagem' => $msg];
+        $this->redirect($id ? '/turmas/' . $id . '#representantes' : '/turmas');
     }
 
     // ============ HELPERS ============

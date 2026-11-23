@@ -18,7 +18,8 @@ foreach ($avaliacoesOutros as $cid => $porDiretor) {
     }
 }
 
-$fmt = fn($v) => $v === null || $v === '' ? '' : rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
+require_once __DIR__ . '/../../Helpers/EscalaNota.php';
+$fmt = EscalaNota::fmt($cfg); // valor no esquema do projeto (menção/0–100 ou 0–10)
 $grupoNome = '';
 foreach ($meusGrupos as $g) if ((int) $g['id'] === (int) $grupoAtual) $grupoNome = $g['nome'];
 $avaliaveis = count(array_filter($membros, fn($m) => (int) $m['usuario_id'] !== $meuId));
@@ -55,7 +56,7 @@ $avaliaveis = count(array_filter($membros, fn($m) => (int) $m['usuario_id'] !== 
 
 <form method="POST" id="form-avaliacao" class="aval-app"
       action="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/avaliacoes/diretor/salvar"
-      data-i-max="<?= (float) $cfg['limite_i_max'] ?>" data-r-max="<?= (float) $cfg['limite_r_max'] ?>"
+      data-esquema="<?= EscalaNota::esquema($cfg) ?>" data-max="<?= EscalaNota::maximo($cfg) ?>" data-i-max="<?= (float) $cfg['limite_i_max'] ?>" data-r-max="<?= (float) $cfg['limite_r_max'] ?>"
       data-b-max="<?= (float) $cfg['limite_b_max'] ?>" data-chave="aval-dir-<?= (int) $projeto['id'] ?>-<?= (int) $grupoAtual ?>">
     <?= ViewHelper::csrfField() ?>
     <input type="hidden" name="grupo_id" value="<?= (int) $grupoAtual ?>">
@@ -141,7 +142,7 @@ $avaliaveis = count(array_filter($membros, fn($m) => (int) $m['usuario_id'] !== 
                                         <?php endforeach; ?>
                                     </span>
                                     <input type="text" inputmode="decimal" class="aval-valor" name="<?= $nome ?>[valor]"
-                                           value="<?= h($val) ?>" placeholder="—" maxlength="6" aria-label="Valor de 0 a 100 de <?= h($m['nome']) ?>">
+                                           value="<?= h($val) ?>" placeholder="—" maxlength="6" aria-label="Valor de 0 a <?= EscalaNota::maximo($cfg) ?> de <?= h($m['nome']) ?>">
                                     <button type="button" class="aval-limpar" data-limpar title="Tirar nota" aria-label="Tirar nota de <?= h($m['nome']) ?>"><i class="fas fa-xmark"></i></button>
                                 </span>
                             <?php endif; ?>

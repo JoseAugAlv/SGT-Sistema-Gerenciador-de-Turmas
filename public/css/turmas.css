@@ -269,3 +269,30 @@ html[data-theme="misto"] .turma-card-topo:not([style*="--shell-bg"]) .turma-card
 .projeto-cartao-atalhos a i { font-size: 15px; color: var(--primary); }
 .projeto-cartao-atalhos a:hover { background: var(--primary-soft); color: var(--primary); }
 .projeto-cartao.encerrado .projeto-cartao-titulo strong { color: var(--muted); }
+
+/* ============ Vice-representante ============ */
+.badge-blue { background: color-mix(in srgb, var(--blue) 14%, transparent); color: var(--blue); }
+.vice-form { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.vice-linha { display: flex; gap: 8px; flex-wrap: wrap; }
+.vice-linha .field { flex: 1 1 220px; margin: 0; }
+
+/* ============ Dia a dia: atalhos, próximas datas e aulas de hoje ============ */
+.dia-atalhos { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin: 0 0 16px; }
+.dia-atalhos a { display: grid; justify-items: center; gap: 6px; padding: 14px 8px; border: 1px solid var(--border); border-radius: var(--radius, 12px);
+    background: var(--surface); color: var(--text); text-decoration: none; font-weight: 600; font-size: 14px; transition: border-color .15s, transform .15s; }
+.dia-atalhos a:hover { border-color: var(--primary); transform: translateY(-1px); }
+.dia-atalhos i { font-size: 20px; color: var(--primary); }
+.dia-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.dia-bloco { margin: 0; }
+.dia-bloco-topo { display: flex; justify-content: space-between; margin-bottom: 8px; } .dia-bloco-topo i { color: var(--primary); }
+.dia-bloco ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.dia-bloco li { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; }
+.dia-bloco li small { display: block; color: var(--muted); font-size: 12px; }
+.dia-bloco li .num { font-size: 13px; color: var(--muted); padding-top: 1px; }
+.dia-bloco li.agora strong { color: var(--primary); } .dia-bloco li em { font-style: normal; font-size: 11px; font-weight: 700; color: #fff; background: var(--primary); padding: 1px 6px; border-radius: 999px; }
+.dia-pino { width: 10px; height: 10px; border-radius: 3px; margin-top: 5px; }
+.t-entrega { background: #1c6fd6; } .t-prova { background: #d63548; } .t-evento { background: #29946e; }
+.t-reuniao { background: #7a4fd6; } .t-feriado { background: #8a8f98; } .t-outro { background: #d48b1c; }
+@media (prefers-reduced-motion: reduce) { .dia-atalhos a { transition: none; } .dia-atalhos a:hover { transform: none; } }
+.dia-atalhos a.bloqueado { opacity: .6; } .dia-atalhos a.bloqueado i { color: var(--muted); }
+.cg-op input:disabled + .cg-card { opacity: .55; cursor: not-allowed; }

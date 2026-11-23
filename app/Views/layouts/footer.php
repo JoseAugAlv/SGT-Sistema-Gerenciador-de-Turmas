@@ -121,9 +121,9 @@ $ano      = date('Y');
         <!-- Barra inferior (celular) -->
         <nav class="bottom-nav" aria-label="Navegação rápida">
             <a class="<?= $ativoEm('/') ?>" href="<?= $basePath ?>/"><i class="fas fa-house"></i>Início</a>
+            <a class="<?= $ativoEm('/agenda') ?>" href="<?= $basePath ?>/agenda"><i class="fas fa-calendar-days"></i>Agenda</a>
             <a class="<?= $ativoEm('/turmas') ?>" href="<?= $basePath ?>/turmas"><i class="fas fa-users"></i>Turmas</a>
             <a class="<?= $ativoEm('/notificacoes') ?>" href="<?= $basePath ?>/notificacoes"><i class="fas fa-bell"></i>Avisos</a>
-            <a class="<?= $ativoEm('/user') ?>" href="<?= $basePath ?>/user"><i class="fas fa-user"></i>Conta</a>
             <button type="button" class="bottom-nav-menu" onclick="document.getElementById('hamburger').click()"><i class="fas fa-bars"></i>Menu</button>
         </nav>
 
@@ -147,6 +147,19 @@ $ano      = date('Y');
 </div><!-- /.app-shell -->
 
 <script src="<?= ViewHelper::asset('js/theme.js') ?>"></script>
+<script src="<?= ViewHelper::asset('js/carregando.js') ?>"></script>
+<script src="<?= ViewHelper::asset('js/pwa.js') ?>"></script>
+<script src="<?= ViewHelper::asset('js/parcial.js') ?>"></script>
+<?php if (!empty($_SESSION['usuario']['id'])):
+    // tutorial guiado: tours das telas e os que a pessoa já fez/dispensou
+    $toursCfg = require __DIR__ . '/../../Config/tours.php';
+    $stTour = Database::getConnection()->prepare("SELECT tour FROM tutorial_vistos WHERE usuario_id = ?");
+    $stTour->execute([(int) $_SESSION['usuario']['id']]);
+    $toursJs = [];
+    foreach ($toursCfg as $tid => $tc) $toursJs[$tid] = ['titulo' => $tc['titulo'], 'icone' => $tc['icone'], 'descricao' => $tc['descricao'], 'rota' => $tc['rota'], 'passos' => $tc['passos']]; ?>
+<script>window.PRUMO_TOUR = <?= json_encode(['base' => App::getBasePath(), 'tours' => $toursJs, 'vistos' => $stTour->fetchAll(PDO::FETCH_COLUMN), 'token' => CsrfMiddleware::generateToken()], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>;</script>
+<script src="<?= ViewHelper::asset('js/tour.js') ?>"></script>
+<?php endif; ?>
 <script>
 (function () {
     'use strict';
@@ -186,6 +199,7 @@ $ano      = date('Y');
     }
     document.addEventListener('DOMContentLoaded', atualizarContador);
     setInterval(atualizarContador, 30000);
+    document.addEventListener('parcial:feito', atualizarContador);
 
     // ============================================================
     // 4. DROPDOWN DO USUÁRIO

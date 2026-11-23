@@ -1,0 +1,41 @@
+/* public/css/caixinha.css — caixinha anônima de dúvidas e sugestões */
+.cx-grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .cx-grade { grid-template-columns: 1fr; } }
+.cx-titulo { margin: 0 0 12px; font-size: 18px; display: flex; gap: 8px; align-items: center; }
+.cx-sub { margin: 20px 0 8px; font-size: 15px; }
+.cx-vazio { color: var(--muted); margin: 8px 0 0; }
+
+/* enviar */
+.cx-form { display: grid; gap: 10px; }
+.cx-tipos { display: flex; flex-wrap: wrap; gap: 8px; }
+.cx-opcao input { position: absolute; opacity: 0; pointer-events: none; }
+.cx-opcao span { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1.5px solid var(--border); border-radius: 999px; cursor: pointer; font-size: 14px; transition: border-color .2s, background-color .2s; }
+.cx-opcao input:checked + span { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--primary); font-weight: 600; }
+.cx-opcao input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: 2px; }
+.cx-form-pe { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cx-form-pe small { color: var(--muted); }
+
+/* mensagens */
+.cx-lista { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 12px; }
+.cx-msg { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; }
+.cx-msg.nova { border-color: var(--primary); box-shadow: inset 3px 0 0 var(--primary); }
+.cx-msg-topo { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: center; }
+.cx-msg-topo small { color: var(--muted); }
+.cx-texto { margin: 0; white-space: normal; }
+.cx-resposta { padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--primary) 7%, transparent); font-size: 14px; }
+.cx-tipo { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; }
+.cx-duvida     { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); }
+.cx-sugestao   { background: color-mix(in srgb, var(--orange) 15%, transparent); color: var(--orange); }
+.cx-reclamacao { background: color-mix(in srgb, var(--red) 13%, transparent); color: var(--red); }
+.cx-elogio     { background: color-mix(in srgb, var(--green) 14%, transparent); color: var(--green); }
+.cx-responder summary { cursor: pointer; color: var(--primary); font-weight: 600; font-size: 14px; }
+.cx-responder form { display: grid; gap: 8px; margin-top: 8px; }
+.cx-check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.cx-arquivar { justify-self: end; }
+
+/* abas */
+.cx-abas { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cx-aba { padding: 7px 12px; border-radius: 10px; color: var(--muted); text-decoration: none; font-weight: 500; }
+.cx-aba b { margin-left: 4px; font-weight: 700; }
+.cx-aba.ativa { background: var(--surface); color: var(--text); }
+.cx-novas { margin-left: auto; font-size: 12px; font-weight: 700; color: #fff; background: var(--primary); padding: 3px 10px; border-radius: 999px; }

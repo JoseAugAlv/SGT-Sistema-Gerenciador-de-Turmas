@@ -9,6 +9,7 @@ require_once __DIR__ . '/../Helpers/PasswordHelper.php';
 require_once __DIR__ . '/../Helpers/SecurityHelper.php';
 require_once __DIR__ . '/../Helpers/ViewHelper.php';
 require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
+require_once __DIR__ . '/../Services/GoogleAuthService.php';
 
 class UserController
 {
@@ -33,9 +34,32 @@ class UserController
         unset($user['senha']);
 
         $this->render('user/index', [
-            'user'   => $user,
-            'prefs'  => $this->prefs->porUsuario((int) $user['id']),
+            'user'     => $user,
+            'prefs'    => $this->prefs->porUsuario((int) $user['id']),
+            'googleOk' => GoogleAuthService::configurado(),
         ]);
+    }
+
+    // ============ CONTA GOOGLE ============
+
+    /** Quem entrou com email e senha conecta a conta Google (depois pode entrar pelos dois jeitos). */
+    public function conectarGoogle()
+    {
+        CsrfMiddleware::validate();
+        if (empty($_SESSION['usuario'])) { $this->redirect('/login'); }
+        $_SESSION['google_vincular'] = (int) $_SESSION['usuario']['id'];   // o retorno do Google vê isto e só conecta
+        $this->redirect('/auth/google');
+    }
+
+    public function desconectarGoogle()
+    {
+        CsrfMiddleware::validate();
+        if (empty($_SESSION['usuario'])) { $this->redirect('/login'); }
+        $uid = (int) $_SESSION['usuario']['id'];
+        $this->usuario->desligarGoogle($uid);
+        SecurityHelper::logAuditoria('google_desconectado', $uid, 'Conta Google desconectada pelo perfil', 'info');
+        $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Conta Google desconectada. Para entrar, use seu email e senha (se não lembrar a senha, use "Esqueci minha senha" na tela de login).'];
+        $this->redirect('/user');
     }
 
     public function editar()

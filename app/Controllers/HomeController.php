@@ -127,6 +127,11 @@ class HomeController
             'papeis'                => $papeis,
         ];
         extract($dados);
+        // Agenda (Dia a dia) na página inicial + lembretes da véspera
+        require_once __DIR__ . '/AgendaController.php';
+        $agendaCtx = AgendaController::contexto();
+        AgendaController::gerarLembretes($agendaCtx);
+
         require __DIR__ . '/../Views/home/index.php';
     }
 

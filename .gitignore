@@ -28,3 +28,6 @@ public/uploads/*
 
 # dumps do banco (têm dados pessoais e hashes de senha)
 backups/*.sql
+
+# verificações da landing (perfil do navegador e capturas)
+.taste-skill/

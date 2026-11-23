@@ -117,6 +117,37 @@ class Avaliacao extends Model
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /**
+     * Nota compartilhada dos representantes (principal e vice): a última lançada por qualquer um deles, uma por aluno.
+     * Mesmo formato de listarDoAvaliador (lista de linhas).
+     */
+    public function listarDosRepresentantes(int $criterioId): array
+    {
+        $stmt = $this->conn->prepare("
+            SELECT * FROM avaliacoes WHERE criterio_id = ? AND tipo = 'representante'
+            ORDER BY COALESCE(editado_em, updated_at, created_at) ASC, id ASC
+        ");
+        $stmt->execute([$criterioId]);
+        $porAluno = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $l) $porAluno[(int) $l['aluno_id']] = $l; // a mais recente fica
+        return array_values($porAluno);
+    }
+
+    /** Modo compartilhado: depois de salvar, apaga as notas dos outros representantes (fica uma só). */
+    public function deletarOutrosRepresentantes(int $criterioId, int $alunoId, int $manterAvaliadorId): void
+    {
+        $this->conn->prepare("
+            DELETE FROM avaliacoes WHERE criterio_id = ? AND aluno_id = ? AND tipo = 'representante' AND avaliador_id <> ?
+        ")->execute([$criterioId, $alunoId, $manterAvaliadorId]);
+    }
+
+    /** Modo compartilhado: tirar a nota tira a de todos os representantes. */
+    public function deletarDosRepresentantes(int $criterioId, int $alunoId): void
+    {
+        $this->conn->prepare("DELETE FROM avaliacoes WHERE criterio_id = ? AND aluno_id = ? AND tipo = 'representante'")
+                   ->execute([$criterioId, $alunoId]);
+    }
+
     public function listarDoAvaliador(int $criterioId, int $avaliadorId): array
     {
         $stmt = $this->conn->prepare("

@@ -49,11 +49,11 @@ class Usuario extends Model
             INSERT INTO usuarios
                 (nome, email, senha, tipo, telefone, data_nascimento,
                  email_confirmado, email_token, email_token_expira,
-                 primeiro_login, ativo, lgpd_aceito, lgpd_data)
+                 primeiro_login, ativo, lgpd_aceito, lgpd_data, google_id, cadastro_pendente)
             VALUES
                 (:nome, :email, :senha, :tipo, :telefone, :data_nascimento,
                  :email_confirmado, :email_token, :email_token_expira,
-                 :primeiro_login, :ativo, :lgpd_aceito, :lgpd_data)
+                 :primeiro_login, :ativo, :lgpd_aceito, :lgpd_data, :google_id, :cadastro_pendente)
         ");
         $stmt->execute([
             ':nome'                => $dados['nome'],
@@ -69,8 +69,51 @@ class Usuario extends Model
             ':ativo'               => $dados['ativo'] ?? 1,
             ':lgpd_aceito'         => $dados['lgpd_aceito'] ?? 0,
             ':lgpd_data'           => $dados['lgpd_data'] ?? null,
+            ':google_id'           => $dados['google_id'] ?? null,
+            ':cadastro_pendente'   => $dados['cadastro_pendente'] ?? 0,
         ]);
         return (int) $this->conn->lastInsertId();
+    }
+
+    public function findByGoogleId(string $googleId): ?array
+    {
+        $stmt = $this->conn->prepare("SELECT * FROM usuarios WHERE google_id = ? LIMIT 1");
+        $stmt->execute([$googleId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    /**
+     * Liga a conta ao Google. O Google já verificou o email, então confirma o email e dispensa a senha provisória;
+     * se a pessoa ainda não aceitou a LGPD, fica com o cadastro pendente para completar.
+     */
+    public function vincularGoogle(int $id, string $googleId): void
+    {
+        $this->conn->prepare("
+            UPDATE usuarios
+            SET google_id = ?, email_confirmado = 1, email_token = NULL, email_token_expira = NULL,
+                primeiro_login = 0, cadastro_pendente = IF(lgpd_aceito = 1 AND cadastro_pendente = 0, 0, 1)
+            WHERE id = ?
+        ")->execute([$googleId, $id]);
+    }
+
+    /** Conecta a conta Google a quem já entrou com email e senha (só guarda o identificador). */
+    public function ligarGoogle(int $id, string $googleId): void
+    {
+        $this->conn->prepare("UPDATE usuarios SET google_id = ? WHERE id = ?")->execute([$googleId, $id]);
+    }
+
+    public function desligarGoogle(int $id): void
+    {
+        $this->conn->prepare("UPDATE usuarios SET google_id = NULL WHERE id = ?")->execute([$id]);
+    }
+
+    /** Conclui o cadastro pendente (Google ou convite): nome, telefone, LGPD e, se veio, a senha. */
+    public function completarCadastro(int $id, string $nome, ?string $telefone, ?string $hashSenha = null): void
+    {
+        $sql = "UPDATE usuarios SET nome = ?, telefone = ?, cadastro_pendente = 0, primeiro_login = 0,
+                       email_confirmado = 1, lgpd_aceito = 1, lgpd_data = NOW()"
+             . ($hashSenha ? ", senha = ?" : "") . " WHERE id = ?";
+        $this->conn->prepare($sql)->execute($hashSenha ? [$nome, $telefone, $hashSenha, $id] : [$nome, $telefone, $id]);
     }
 
     public function confirmarEmail(int $id): bool

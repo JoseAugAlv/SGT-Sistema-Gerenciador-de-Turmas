@@ -76,17 +76,177 @@ $statusParcela = ['pendente' => 'A pagar', 'pago' => 'Paga', 'cancelado' => 'Can
             <li>
                 <span class="tarefa-icone <?= $p['status'] === 'pago' ? 'pago' : '' ?>"><i class="fas <?= $p['status'] === 'pago' ? 'fa-check' : 'fa-receipt' ?>"></i></span>
                 <div class="tarefa-info">
-                    <strong>Parcela <?= (int) $p['numero'] ?> · <?= $brl($p['valor']) ?></strong>
+                    <strong><?= ($p['tipo'] ?? 'parcela') === 'adicional' ? 'Dia a dia (adicional)' : 'Parcela ' . (int) $p['numero'] ?> · <?= $brl($p['valor']) ?></strong>
                     <small><?= $p['status'] === 'pago' ? 'Paga em ' . ViewHelper::data($p['pago_em'], true) : 'Vence em ' . ViewHelper::data($p['vencimento']) ?></small>
                 </div>
-                <?php if ($proxima && (int) $proxima['id'] === (int) $p['id']): ?>
-                    <a class="tarefa-acao primaria" href="<?= $basePath ?>/pagamentos/<?= (int) $p['id'] ?>">Pagar</a>
+                <?php if ($proxima && (int) $proxima['id'] === (int) $p['id']):
+                    require_once __DIR__ . '/../../Models/Rateio.php';
+                    $rateioAberto = (new Rateio())->abertoDoPagamento((int) $p['id']); ?>
+                    <?php if ($rateioAberto): ?>
+                        <a class="tarefa-acao primaria" href="<?= $basePath ?>/rateios/<?= (int) $rateioAberto['id'] ?>"><i class="fas fa-people-arrows"></i> Ver divisão</a>
+                    <?php else: ?>
+                        <a class="tarefa-acao" href="<?= $basePath ?>/pagamentos/<?= (int) $p['id'] ?>/rateio" title="Cada aluno paga a sua parte pelo Pix"><i class="fas fa-people-arrows"></i> Dividir</a>
+                        <a class="tarefa-acao primaria" href="<?= $basePath ?>/pagamentos/<?= (int) $p['id'] ?>">Pagar</a>
+                    <?php endif; ?>
                 <?php else: ?>
                     <span class="parcela-status <?= h($p['status']) ?>"><?= $statusParcela[$p['status']] ?? $p['status'] ?></span>
                 <?php endif; ?>
             </li>
         <?php endforeach; ?>
     </ul>
+
+    <!-- ============ DIA A DIA (adicional nos planos que não incluem) ============ -->
+    <?php if ($diaPreco > 0 && empty($atual['dia_a_dia'])):
+        $teste = PlanoGuard::testeDia($turma); ?>
+        <section class="panel dia-oferta mt-24" id="dia-a-dia">
+            <div class="dia-oferta-ico"><i class="fas fa-calendar-days"></i></div>
+            <div>
+                <h2>Libere o Dia a dia</h2>
+                <?php if ($teste['ativo']): ?>
+                    <p class="dia-teste-ativo"><i class="fas fa-hourglass-half"></i> Teste grátis ativo até <?= date('d/m/Y', strtotime($teste['ate'])) ?>
+                       (falta<?= $teste['faltam'] > 1 ? 'm' : '' ?> <?= $teste['faltam'] ?> dia<?= $teste['faltam'] > 1 ? 's' : '' ?>). Para continuar depois, libere abaixo.</p>
+                <?php endif; ?>
+                <p>Agenda interativa com lembretes na véspera e prioridades por cor, horário das aulas, aviso do dia e contagem regressiva.
+                   Para a turma toda e na agenda pessoal de cada aluno.</p>
+                <div class="dia-oferta-acoes">
+                    <?php if ($diaPendente): ?>
+                        <a class="button button-primary" href="<?= $basePath ?>/pagamentos/<?= (int) $diaPendente['id'] ?>"><i class="fas fa-qrcode"></i> Pagar <?= $brl($diaPendente['valor']) ?></a>
+                        <form method="POST" action="<?= $basePath ?>/pagamentos/<?= (int) $diaPendente['id'] ?>/cancelar-adicional" class="d-inline">
+                            <?= ViewHelper::csrfField() ?><button type="submit" class="button button-ghost">Cancelar pedido</button>
+                        </form>
+                    <?php else: ?>
+                        <?php if ($teste['pode']): ?>
+                            <form method="POST" action="<?= $base ?>/dia-a-dia/teste" class="d-inline">
+                                <?= ViewHelper::csrfField() ?>
+                                <button type="submit" class="button button-primary"><i class="fas fa-gift"></i> Testar grátis por <?= (int) $teste['dias'] ?> dias</button>
+                            </form>
+                        <?php endif; ?>
+                        <form method="POST" action="<?= $base ?>/dia-a-dia" class="d-inline">
+                            <?= ViewHelper::csrfField() ?>
+                            <button type="submit" class="button <?= $teste['pode'] ? 'button-secondary' : 'button-primary' ?>" data-carregando="Gerando Pix…"><i class="fas fa-unlock"></i> Liberar por <?= $brl($diaPreco) ?></button>
+                        </form>
+                    <?php endif; ?>
+                    <a class="button button-ghost" href="#trocar">Ou troque para o Anual (já inclui)</a>
+                </div>
+                <small class="field-help">Pagamento único, vale até o fim do plano atual. No Anual, o Dia a dia vem incluso.<?= $teste['pode'] ? ' O teste grátis não pede pagamento e pode ser usado uma vez por turma.' : '' ?></small>
+            </div>
+        </section>
+    <?php elseif ($atual && ($atual['dia_a_dia'] || !empty($atual['inclui_dia_a_dia']))): ?>
+        <p class="dia-ok mt-24" id="dia-a-dia"><i class="fas fa-calendar-check"></i> Dia a dia liberado: <a href="<?= $basePath ?>/turmas/<?= $tid ?>/calendario">agenda e horário</a>, aviso do dia e contagem regressiva.</p>
+    <?php endif; ?>
+
+    <!-- ============ INDIQUE OUTRA TURMA ============ -->
+    <?php if (!empty($codigoIndicacao)):
+        $pctTxt = fn($p) => rtrim(rtrim(number_format((float) $p, 2, ',', ''), '0'), ',') . '%';
+        $disp = array_filter($creditos, fn($c) => $c['status'] === 'disponivel');
+    ?>
+        <section class="panel indicacao mt-24">
+            <div class="indicacao-topo">
+                <div>
+                    <h2><i class="fas fa-share-nodes"></i> Indique outra turma</h2>
+                    <p>A turma indicada ganha <strong><?= $pctTxt($pctIndicada) ?></strong> na primeira compra. Quando ela pagar, vocês ganham
+                       <strong><?= $pctTxt($pctRecompensa) ?></strong> de desconto nas parcelas que faltam ou na próxima compra.</p>
+                </div>
+                <div class="indicacao-codigo">
+                    <code id="cod-indicacao"><?= h($codigoIndicacao) ?></code>
+                    <button type="button" class="button button-secondary" onclick="navigator.clipboard.writeText('<?= h($codigoIndicacao) ?>').then(function(){ this.textContent='Copiado!'; }.bind(this))">Copiar</button>
+                </div>
+            </div>
+            <?php if ($creditos): ?>
+                <ul class="lista-tarefas mt-12">
+                    <?php foreach ($creditos as $c): ?>
+                        <li>
+                            <span class="tarefa-icone"><i class="fas fa-gift"></i></span>
+                            <div class="tarefa-info">
+                                <strong><?= $pctTxt($c['pct']) ?> de desconto · <?= h($c['descricao'] ?? 'Indicação') ?></strong>
+                                <small><?= $c['status'] === 'usado' ? 'Usado em ' . ViewHelper::data($c['usado_em']) : 'Disponível: entra na próxima compra' ?></small>
+                            </div>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </section>
+    <?php endif; ?>
+
+    <!-- ============ RENOVAR (perto do fim do plano) ============ -->
+    <?php if ($renov['pendente']): ?>
+        <div class="bloco-titulo mt-24" id="renovar"><h2>Renovação</h2></div>
+        <section class="panel plano-aguardando">
+            <h2>Renovação para o plano <?= h($renov['pendente']['plano_nome']) ?> aguardando pagamento</h2>
+            <p><?= (int) $renov['pendente']['parcelas'] ?>x · total <?= $brl($renov['pendente']['valor_total']) ?>.
+               O novo período começa em <?= h($renov['inicio']) ?>, sem perder os dias que faltam do plano atual.</p>
+            <div class="plano-aguardando-acoes">
+                <?php if ($renov['proxima']): ?>
+                    <a class="button button-primary" href="<?= $basePath ?>/pagamentos/<?= (int) $renov['proxima']['id'] ?>"><i class="fas fa-qrcode"></i> Pagar 1ª parcela (<?= $brl($renov['proxima']['valor']) ?>)</a>
+                <?php endif; ?>
+                <form method="POST" action="<?= $basePath ?>/assinaturas/<?= (int) $renov['pendente']['id'] ?>/cancelar" class="d-inline">
+                    <?= ViewHelper::csrfField() ?>
+                    <button type="submit" class="button button-ghost" onclick="return confirm('Cancelar o pedido de renovação?')">Cancelar renovação</button>
+                </form>
+            </div>
+        </section>
+    <?php elseif ($renov['pode']): ?>
+        <div class="bloco-titulo mt-24" id="renovar"><h2>Renovar o plano</h2></div>
+        <section class="panel renovar-plano">
+            <?php if ($renov['cupom']): ?>
+                <div class="renovar-cupom">
+                    <i class="fas fa-ticket"></i>
+                    <div>
+                        <strong>Cupom de renovação: <?= h($renov['cupom']['codigo']) ?></strong>
+                        <span><?= rtrim(rtrim(number_format((float) $renov['cupom']['percentual'], 2, ',', ''), '0'), ',') ?>% de desconto, já aplicado abaixo.
+                              Válido até <?= date('d/m/Y', strtotime($renov['cupom']['valido_ate'])) ?>, só para esta turma.</span>
+                    </div>
+                </div>
+            <?php endif; ?>
+            <p class="field-help">Escolha o próximo plano. Ele começa em <strong><?= h($renov['inicio']) ?></strong>: os dias que faltam do plano atual não se perdem.</p>
+            <?php
+            $urlCupom = $base; $acaoForm = $base . '/renovar';
+            $planoInicial = $atual['plano_codigo']; $textoBotao = 'Gerar Pix da renovação';
+            require __DIR__ . '/_escolher.php';
+            ?>
+        </section>
+    <?php endif; ?>
+
+    <!-- ============ TROCAR DE PLANO ============ -->
+    <div class="bloco-titulo mt-24" id="trocar"><h2>Trocar de plano</h2></div>
+    <?php if (!$troca && ($renov['pode'] || $renov['pendente'])): ?>
+        <p class="field-help">Perto do fim do plano, a troca dá lugar à renovação acima, onde você também pode escolher um plano maior.</p>
+    <?php elseif ($troca): ?>
+        <section class="panel plano-aguardando">
+            <h2>Troca para o plano <?= h($troca['plano_nome']) ?> aguardando pagamento</h2>
+            <p>
+                Diferença: <?= (int) $troca['parcelas'] ?>x · total <?= $brl($troca['valor_total']) ?>.
+                O plano <?= h($atual['plano_nome']) ?> continua valendo até a 1ª parcela ser paga.
+                O novo plano começa no dia do pagamento, com a duração completa.
+            </p>
+            <div class="plano-aguardando-acoes">
+                <?php if ($trocaProxima): ?>
+                    <a class="button button-primary" href="<?= $basePath ?>/pagamentos/<?= (int) $trocaProxima['id'] ?>"><i class="fas fa-qrcode"></i> Pagar 1ª parcela (<?= $brl($trocaProxima['valor']) ?>)</a>
+                <?php endif; ?>
+                <form method="POST" action="<?= $basePath ?>/assinaturas/<?= (int) $troca['id'] ?>/cancelar" class="d-inline">
+                    <?= ViewHelper::csrfField() ?>
+                    <button type="submit" class="button button-ghost" onclick="return confirm('Cancelar a troca? O plano atual continua.')">Cancelar troca</button>
+                </form>
+            </div>
+        </section>
+    <?php elseif ($trocaBloqueio): ?>
+        <p class="field-help"><?= h($trocaBloqueio) ?></p>
+    <?php else: ?>
+        <details class="panel troca-plano">
+            <summary><strong>Ver planos maiores</strong> · você paga só a diferença do preço</summary>
+            <p class="field-help">
+                Só é possível trocar para um plano mais caro. O novo plano começa no dia do pagamento, com a duração completa,
+                e o tempo que falta do plano atual vira crédito: <strong><?= $brl($trocaCredito) ?></strong>
+                (proporcional ao que foi pago e aos dias restantes). Você paga o preço do plano novo menos esse crédito. Cupom não vale na troca.
+            </p>
+            <?php
+            $planos = $trocaPlanos; $precos = $trocaPrecos; $cupom = null; $codigoCupom = ''; $erroCupom = null;
+            $semCupom = true; $urlCupom = $base; $acaoForm = $base . '/trocar';
+            $planoInicial = $trocaPlanos[0]['codigo']; $textoBotao = 'Gerar Pix da diferença';
+            require __DIR__ . '/_escolher.php';
+            ?>
+        </details>
+    <?php endif; ?>
 
 <?php elseif ($atual && $atual['status'] === 'aguardando'): ?>
     <!-- ============ PEDIDO AGUARDANDO O 1º PAGAMENTO ============ -->
@@ -108,107 +268,10 @@ $statusParcela = ['pendente' => 'A pagar', 'pago' => 'Paga', 'cancelado' => 'Can
     </section>
 
 <?php else: ?>
-    <!-- ============ ESCOLHER PLANO ============ -->
-    <form method="GET" action="<?= $base ?>" class="plano-cupom">
-        <label class="field-label" for="cupom">Tem um cupom?</label>
-        <div class="plano-cupom-linha">
-            <input id="cupom" type="text" name="cupom" class="field" maxlength="40" value="<?= h($codigoCupom) ?>" placeholder="Digite o código" autocomplete="off">
-            <button type="submit" class="button button-secondary">Aplicar</button>
-            <?php if ($cupom): ?><a class="text-link" href="<?= $base ?>">Remover</a><?php endif; ?>
-        </div>
-        <?php if ($cupom): ?>
-            <small class="plano-cupom-ok"><i class="fas fa-tag"></i> Cupom <?= h($cupom['codigo']) ?> aplicado nos preços abaixo.</small>
-        <?php elseif ($erroCupom): ?>
-            <small class="txt-alerta"><?= h($erroCupom) ?></small>
-        <?php endif; ?>
-    </form>
-
-    <form method="POST" action="<?= $base ?>/assinar" id="form-plano" class="plano-form">
-        <?= ViewHelper::csrfField() ?>
-        <input type="hidden" name="cupom" value="<?= h($cupom['codigo'] ?? '') ?>">
-
-        <fieldset class="planos-grade">
-            <legend class="bloco-titulo-legend">Escolha o plano</legend>
-            <?php foreach ($planos as $i => $p):
-                $pid = (int) $p['id'];
-                $pr  = $precos[$pid][1];
-                $maxParc = max(array_keys($precos[$pid]));
-                $semJuros = 1;
-                foreach ($precos[$pid] as $n => $x) if ($x['acrescimo_pct'] == 0) $semJuros = $n;
-            ?>
-                <label class="plano-card<?= $p['codigo'] === 'anual' ? ' destaque' : '' ?>">
-                    <input type="radio" name="plano_id" value="<?= $pid ?>" <?= $p['codigo'] === 'anual' ? 'checked' : '' ?> required>
-                    <?php if ($p['codigo'] === 'anual'): ?><span class="plano-tag">Mais escolhido</span><?php endif; ?>
-                    <strong class="plano-nome"><?= h($p['nome']) ?></strong>
-                    <span class="plano-duracao"><?= $p['meses'] ? (int) $p['meses'] . ' meses de acesso' : 'Acesso sem vencimento' ?> · <?= (int) $p['projetos'] ?> projetos</span>
-                    <span class="plano-preco">
-                        <?php if ($pr['desconto_pct'] > 0): ?><s><?= $brl($pr['lista']) ?></s><?php endif; ?>
-                        <b class="num"><?= $brl($pr['avista']) ?></b>
-                        <small>à vista</small>
-                    </span>
-                    <span class="plano-parcela">
-                        <?php if ($maxParc > 1): ?>
-                            ou até <?= $maxParc ?>x<?= $semJuros > 1 ? ' (' . $semJuros . 'x sem acréscimo)' : '' ?>
-                        <?php else: ?>só à vista<?php endif; ?>
-                    </span>
-                    <span class="plano-por-aluno">≈ <?= $brl($pr['avista'] / $divisor) ?> por aluno, dividindo por <?= $divisor ?></span>
-                </label>
-            <?php endforeach; ?>
-        </fieldset>
-
-        <section class="plano-resumo panel">
-            <label class="field-label" for="parcelas">Parcelas</label>
-            <select id="parcelas" name="parcelas" class="field"></select>
-            <small class="field-help">A 1ª parcela libera o acesso. As demais vencem a cada 30 dias.</small>
-        </section>
-
-        <!-- Barra fixa: total e botão sempre à mão enquanto rola os planos -->
-        <div class="aval-barra-salvar plano-barra">
-            <span class="aval-status plano-resumo-total">
-                <span><span id="resumo-plano"></span> · <span id="resumo-linha"></span></span>
-                <strong id="resumo-total" class="num"></strong>
-                <small id="resumo-extra"></small>
-            </span>
-            <button type="submit" class="button button-primary plano-botao"><i class="fas fa-qrcode"></i> Gerar Pix</button>
-        </div>
-    </form>
-
-    <script>
-    (function () {
-        var precos = <?= json_encode($precos, JSON_UNESCAPED_UNICODE) ?>;
-        var form = document.getElementById('form-plano');
-        var sel  = document.getElementById('parcelas');
-        var brl  = function (v) { return 'R$ ' + Number(v).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); };
-        function planoAtual() { var r = form.querySelector('[name=plano_id]:checked'); return r ? r.value : null; }
-        function montarParcelas() {
-            var op = precos[planoAtual()] || {}, antes = sel.value;
-            sel.innerHTML = '';
-            Object.keys(op).forEach(function (n) {
-                var x = op[n], o = document.createElement('option');
-                o.value = n;
-                o.textContent = n === '1' ? '1x de ' + brl(x.total) + ' (à vista)'
-                    : n + 'x de ' + brl(x.parcela) + (x.acrescimo_pct > 0 ? ' (total ' + brl(x.total) + ')' : ' sem acréscimo');
-                sel.appendChild(o);
-            });
-            if (op[antes]) sel.value = antes;
-            resumo();
-        }
-        function resumo() {
-            var x = (precos[planoAtual()] || {})[sel.value];
-            if (!x) return;
-            var card = form.querySelector('[name=plano_id]:checked').closest('.plano-card');
-            document.getElementById('resumo-plano').textContent = card.querySelector('.plano-nome').textContent;
-            document.getElementById('resumo-linha').textContent = x.parcelas > 1 ? x.parcelas + 'x de ' + brl(x.parcela) : 'à vista';
-            document.getElementById('resumo-total').textContent = brl(x.total);
-            var extra = [];
-            if (x.desconto_pct > 0) extra.push('cupom: ' + x.desconto_pct.toString().replace('.', ',') + '% de desconto');
-            if (x.acrescimo_pct > 0) extra.push('inclui ' + x.acrescimo_pct + '% do parcelamento');
-            document.getElementById('resumo-extra').textContent = extra.join(' · ');
-        }
-        form.addEventListener('change', function (e) { if (e.target.name === 'plano_id') montarParcelas(); else resumo(); });
-        montarParcelas();
-    })();
-    </script>
+    <?php
+    $urlCupom = $base; $acaoForm = $base . '/assinar';
+    require __DIR__ . '/_escolher.php';
+    ?>
 <?php endif; ?>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

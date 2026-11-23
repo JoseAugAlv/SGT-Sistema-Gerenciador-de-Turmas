@@ -44,6 +44,7 @@ $totalLista     = count($notificacoes);
 $totalNaoLidas  = $naoLidas ?? 0;
 ?>
 
+<div id="notif-area" data-atualizar="30">
 <section class="hero-section">
     <div>
         <div class="eyebrow">
@@ -90,7 +91,7 @@ $totalNaoLidas  = $naoLidas ?? 0;
         </span>
 
         <?php if ($totalNaoLidas > 0): ?>
-            <form method="POST" action="<?= $basePath ?>/notificacoes/marcar-todas-lidas" class="d-inline">
+            <form method="POST" action="<?= $basePath ?>/notificacoes/marcar-todas-lidas" class="d-inline" data-parcial="#notif-area">
                 <?= ViewHelper::csrfField() ?>
                 <button type="submit" class="button small button-ghost">
                     <i class="fas fa-check-double"></i> Marcar todas como lidas
@@ -166,7 +167,7 @@ $totalNaoLidas  = $naoLidas ?? 0;
                     <?php endif; ?>
 
                     <?php if (!$lida): ?>
-                        <form method="POST" action="<?= $basePath ?>/notificacoes/marcar-lida" class="d-inline">
+                        <form method="POST" action="<?= $basePath ?>/notificacoes/marcar-lida" class="d-inline" data-parcial="#notif-area">
                             <?= ViewHelper::csrfField() ?>
                             <input type="hidden" name="id" value="<?= (int) $n['id'] ?>">
                             <input type="hidden" name="voltar" value="<?= h($_SERVER['REQUEST_URI'] ?? '/notificacoes') ?>">
@@ -180,5 +181,7 @@ $totalNaoLidas  = $naoLidas ?? 0;
         <?php endforeach; ?>
     </section>
 <?php endif; ?>
+
+</div>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

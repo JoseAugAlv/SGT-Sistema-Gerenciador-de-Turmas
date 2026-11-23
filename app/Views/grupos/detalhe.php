@@ -26,6 +26,7 @@ require_once __DIR__ . '/../layouts/flashes.php';
     </div>
 
     <div class="hero-actions">
+        <a class="button button-primary" href="<?= $basePath ?>/grupos/<?= (int) $grupo['id'] ?>/tarefas"><i class="fas fa-table-columns"></i> Tarefas</a>
         <?php if ($podeEditar): ?>
             <a class="button button-secondary" href="<?= $basePath ?>/grupos/<?= (int) $grupo['id'] ?>/editar">
                 <i class="fas fa-pen"></i> Editar grupo

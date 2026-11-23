@@ -12,6 +12,9 @@ class Notificacao extends Model
         'ata'       => 'Ata',
         'material'  => 'Material',
         'lgpd'      => 'LGPD',
+        'enquete'   => 'Enquete',
+        'caixinha'  => 'Caixinha',
+        'mural'     => 'Mural',
     ];
 
     public function __construct()
@@ -26,7 +29,8 @@ class Notificacao extends Model
         string $titulo,
         string $mensagem,
         ?string $link = null,
-        ?int $referenciaId = null
+        ?int $referenciaId = null,
+        bool $direta = true // false quando a mesma notificação vai para vários (não é "menção direta")
     ): int {
         $stmt = $this->conn->prepare("
             INSERT INTO notificacoes
@@ -34,7 +38,70 @@ class Notificacao extends Model
             VALUES (?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([$usuarioId, $tipo, $referenciaId, $titulo, $mensagem, $link]);
-        return (int) $this->conn->lastInsertId();
+        $id = (int) $this->conn->lastInsertId();
+
+        // Email conforme o nível escolhido pela pessoa (todas / importantes / menções / nenhuma).
+        // Vai para uma fila enviada DEPOIS da resposta ao navegador: avisar a turma inteira não deixa o clique lento.
+        self::$filaEmail[] = [$id, $usuarioId, $tipo, $titulo, $mensagem, $link, $direta];
+        if (!self::$filaRegistrada) {
+            self::$filaRegistrada = true;
+            register_shutdown_function([self::class, 'despacharFila']);
+        }
+        return $id;
+    }
+
+    /** Emails das notificações esperando o fim da requisição. */
+    private static array $filaEmail = [];
+    private static bool $filaRegistrada = false;
+
+    /**
+     * Fim da requisição: entrega a resposta ao navegador (fecha a conexão) e só então envia os emails da fila.
+     * Também pode ser chamada direto (ex.: scripts de linha de comando).
+     */
+    public static function despacharFila(): void
+    {
+        if (!self::$filaEmail) return;
+        ignore_user_abort(true);
+        @set_time_limit(300);
+        if (PHP_SAPI !== 'cli') {
+            if (!headers_sent()) {
+                $corpo = '';
+                while (ob_get_level() > 0) $corpo .= ob_get_clean();
+                header('Connection: close');
+                header('Content-Length: ' . strlen($corpo));
+                echo $corpo;
+            }
+            if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+            while (ob_get_level() > 0) @ob_end_flush();
+            flush();
+            if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
+        }
+        $fila = self::$filaEmail;
+        self::$filaEmail = [];
+        try {
+            require_once __DIR__ . '/../Services/EmailService.php';
+            $email = new EmailService();
+            $conn = Database::getConnection();
+            $marca = $conn->prepare("UPDATE notificacoes SET enviada_email = 1 WHERE id = ?");
+            foreach ($fila as [$id, $uid, $tipo, $titulo, $mensagem, $link, $direta]) {
+                try {
+                    if ($email->notificacaoPorEmail($uid, $tipo, $titulo, $mensagem, $link, $direta)) $marca->execute([$id]);
+                } catch (\Throwable $e) {
+                    error_log('Email da notificação: ' . $e->getMessage()); // email nunca derruba a ação
+                }
+            }
+            // notificação no celular/computador de quem ativou (app instalável)
+            require_once __DIR__ . '/../Services/PushService.php';
+            $push = new PushService();
+            $comAparelho = [];
+            foreach ($fila as [$id, $uid, $tipo, $titulo, $mensagem, $link]) {
+                if (!isset($comAparelho[$uid])) $comAparelho[$uid] = $push->temInscricao($uid);
+                if (!$comAparelho[$uid]) continue;
+                try { $push->enviar($uid, $titulo, $mensagem, $link); } catch (\Throwable $e) { error_log('Push da notificação: ' . $e->getMessage()); }
+            }
+        } catch (\Throwable $e) {
+            error_log('Fila de emails: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -46,7 +113,7 @@ class Notificacao extends Model
         foreach ($usuarioIds as $uid) {
             $uid = (int) $uid;
             if ($uid > 0) {
-                $this->criar($uid, $tipo, $titulo, $mensagem, $link);
+                $this->criar($uid, $tipo, $titulo, $mensagem, $link, null, false);
                 $total++;
             }
         }

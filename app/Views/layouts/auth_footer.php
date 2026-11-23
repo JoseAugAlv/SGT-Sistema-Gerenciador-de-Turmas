@@ -27,6 +27,7 @@
 })();
 </script>
 <script src="<?= ViewHelper::asset('js/theme.js') ?>"></script>
+<script src="<?= ViewHelper::asset('js/carregando.js') ?>"></script>
 
 </body>
 </html>

@@ -25,6 +25,13 @@ if (!is_array($cssPagina))  $cssPagina = [];
 
     <!-- Fontes -->
     <link rel="icon" type="image/png" href="<?= ViewHelper::asset('img/logo-prumo.png') ?>">
+    <!-- App instalável (PWA) -->
+    <link rel="manifest" href="<?= App::getBasePath() ?>/manifest.webmanifest">
+    <meta name="theme-color" content="#1d4ed8">
+    <meta name="app-base" content="<?= h(App::getBasePath()) ?>">
+    <?php if (!empty($_SESSION['usuario']['id'])): ?><meta name="usuario-id" content="<?= (int) $_SESSION['usuario']['id'] ?>"><?php endif; ?>
+    <link rel="apple-touch-icon" href="<?= App::getBasePath() ?>/public/img/logo-prumo.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Public+Sans:wght@400;500;600;700;800&display=swap">
@@ -38,6 +45,7 @@ if (!is_array($cssPagina))  $cssPagina = [];
     <link rel="stylesheet" href="<?= ViewHelper::asset('css/components.css') ?>">
     <link rel="stylesheet" href="<?= ViewHelper::asset('css/footer.css') ?>">
     <link rel="stylesheet" href="<?= ViewHelper::asset('css/responsive.css') ?>">
+    <link rel="stylesheet" href="<?= ViewHelper::asset('css/tour.css') ?>">
 
     <?php foreach ($cssPagina as $arquivoCss): ?>
         <link rel="stylesheet" href="<?= h(ViewHelper::asset('css/' . $arquivoCss)) ?>">

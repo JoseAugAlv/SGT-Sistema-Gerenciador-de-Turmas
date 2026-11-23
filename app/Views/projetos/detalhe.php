@@ -23,6 +23,9 @@ require_once __DIR__ . '/../layouts/flashes.php';
         </p>
     </div>
     <div class="hero-actions">
+        <a class="button button-secondary" href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/portfolio.pdf" target="_blank" rel="noopener">
+            <i class="fas fa-book-bookmark"></i> Portfólio (PDF)
+        </a>
         <?php if ($isMaster): ?>
             <a class="button button-secondary" href="<?= $basePath ?>/projetos/<?= (int) $projeto['id'] ?>/editar">
                 <i class="fas fa-pen"></i> Editar
@@ -43,6 +46,8 @@ require_once __DIR__ . '/../layouts/flashes.php';
 <?php endif; ?>
 
 <?php require __DIR__ . '/_nav.php'; ?>
+
+<?php $cfg = $cfgNotas; require __DIR__ . '/_como_funciona.php'; ?>
 
 <?php if ($podeEditar && !$projeto['encerrado'] && ($totalCriterios === 0 || abs($somaPesos - 10) >= 0.01)): ?>
     <div class="notice notice-warning mt-0">

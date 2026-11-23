@@ -76,10 +76,21 @@ if ($turmaFoco && $souRepFoco) {
         ['fas fa-bullhorn',  'Novo aviso', $tt . '/alertas/criar'],
         ['fas fa-user-plus', 'Alunos',     $basePath . '/alunos'],
         ['fas fa-palette',   'Identidade', $tt . '/identidade'],
-        ['fas fa-receipt',   'Plano',      $tt . '/plano'],
     ];
+    if (empty($turmaFoco['sou_vice'])) $acoesTurma[] = ['fas fa-receipt', 'Plano', $tt . '/plano']; // o vice não cuida do plano
 }
 ?>
+
+<?php if (!$isMaster && !empty($_SESSION['plano_desejado'])): ?>
+    <div class="notice notice-blue">
+        <span><i class="fas fa-tags"></i></span>
+        <div>
+            <strong>Continue de onde parou</strong>
+            <?php $ehG = str_starts_with((string) $_SESSION['plano_desejado'], 'g_'); ?>
+            <p>Você escolheu um plano na página de preços. <a href="<?= $basePath ?><?= $ehG ? '/gremios/novo' : '/turmas/nova' ?>"><?= $ehG ? 'Criar o grêmio e pagar' : 'Criar a turma e pagar' ?></a></p>
+        </div>
+    </div>
+<?php endif; ?>
 
 <!-- ============================================================ -->
 <!-- FAIXA DA TURMA                                                -->
@@ -97,7 +108,7 @@ if ($turmaFoco && $souRepFoco) {
         <div class="turma-meta">
             <strong><?= h($turmaFoco['nome']) ?></strong>
             <span>
-                <?= h($papelLabel[$turmaFoco['meu_papel'] ?? 'aluno'] ?? 'você participa') ?>
+                <?= !empty($turmaFoco['sou_vice']) ? 'você é vice-representante' : h($papelLabel[$turmaFoco['meu_papel'] ?? 'aluno'] ?? 'você participa') ?>
                 <?php if (count($minhasTurmas) > 1): ?> · <?= count($minhasTurmas) ?> turmas<?php endif; ?>
             </span>
         </div>
@@ -111,6 +122,43 @@ if ($turmaFoco && $souRepFoco) {
         </div>
     <?php endif; ?>
 </section>
+
+<?php
+// ---------- Planos das turmas que eu represento (sempre à vista, mesmo sendo aluno em outras) ----------
+$turmasRep = $isMaster ? [] : array_values(array_filter($minhasTurmas, fn($t) => ($t['meu_papel'] ?? '') === 'representante' && empty($t['sou_vice'])));
+if ($turmasRep):
+    require_once __DIR__ . '/../../Helpers/PlanoGuard.php';
+    $seloHome = ['isenta' => ['Cortesia', 'ok'], 'ativa' => ['Ativo', 'ok'], 'vencendo' => ['Vence em breve', 'aviso'],
+                 'tolerancia' => ['Vencido', 'perigo'], 'atraso' => ['Parcela atrasada', 'perigo'], 'sem_plano' => ['Sem plano', 'perigo'],
+                 'aguardando' => ['Aguardando pagamento', 'aviso'], 'vencido' => ['Vencido', 'perigo'], 'atraso_bloqueio' => ['Bloqueada', 'perigo']];
+?>
+<section class="panel home-planos">
+    <div class="home-planos-topo">
+        <h2><i class="fas fa-crown"></i> Planos das suas turmas</h2>
+        <a class="text-link" href="<?= $basePath ?>/planos">Ver todos os planos</a>
+    </div>
+    <ul class="home-planos-lista">
+        <?php foreach ($turmasRep as $t):
+            $sit = PlanoGuard::situacao($t);
+            [$rot, $cls] = $seloHome[$sit['codigo']] ?? [$sit['codigo'], 'aviso'];
+            $ass = $sit['assinatura'];
+        ?>
+            <li>
+                <span>
+                    <strong><?= h($t['nome']) ?></strong>
+                    <small class="home-planos-info"><?= $ass ? h($ass['plano_nome']) . ($ass['fim'] ? ' · até ' . ViewHelper::data($ass['fim']) : '') : '' ?></small>
+                </span>
+                <span class="home-planos-acoes">
+                    <span class="home-selo <?= $cls ?>"><?= h($rot) ?></span>
+                    <a class="button <?= $sit['bloqueia'] ? 'button-primary' : 'button-ghost' ?>" href="<?= $basePath ?>/turmas/<?= (int) $t['id'] ?>/plano">
+                        <?= $sit['bloqueia'] ? 'Regularizar' : ($ass && $ass['status'] === 'ativa' ? 'Plano e upgrade' : 'Ver plano') ?>
+                    </a>
+                </span>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+</section>
+<?php endif; ?>
 
 <div class="painel-grid">
 <div class="painel-main">
@@ -149,6 +197,17 @@ if ($turmaFoco && $souRepFoco) {
             <small><?= h(mb_strtolower($s['label'])) ?></small>
         </div>
     <?php endforeach; ?>
+</section>
+
+<!-- ============================================================ -->
+<!-- AGENDA (Dia a dia)                                            -->
+<!-- ============================================================ -->
+<section class="home-agenda" aria-labelledby="agenda-titulo">
+    <div class="bloco-titulo">
+        <h2 id="agenda-titulo">Agenda</h2>
+        <a href="<?= $basePath ?>/agenda" class="bloco-link">Abrir agenda <i class="fas fa-arrow-right"></i></a>
+    </div>
+    <?php $ctx = $agendaCtx; $modo = 'mini'; $agId = 'agenda-home'; $soTurma = null; require __DIR__ . '/../agenda/_componente.php'; ?>
 </section>
 
 <!-- ============================================================ -->
@@ -312,8 +371,17 @@ if ($turmaFoco && $souRepFoco) {
                 <a class="bloco-link" href="<?= $basePath ?>/turmas/entrar"><i class="fas fa-right-to-bracket"></i> Entrar com código</a>
             <?php endif; ?>
         </div>
-        <?php if (empty($minhasTurmas)): ?>
-            <div class="lista-vazia"><i class="fas fa-users"></i><span>Peça o código da turma ao representante e entre por “Entrar com código”.</span></div>
+        <?php if (empty($minhasTurmas) && !$isMaster): ?>
+            <div class="lista-vazia sem-turma">
+                <i class="fas fa-users"></i>
+                <span>
+                    <strong>Você ainda não está em nenhuma turma.</strong>
+                    Sua turma já usa o Prumo? Peça o código ao representante e <a href="<?= $basePath ?>/turmas/entrar">entre com o código</a>.
+                    É o representante? <a href="<?= $basePath ?>/turmas/nova">Crie a turma</a> e escolha um plano.
+                </span>
+            </div>
+        <?php elseif (empty($minhasTurmas)): ?>
+            <div class="lista-vazia"><i class="fas fa-users"></i><span>Nenhuma turma cadastrada.</span></div>
         <?php else: ?>
             <ul class="lista-tarefas lista-compacta">
                 <?php foreach (array_slice($minhasTurmas, 0, 6) as $t): ?>

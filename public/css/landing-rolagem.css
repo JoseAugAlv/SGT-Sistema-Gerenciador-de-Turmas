@@ -1,0 +1,33 @@
+/* public/css/landing-rolagem.css
+   Apoio das animações de rolagem da landing (public/js/landing-rolagem.js). */
+
+/* barra de progresso de leitura, colada no topo da tela */
+.rl-progresso {
+  position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 200; pointer-events: none;
+  background: linear-gradient(90deg, var(--accent), color-mix(in oklab, var(--accent) 55%, #29c1e0));
+  transform-origin: 0 50%; transform: scaleX(0);
+}
+
+/* títulos: cada palavra numa máscara, a parte de dentro sobe */
+.rl-p { display: inline-block; overflow: clip; vertical-align: top; padding-bottom: .1em; margin-bottom: -.1em; }
+.rl-pi { display: inline-block; will-change: transform; }
+
+/* texto que acende palavra por palavra */
+.rl-wi { transition: opacity .15s linear; }
+
+/* letras do nome gigante do rodapé (o próprio .close__word já recorta o que sai da linha) */
+.close__word .rl-l { display: inline-block; will-change: transform; }
+
+/* fatos da frase grande: a linha de cima se desenha */
+#sem-planilha .fatos div { position: relative; border-top-color: transparent !important; }
+#sem-planilha .fatos div::before {
+  content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 1px; background: var(--line-strong);
+  transform-origin: 0 50%; transform: scaleX(var(--rl-linha, 1));
+}
+
+/* peças animadas: o navegador prepara as camadas */
+.rl-vivo :is(#recursos article.card, .pr-board .pr-dir, #planos .frame .pr-mini, .hero__media) { will-change: transform, opacity; }
+#planos .frame { perspective: 1400px; }
+
+/* quadro do grêmio sem fundo próprio: as diretorias chegam sobre o painel */
+.pr-board.pr { background: transparent; }

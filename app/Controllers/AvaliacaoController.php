@@ -1,5 +1,6 @@
 <?php
 // app/Controllers/AvaliacaoController.php
+require_once __DIR__ . '/../Helpers/EscalaNota.php';
 require_once __DIR__ . '/../Core/App.php';
 require_once __DIR__ . '/../Models/Projeto.php';
 require_once __DIR__ . '/../Models/Criterio.php';
@@ -134,9 +135,14 @@ class AvaliacaoController
         }
 
         // Busca avaliações já feitas por este representante
+        // Modo "compartilhada": principal e vice veem e editam a mesma nota; modo "media": cada um a sua
+        $compartilhada = ($projeto['avaliacao_reps'] ?? 'media') === 'compartilhada';
         $minhasAvaliacoes = [];
         foreach ($criterios as $c) {
-            $minhasAvaliacoes[(int) $c['id']] = $this->aval->listarDoAvaliador((int) $c['id'], (int) $u['id']);
+            $doRep = $compartilhada && in_array($c['tipo_avaliacao'], ['representante', 'misto'], true);
+            $minhasAvaliacoes[(int) $c['id']] = $doRep
+                ? $this->aval->listarDosRepresentantes((int) $c['id'])
+                : $this->aval->listarDoAvaliador((int) $c['id'], (int) $u['id']);
         }
 
         // Quais critérios este usuário edita aqui; os demais aparecem só para leitura,
@@ -216,6 +222,12 @@ class AvaliacaoController
             if (!$aplica) continue;
             if (!$tipoAval) continue;
 
+            // Modo compartilhado: nota atual dos representantes, para não regravar (nem reavisar) o que não mudou
+            $atuaisReps = [];
+            if ($tipoAval === 'representante' && ($projeto['avaliacao_reps'] ?? 'media') === 'compartilhada') {
+                foreach ($this->aval->listarDosRepresentantes($cid) as $l) $atuaisReps[(int) $l['aluno_id']] = $l;
+            }
+
             // Pega lista de valores do POST: aval[cid][aluno_id]
             $linha = $_POST['aval'][$cid] ?? [];
             foreach ($linha as $alunoId => $dados) {
@@ -223,15 +235,23 @@ class AvaliacaoController
                 if (!in_array($alunoId, $idsTurma, true)) continue;
 
                 $nota = $this->lerNota((array) $dados, $cfg);
+                $compartilhada = $tipoAval === 'representante' && ($projeto['avaliacao_reps'] ?? 'media') === 'compartilhada';
                 if ($nota === null) {
-                    // vazio: se estava salvo, remove
-                    $this->aval->deletar($cid, $alunoId, (int) $u['id'], $tipoAval);
+                    // vazio: se estava salvo, remove (no modo compartilhado, a nota de todos os representantes)
+                    if ($compartilhada) $this->aval->deletarDosRepresentantes($cid, $alunoId);
+                    else $this->aval->deletar($cid, $alunoId, (int) $u['id'], $tipoAval);
                     continue;
                 }
 
+                $atual = $atuaisReps[$alunoId] ?? null;
+                if ($atual && $atual['conceito'] === $nota['conceito'] && abs((float) $atual['valor_numerico'] - $nota['valor']) < 0.001) {
+                    $salvos++;
+                    continue; // mesma nota compartilhada: nada muda
+                }
                 if ($this->aval->upsert($cid, $alunoId, (int) $u['id'], $tipoAval, $nota['conceito'], $nota['valor'])) {
                     $mudancas[$alunoId] = ($mudancas[$alunoId] ?? 0) + 1;
                 }
+                if ($compartilhada) $this->aval->deletarOutrosRepresentantes($cid, $alunoId, (int) $u['id']);
                 $salvos++;
             }
         }
@@ -1068,12 +1088,13 @@ class AvaliacaoController
         $conceito = strtoupper(trim((string) ($dados['conceito'] ?? '')));
         $bruto    = trim(str_replace(',', '.', (string) ($dados['valor'] ?? '')));
         $temValor = $bruto !== '' && is_numeric($bruto);
-        $temConc  = in_array($conceito, ['I', 'R', 'B', 'MB'], true);
+        $temConc  = in_array($conceito, ['I', 'R', 'B', 'MB'], true) && !EscalaNota::ehNumerico($cfg);
 
         if (!$temValor && !$temConc) return null;
 
         if ($temValor) {
-            $valor = max(0.0, min(100.0, (float) $bruto));
+            // O valor vem no esquema do projeto (0–10 ou 0–100) e é guardado de 0 a 100
+            $valor = EscalaNota::paraInterno((float) $bruto, $cfg);
             return ['conceito' => NotaService::conceitoPorValor($valor, $cfg), 'valor' => $valor];
         }
         return ['conceito' => $conceito, 'valor' => NotaService::valorPadraoPorConceito($conceito, $cfg)];

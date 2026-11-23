@@ -11,6 +11,7 @@ USE sgt;
 
 SET NAMES utf8mb4;
 SET time_zone = '+00:00';
+SET SQL_SAFE_UPDATES = 0;  -- MySQL Workbench: permite os UPDATE de dados de exemplo abaixo
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- =====================================================================
@@ -21,6 +22,7 @@ CREATE TABLE usuarios (
   nome VARCHAR(150) NOT NULL,
   email VARCHAR(150) NOT NULL UNIQUE,
   senha VARCHAR(255) NOT NULL,
+  google_id VARCHAR(64) DEFAULT NULL,           -- login com Google (identificador da conta)
   tipo ENUM('aluno','master') NOT NULL DEFAULT 'aluno',
   telefone VARCHAR(20) DEFAULT NULL,
   data_nascimento DATE DEFAULT NULL,
@@ -28,12 +30,14 @@ CREATE TABLE usuarios (
   email_token VARCHAR(255) DEFAULT NULL,
   email_token_expira DATETIME DEFAULT NULL,
   primeiro_login TINYINT(1) NOT NULL DEFAULT 1,
+  cadastro_pendente TINYINT(1) NOT NULL DEFAULT 0, -- entrou pelo Google/convite e falta nome e telefone
   ativo TINYINT(1) NOT NULL DEFAULT 1,
   lgpd_aceito TINYINT(1) NOT NULL DEFAULT 0,
   lgpd_data DATETIME DEFAULT NULL,
   ultimo_acesso DATETIME DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_google_id (google_id),
   INDEX idx_usuarios_email (email),
   INDEX idx_usuarios_tipo (tipo),
   INDEX idx_usuarios_ativo (ativo)
@@ -54,6 +58,8 @@ CREATE TABLE reset_senhas (
 CREATE TABLE preferencias_usuario (
   id INT AUTO_INCREMENT PRIMARY KEY,
   usuario_id INT NOT NULL UNIQUE,
+  nivel_email ENUM('todas','importantes','mencoes','nenhuma') NOT NULL DEFAULT 'importantes',
+  resumo_semanal TINYINT(1) NOT NULL DEFAULT 1,  -- recebe o resumo da semana por email (segunda-feira)
   receber_email TINYINT(1) DEFAULT 1,
   receber_email_prazos TINYINT(1) DEFAULT 1,
   receber_email_alertas TINYINT(1) DEFAULT 1,
@@ -68,6 +74,7 @@ CREATE TABLE preferencias_usuario (
 CREATE TABLE turmas (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nome VARCHAR(150) NOT NULL,
+  tipo ENUM('turma','gremio') NOT NULL DEFAULT 'turma',  -- grêmio: presidente = representante principal
   codigo_acesso VARCHAR(30) NOT NULL UNIQUE,
   codigo_interno VARCHAR(100) DEFAULT NULL,
   cor_primaria VARCHAR(20) DEFAULT '#3498db',
@@ -78,6 +85,8 @@ CREATE TABLE turmas (
   bloqueada_motivo VARCHAR(255) DEFAULT NULL,
   bloqueada_em DATETIME DEFAULT NULL,
   bloqueada_por INT DEFAULT NULL,
+  isenta_plano TINYINT(1) NOT NULL DEFAULT 0,  -- 1 = não precisa de plano (turmas antigas, cortesia)
+  teste_dia_ate DATETIME NULL,                 -- teste grátis do Dia a dia vale até (NULL = nunca testou)
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (bloqueada_por) REFERENCES usuarios(id) ON DELETE SET NULL,
@@ -89,6 +98,7 @@ CREATE TABLE turma_usuarios (
   turma_id INT NOT NULL,
   usuario_id INT NOT NULL,
   papel ENUM('aluno','representante') NOT NULL DEFAULT 'aluno',
+  vice TINYINT(1) NOT NULL DEFAULT 0,            -- 1 = vice (avalia e organiza, sem acesso a plano/pagamento)
   ativo TINYINT(1) DEFAULT 1,
   entrou_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   saiu_em DATETIME DEFAULT NULL,
@@ -99,6 +109,25 @@ CREATE TABLE turma_usuarios (
   FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
   INDEX idx_tu_papel (papel),
   INDEX idx_tu_ativo (ativo)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Convites por email: o aluno já entra na turma e completa o cadastro pelo link
+CREATE TABLE convites (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  turma_id INT NOT NULL,
+  usuario_id INT NOT NULL,
+  email VARCHAR(150) NOT NULL,
+  token VARCHAR(64) NOT NULL,
+  status ENUM('pendente','aceito','cancelado') NOT NULL DEFAULT 'pendente',
+  convidado_por INT DEFAULT NULL,
+  expira_em DATETIME NOT NULL,
+  aceito_em DATETIME DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_convite_token (token),
+  KEY idx_convite_turma (turma_id, status),
+  FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  FOREIGN KEY (convidado_por) REFERENCES usuarios(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =====================================================================
@@ -128,10 +157,15 @@ CREATE TABLE periodos (
 CREATE TABLE projetos (
   id INT AUTO_INCREMENT PRIMARY KEY,
   turma_id INT NOT NULL,
+  diretoria_id INT NULL,                     -- grêmio: diretoria responsável pelo projeto (orçamento e prestação de contas)
   nome VARCHAR(150) NOT NULL,
   descricao TEXT DEFAULT NULL,
   prazo DATE DEFAULT NULL,
   modo_avaliacao ENUM('etapa','cronograma') DEFAULT 'cronograma',
+  alunos_pedem_grupo TINYINT(1) NOT NULL DEFAULT 0,      -- 1 = alunos pedem para entrar no grupo
+  alunos_pedem_diretor TINYINT(1) NOT NULL DEFAULT 0,    -- 1 = membros pedem para ser diretor
+  diretores_por_grupo INT NOT NULL DEFAULT 1,
+  avaliacao_reps ENUM('compartilhada','media') NOT NULL DEFAULT 'compartilhada', -- representante e vice: mesma nota ou média
   encerrado TINYINT(1) DEFAULT 0,
   encerrado_em DATETIME DEFAULT NULL,
   encerrado_por INT DEFAULT NULL,
@@ -140,7 +174,8 @@ CREATE TABLE projetos (
   FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE,
   FOREIGN KEY (encerrado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
   INDEX idx_projetos_turma (turma_id),
-  INDEX idx_projetos_encerrado (encerrado)
+  INDEX idx_projetos_encerrado (encerrado),
+  CONSTRAINT fk_projeto_diretoria FOREIGN KEY (diretoria_id) REFERENCES gremio_diretorias(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE projeto_etapas (
@@ -202,6 +237,23 @@ CREATE TABLE grupo_diretores (
   INDEX idx_gd_ativo (ativo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Pedidos dos alunos: entrar num grupo ou ser diretor (quando o projeto permite)
+CREATE TABLE solicitacoes_grupo (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  grupo_id INT NOT NULL,
+  usuario_id INT NOT NULL,
+  tipo ENUM('entrar','diretor') NOT NULL,
+  status ENUM('pendente','aprovada','recusada','cancelada') NOT NULL DEFAULT 'pendente',
+  respondida_por INT DEFAULT NULL,
+  respondida_em DATETIME DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_solic_grupo (grupo_id, status),
+  KEY idx_solic_usuario (usuario_id, status),
+  FOREIGN KEY (grupo_id) REFERENCES grupos(id) ON DELETE CASCADE,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  FOREIGN KEY (respondida_por) REFERENCES usuarios(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- =====================================================================
 -- 6. CRITÉRIOS
 -- =====================================================================
@@ -252,6 +304,7 @@ CREATE TABLE descontos_nota (
 CREATE TABLE configuracoes_conceito (
   id INT AUTO_INCREMENT PRIMARY KEY,
   projeto_id INT NOT NULL UNIQUE,
+  esquema_nota ENUM('mencao','0a10','0a100') NOT NULL DEFAULT 'mencao',
   limite_i_max INT NOT NULL DEFAULT 49,
   limite_r_min INT NOT NULL DEFAULT 50,
   limite_r_max INT NOT NULL DEFAULT 69,
@@ -482,6 +535,8 @@ CREATE TABLE alertas (
   titulo VARCHAR(200) NOT NULL,
   mensagem TEXT NOT NULL,
   urgente TINYINT(1) DEFAULT 0,
+  contagem_ate DATETIME DEFAULT NULL,     -- contagem regressiva no painel
+  do_dia DATE DEFAULT NULL,               -- aviso do dia (some à meia-noite)
   expira_em DATETIME DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -510,6 +565,108 @@ CREATE TABLE notificacoes (
   INDEX idx_notif_usuario (usuario_id),
   INDEX idx_notif_lida (lida),
   INDEX idx_notif_data (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =====================================================================
+-- DIA A DIA E GRÊMIO: calendário, horário das aulas, diretorias e reuniões
+-- =====================================================================
+-- Agenda: eventos da turma (criados pelo representante/vice, todos veem) e pessoais (só quem criou vê)
+CREATE TABLE eventos_calendario (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  turma_id INT NULL,                     -- pessoal pode não ter turma
+  visibilidade ENUM('turma','pessoal') NOT NULL DEFAULT 'turma',
+  tipo ENUM('entrega','prova','tarefa','estudo','evento','reuniao','feriado','outro') NOT NULL DEFAULT 'evento',
+  prioridade ENUM('baixa','media','alta','urgente') NOT NULL DEFAULT 'media',
+  titulo VARCHAR(150) NOT NULL,
+  descricao TEXT NULL,
+  data DATE NOT NULL,
+  hora_inicio TIME NULL,
+  hora_fim TIME NULL,
+  local VARCHAR(120) NULL,
+  lembrete TINYINT(1) NOT NULL DEFAULT 1, -- notificação na véspera
+  criado_por INT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_evento_turma_data (turma_id, data),
+  KEY idx_evento_criador (criado_por, data),
+  FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE,
+  FOREIGN KEY (criado_por) REFERENCES usuarios(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Quem já concluiu cada evento (cada pessoa marca o seu)
+CREATE TABLE evento_conclusoes (
+  evento_id INT NOT NULL,
+  usuario_id INT NOT NULL,
+  concluido_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (evento_id, usuario_id),
+  FOREIGN KEY (evento_id) REFERENCES eventos_calendario(id) ON DELETE CASCADE,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE horarios_aula (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  turma_id INT NOT NULL,
+  dia_semana TINYINT NOT NULL,           -- 1 = segunda ... 7 = domingo
+  inicio TIME NOT NULL,
+  fim TIME NOT NULL,
+  disciplina VARCHAR(100) NOT NULL,
+  professor VARCHAR(100) NULL,
+  sala VARCHAR(50) NULL,
+  KEY idx_horario_turma (turma_id, dia_semana, inicio),
+  FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Diretorias / coordenações do grêmio (criadas pelo presidente)
+CREATE TABLE gremio_diretorias (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  turma_id INT NOT NULL,
+  nome VARCHAR(100) NOT NULL,
+  descricao VARCHAR(500) NULL,
+  criado_por INT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE,
+  FOREIGN KEY (criado_por) REFERENCES usuarios(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE gremio_diretoria_membros (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  diretoria_id INT NOT NULL,
+  usuario_id INT NOT NULL,
+  cargo ENUM('diretor','coordenador','membro') NOT NULL DEFAULT 'membro',
+  UNIQUE KEY uk_diretoria_membro (diretoria_id, usuario_id),
+  FOREIGN KEY (diretoria_id) REFERENCES gremio_diretorias(id) ON DELETE CASCADE,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Reuniões da turma ou do grêmio (geral ou de uma diretoria): pauta, ata e presença
+CREATE TABLE reunioes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  turma_id INT NOT NULL,
+  diretoria_id INT NULL,
+  titulo VARCHAR(150) NOT NULL,
+  data DATETIME NOT NULL,
+  local VARCHAR(120) NULL,
+  pauta TEXT NULL,
+  ata TEXT NULL,
+  status ENUM('agendada','realizada','cancelada') NOT NULL DEFAULT 'agendada',
+  qr_token VARCHAR(40) NULL,                 -- QR de presença aberto (muda a cada 30 s, assinado com APP_KEY)
+  qr_ate DATETIME NULL,                      -- até quando o QR aceita presenças
+  criado_por INT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_reuniao_turma (turma_id, data),
+  FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE,
+  FOREIGN KEY (diretoria_id) REFERENCES gremio_diretorias(id) ON DELETE SET NULL,
+  FOREIGN KEY (criado_por) REFERENCES usuarios(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE reuniao_presencas (
+  reuniao_id INT NOT NULL,
+  usuario_id INT NOT NULL,
+  presente TINYINT(1) NOT NULL DEFAULT 1,
+  via ENUM('manual','qr') NOT NULL DEFAULT 'manual',  -- como a presença foi marcada
+  marcado_em DATETIME NULL,
+  PRIMARY KEY (reuniao_id, usuario_id),
+  FOREIGN KEY (reuniao_id) REFERENCES reunioes(id) ON DELETE CASCADE,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =====================================================================
@@ -603,6 +760,419 @@ CREATE TABLE solicitacoes_materiais (
   INDEX idx_sm_status (status),
   INDEX idx_sm_solicitante (solicitante_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================================
+-- PLANOS E PAGAMENTOS
+-- =====================================================================
+-- Planos, cupons, assinaturas e pagamentos (modo de teste, sem gateway).
+-- Preços e regras: precos.md.
+
+CREATE TABLE planos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  codigo VARCHAR(30) NOT NULL UNIQUE,
+  tipo ENUM('turma','gremio') NOT NULL,
+  nome VARCHAR(60) NOT NULL,
+  meses INT DEFAULT NULL,                 -- NULL = sem vencimento (Vitalício)
+  projetos INT NOT NULL,
+  pessoas_max INT NOT NULL DEFAULT 50,
+  preco DECIMAL(10,2) NOT NULL,           -- à vista, preço de lista
+  piso DECIMAL(10,2) NOT NULL,            -- nenhum desconto deixa o à vista abaixo disto
+  max_parcelas INT NOT NULL DEFAULT 1,
+  tabela_parcelas CHAR(1) DEFAULT NULL,   -- 'A' (acréscimo desde 2x) ou 'B' (6x sem juros); NULL = só à vista
+  inclui_dia_a_dia TINYINT(1) NOT NULL DEFAULT 1, -- agenda, horário, aviso do dia e contagem (do Anual para cima)
+  preco_dia_a_dia DECIMAL(10,2) DEFAULT NULL,     -- adicional para os planos que não incluem
+  ordem INT NOT NULL DEFAULT 0,
+  ativo TINYINT(1) NOT NULL DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE config_comercial (
+  chave VARCHAR(60) PRIMARY KEY,
+  valor VARCHAR(255) DEFAULT NULL,
+  descricao VARCHAR(255) DEFAULT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Pacotes para escolas: um cupom gratuito (uso único) por turma
+CREATE TABLE pacotes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nome VARCHAR(100) NOT NULL,
+  plano_id INT NOT NULL,
+  quantidade INT NOT NULL,
+  valido_ate DATE DEFAULT NULL,
+  ativo TINYINT(1) NOT NULL DEFAULT 1,
+  criado_por INT DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (plano_id) REFERENCES planos(id),
+  FOREIGN KEY (criado_por) REFERENCES usuarios(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE cupons (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  codigo VARCHAR(40) NOT NULL UNIQUE,
+  origem ENUM('manual','pacote','indicacao','renovacao') NOT NULL DEFAULT 'manual',
+  pacote_id INT NULL,                     -- cupom gerado por um pacote de escola
+  turma_dona_id INT NULL,                 -- código de indicação desta turma
+  tipo_plano ENUM('turma','gremio','todos') NOT NULL DEFAULT 'todos',
+  percentual DECIMAL(5,2) DEFAULT NULL,   -- NULL = usa o percentual padrão da configuração
+  valido_ate DATE DEFAULT NULL,
+  usos_max INT DEFAULT NULL,
+  usos INT NOT NULL DEFAULT 0,
+  ativo TINYINT(1) NOT NULL DEFAULT 1,
+  criado_por INT DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (criado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
+  CONSTRAINT fk_cupom_pacote FOREIGN KEY (pacote_id) REFERENCES pacotes(id) ON DELETE CASCADE,
+  CONSTRAINT fk_cupom_turma_dona FOREIGN KEY (turma_dona_id) REFERENCES turmas(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Desconto do cupom em cada plano (% ou R$). Sem linhas aqui, vale a regra geral (tipo de plano + percentual)
+CREATE TABLE cupom_planos (
+  cupom_id INT NOT NULL,
+  plano_id INT NOT NULL,
+  tipo_desconto ENUM('pct','valor') NOT NULL DEFAULT 'pct',
+  valor DECIMAL(10,2) NOT NULL,
+  PRIMARY KEY (cupom_id, plano_id),
+  FOREIGN KEY (cupom_id) REFERENCES cupons(id) ON DELETE CASCADE,
+  FOREIGN KEY (plano_id) REFERENCES planos(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE assinaturas (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  turma_id INT NOT NULL,
+  plano_id INT NOT NULL,
+  status ENUM('aguardando','ativa','cancelada','trocada','renovada') NOT NULL DEFAULT 'aguardando',
+  inicio DATETIME DEFAULT NULL,           -- definido quando a 1ª parcela é paga
+  fim DATETIME DEFAULT NULL,              -- NULL com status ativa = sem vencimento
+  projetos_limite INT NOT NULL,
+  valor_lista DECIMAL(10,2) NOT NULL,
+  desconto_pct DECIMAL(5,2) NOT NULL DEFAULT 0,
+  valor_total DECIMAL(10,2) NOT NULL,
+  valor_base DECIMAL(10,2) DEFAULT NULL,  -- valor à vista pago pelo plano (base do crédito na troca)
+  parcelas INT NOT NULL DEFAULT 1,
+  dia_a_dia TINYINT(1) NOT NULL DEFAULT 0, -- comprou o adicional Dia a dia (planos que não incluem)
+  cupom_id INT DEFAULT NULL,
+  troca_de INT DEFAULT NULL,             -- troca de plano: assinatura anterior (vira 'trocada' ao pagar a 1ª parcela)
+  renovacao_de INT NULL,                 -- renovação: assinatura anterior (vira 'renovada'; o novo período começa no fim dela)
+  cupom_renovacao_id INT NULL,           -- cupom automático de renovação gerado perto do fim deste plano
+  comprado_por INT DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE,
+  FOREIGN KEY (plano_id) REFERENCES planos(id),
+  FOREIGN KEY (cupom_id) REFERENCES cupons(id) ON DELETE SET NULL,
+  FOREIGN KEY (comprado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
+  FOREIGN KEY (troca_de) REFERENCES assinaturas(id) ON DELETE SET NULL,
+  INDEX idx_ass_turma (turma_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Dados de cobrança de quem compra planos (CPF e endereço). Um registro por usuário, reaproveitado nas próximas compras.
+CREATE TABLE dados_cobranca (
+  usuario_id INT PRIMARY KEY,
+  nome_completo VARCHAR(120) NOT NULL,
+  cpf CHAR(11) NOT NULL,
+  cep CHAR(8) NOT NULL,
+  logradouro VARCHAR(150) NOT NULL,
+  numero VARCHAR(20) NOT NULL,
+  complemento VARCHAR(80) DEFAULT NULL,
+  bairro VARCHAR(80) NOT NULL,
+  cidade VARCHAR(80) NOT NULL,
+  uf CHAR(2) NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE pagamentos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  assinatura_id INT NOT NULL,
+  numero INT NOT NULL,                    -- nº da parcela (1..parcelas)
+  tipo ENUM('parcela','adicional') NOT NULL DEFAULT 'parcela', -- adicional = compra do Dia a dia depois
+  valor DECIMAL(10,2) NOT NULL,
+  vencimento DATE NOT NULL,
+  status ENUM('pendente','pago','cancelado') NOT NULL DEFAULT 'pendente',
+  metodo VARCHAR(20) NOT NULL DEFAULT 'pix_teste',
+  txid VARCHAR(40) DEFAULT NULL,
+  mp_id VARCHAR(40) NULL,                   -- Mercado Pago: id do pagamento (modo 'mercadopago')
+  pix_copia TEXT NULL,                      -- Pix copia e cola real
+  pix_qr MEDIUMTEXT NULL,                   -- QR do Pix (imagem PNG em base64)
+  pix_expira DATETIME NULL,                 -- validade do Pix gerado
+  pago_em DATETIME DEFAULT NULL,
+  pago_por INT DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_parcela (assinatura_id, numero),
+  FOREIGN KEY (assinatura_id) REFERENCES assinaturas(id) ON DELETE CASCADE,
+  FOREIGN KEY (pago_por) REFERENCES usuarios(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Crédito de quem indicou: % de desconto nas próximas parcelas ou na próxima compra
+CREATE TABLE creditos_indicacao (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  turma_id INT NOT NULL,
+  origem_turma_id INT DEFAULT NULL,
+  origem_assinatura_id INT DEFAULT NULL,
+  pct DECIMAL(5,2) NOT NULL,
+  status ENUM('disponivel','usado') NOT NULL DEFAULT 'disponivel',
+  usado_assinatura_id INT DEFAULT NULL,
+  usado_em DATETIME DEFAULT NULL,
+  descricao VARCHAR(200) DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_credito_turma (turma_id, status),
+  FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE,
+  FOREIGN KEY (origem_turma_id) REFERENCES turmas(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Enquetes e votações da turma/grêmio
+CREATE TABLE enquetes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  turma_id INT NOT NULL,
+  criado_por INT NOT NULL,
+  pergunta VARCHAR(200) NOT NULL,
+  descricao TEXT NULL,
+  multipla TINYINT(1) NOT NULL DEFAULT 0,         -- 1 = pode marcar mais de uma opção
+  anonima TINYINT(1) NOT NULL DEFAULT 1,          -- 1 = ninguém vê quem votou em quê
+  resultado ENUM('sempre','apos_votar','apos_encerrar') NOT NULL DEFAULT 'apos_votar',
+  encerra_em DATETIME NULL,                       -- NULL = fica aberta até encerrar à mão
+  encerrada_em DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE,
+  FOREIGN KEY (criado_por) REFERENCES usuarios(id) ON DELETE CASCADE,
+  INDEX idx_enquete_turma (turma_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE enquete_opcoes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  enquete_id INT NOT NULL,
+  texto VARCHAR(150) NOT NULL,
+  ordem INT NOT NULL DEFAULT 0,
+  FOREIGN KEY (enquete_id) REFERENCES enquetes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE enquete_votos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  enquete_id INT NOT NULL,
+  opcao_id INT NOT NULL,
+  usuario_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_voto (enquete_id, opcao_id, usuario_id),
+  FOREIGN KEY (enquete_id) REFERENCES enquetes(id) ON DELETE CASCADE,
+  FOREIGN KEY (opcao_id) REFERENCES enquete_opcoes(id) ON DELETE CASCADE,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Caixinha anônima de dúvidas e sugestões
+CREATE TABLE caixinha_mensagens (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  turma_id INT NOT NULL,
+  autor_id INT NULL,
+  tipo ENUM('duvida','sugestao','reclamacao','elogio') NOT NULL DEFAULT 'duvida',
+  texto TEXT NOT NULL,
+  status ENUM('nova','lida','respondida','arquivada') NOT NULL DEFAULT 'nova',
+  resposta TEXT NULL,
+  respondida_por INT NULL,
+  respondida_em DATETIME NULL,
+  publica TINYINT(1) NOT NULL DEFAULT 0,          -- 1 = pergunta e resposta aparecem para a turma toda
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE,
+  FOREIGN KEY (autor_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+  FOREIGN KEY (respondida_por) REFERENCES usuarios(id) ON DELETE SET NULL,
+  INDEX idx_caixinha_turma (turma_id, status, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Mural de fotos e conquistas
+CREATE TABLE mural_posts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  turma_id INT NOT NULL,
+  autor_id INT NULL,
+  tipo ENUM('foto','conquista') NOT NULL DEFAULT 'foto',
+  icone ENUM('trofeu','medalha','estrela','foguete','coracao') NULL,   -- conquista sem foto
+  titulo VARCHAR(120) NOT NULL,
+  texto VARCHAR(600) NULL,
+  arquivo VARCHAR(255) NULL,                     -- caminho em public/ (uploads/mural/...)
+  aprovado TINYINT(1) NOT NULL DEFAULT 0,
+  fixado TINYINT(1) NOT NULL DEFAULT 0,          -- aparece primeiro
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE,
+  FOREIGN KEY (autor_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+  INDEX idx_mural_turma (turma_id, aprovado, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE mural_curtidas (
+  post_id INT NOT NULL,
+  usuario_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (post_id, usuario_id),
+  FOREIGN KEY (post_id) REFERENCES mural_posts(id) ON DELETE CASCADE,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Banco de materiais de estudo por disciplina
+CREATE TABLE estudo_materiais (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  turma_id INT NOT NULL,
+  autor_id INT NULL,
+  disciplina VARCHAR(80) NOT NULL,
+  titulo VARCHAR(150) NOT NULL,
+  tipo ENUM('arquivo','link','resumo') NOT NULL DEFAULT 'arquivo',
+  arquivo VARCHAR(255) NULL,                -- caminho em public/ (uploads/estudos/...)
+  nome_original VARCHAR(200) NULL,
+  url VARCHAR(500) NULL,
+  texto TEXT NULL,                          -- resumo escrito
+  evento_id INT NULL,                       -- prova/entrega da agenda a que o material ajuda
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE,
+  FOREIGN KEY (autor_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+  FOREIGN KEY (evento_id) REFERENCES eventos_calendario(id) ON DELETE SET NULL,
+  INDEX idx_estudo_turma (turma_id, disciplina)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Kanban de tarefas do grupo
+CREATE TABLE grupo_tarefas (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  grupo_id INT NOT NULL,
+  titulo VARCHAR(150) NOT NULL,
+  descricao TEXT NULL,
+  responsavel_id INT NULL,
+  prazo DATE NULL,
+  coluna ENUM('a_fazer','fazendo','revisao','feito') NOT NULL DEFAULT 'a_fazer',
+  ordem INT NOT NULL DEFAULT 0,
+  ata_id INT NULL,                          -- ata do grupo em que a tarefa foi combinada
+  criado_por INT NULL,
+  concluida_em DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (grupo_id) REFERENCES grupos(id) ON DELETE CASCADE,
+  FOREIGN KEY (responsavel_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+  FOREIGN KEY (ata_id) REFERENCES atas(id) ON DELETE SET NULL,
+  FOREIGN KEY (criado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
+  INDEX idx_tarefa_grupo (grupo_id, coluna, ordem)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Controle de caixa da turma/grêmio
+CREATE TABLE caixa_lancamentos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  turma_id INT NOT NULL,
+  tipo ENUM('entrada','saida') NOT NULL,
+  valor DECIMAL(10,2) NOT NULL,
+  descricao VARCHAR(200) NOT NULL,
+  categoria VARCHAR(60) NOT NULL DEFAULT 'Outros',
+  data DATE NOT NULL,
+  pessoa_id INT NULL,
+  diretoria_id INT NULL,
+  projeto_id INT NULL,                      -- gasto/arrecadação de um projeto (orçamento)
+  comprovante VARCHAR(255) NULL,            -- caminho em public/ (uploads/caixa/...)
+  comprovante_nome VARCHAR(200) NULL,
+  registrado_por INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE,
+  FOREIGN KEY (pessoa_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+  FOREIGN KEY (diretoria_id) REFERENCES gremio_diretorias(id) ON DELETE SET NULL,
+  FOREIGN KEY (registrado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
+  INDEX idx_caixa_turma (turma_id, data),
+  CONSTRAINT fk_caixa_projeto FOREIGN KEY (projeto_id) REFERENCES projetos(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Orçamento dos projetos (itens previstos)
+CREATE TABLE projeto_orcamento_itens (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  projeto_id INT NOT NULL,
+  descricao VARCHAR(150) NOT NULL,
+  valor_previsto DECIMAL(10,2) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (projeto_id) REFERENCES projetos(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Página pública do grêmio
+CREATE TABLE gremio_paginas (
+  turma_id INT PRIMARY KEY,
+  slug VARCHAR(60) NOT NULL,
+  ativa TINYINT(1) NOT NULL DEFAULT 0,
+  apresentacao TEXT NULL,
+  instagram VARCHAR(60) NULL,
+  mostrar_diretorias TINYINT(1) NOT NULL DEFAULT 1,
+  mostrar_eventos TINYINT(1) NOT NULL DEFAULT 1,
+  mostrar_conquistas TINYINT(1) NOT NULL DEFAULT 1,
+  mostrar_contas TINYINT(1) NOT NULL DEFAULT 0,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_gremio_slug (slug),
+  FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Resumo semanal por email (controle de envio)
+CREATE TABLE resumo_envios (
+  usuario_id INT NOT NULL,
+  semana CHAR(8) NOT NULL,                  -- ex.: 2026-W48
+  enviado_em DATETIME NOT NULL,
+  ok TINYINT(1) NOT NULL DEFAULT 1,         -- 0 = não tinha nada para resumir ou o envio falhou
+  PRIMARY KEY (usuario_id, semana),
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Rateio da mensalidade entre os alunos
+CREATE TABLE rateios (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  pagamento_id INT NOT NULL,
+  turma_id INT NOT NULL,
+  criado_por INT NULL,
+  status ENUM('aberto','quitado','cancelado') NOT NULL DEFAULT 'aberto',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  quitado_em DATETIME NULL,
+  FOREIGN KEY (pagamento_id) REFERENCES pagamentos(id) ON DELETE CASCADE,
+  FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE,
+  FOREIGN KEY (criado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
+  INDEX idx_rateio_pagamento (pagamento_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE rateio_partes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  rateio_id INT NOT NULL,
+  usuario_id INT NOT NULL,
+  valor DECIMAL(10,2) NOT NULL,
+  status ENUM('pendente','pago','coberto') NOT NULL DEFAULT 'pendente',   -- coberto = o representante pagou por ele
+  pago_em DATETIME NULL,
+  UNIQUE KEY uq_parte (rateio_id, usuario_id),
+  FOREIGN KEY (rateio_id) REFERENCES rateios(id) ON DELETE CASCADE,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Pedidos de proposta das escolas
+CREATE TABLE escola_contatos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nome VARCHAR(120) NOT NULL,
+  escola VARCHAR(150) NOT NULL,
+  cidade VARCHAR(100) NULL,
+  email VARCHAR(150) NOT NULL,
+  telefone VARCHAR(30) NULL,
+  turmas INT NOT NULL DEFAULT 1,
+  plano_id INT NULL,
+  mensagem TEXT NULL,
+  status ENUM('novo','em_contato','fechado','descartado') NOT NULL DEFAULT 'novo',
+  ip VARCHAR(45) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (plano_id) REFERENCES planos(id) ON DELETE SET NULL,
+  INDEX idx_escola_status (status, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- App instalável: inscrições de notificação no aparelho (Web Push)
+CREATE TABLE push_inscricoes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id INT NOT NULL,
+  endpoint VARCHAR(700) NOT NULL,
+  endpoint_hash CHAR(64) NOT NULL,
+  p256dh VARCHAR(150) NOT NULL,
+  auth VARCHAR(60) NOT NULL,
+  aparelho VARCHAR(150) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  ultimo_envio DATETIME NULL,
+  UNIQUE KEY uq_push_endpoint (endpoint_hash),
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Tutorial guiado (tours vistos)
+CREATE TABLE tutorial_vistos (
+  usuario_id INT NOT NULL,
+  tour VARCHAR(40) NOT NULL,
+  status ENUM('feito','dispensado') NOT NULL DEFAULT 'feito',
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (usuario_id, tour),
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =====================================================================
 -- USUÁRIOS — emails corrigidos com .com
@@ -1018,107 +1588,52 @@ INSERT INTO participantes_relatorio (relatorio_id, usuario_id) VALUES
 (2, 20),
 (2, 32);
 
--- =====================================================================
--- PLANOS E PAGAMENTOS
--- =====================================================================
--- Planos, cupons, assinaturas e pagamentos (modo de teste, sem gateway).
--- Preços e regras: precos.md.
-
-CREATE TABLE planos (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  codigo VARCHAR(30) NOT NULL UNIQUE,
-  tipo ENUM('turma','gremio') NOT NULL,
-  nome VARCHAR(60) NOT NULL,
-  meses INT DEFAULT NULL,                 -- NULL = sem vencimento (Vitalício)
-  projetos INT NOT NULL,
-  pessoas_max INT NOT NULL DEFAULT 50,
-  preco DECIMAL(10,2) NOT NULL,           -- à vista, preço de lista
-  piso DECIMAL(10,2) NOT NULL,            -- nenhum desconto deixa o à vista abaixo disto
-  max_parcelas INT NOT NULL DEFAULT 1,
-  tabela_parcelas CHAR(1) DEFAULT NULL,   -- 'A' (acréscimo desde 2x) ou 'B' (6x sem juros); NULL = só à vista
-  ordem INT NOT NULL DEFAULT 0,
-  ativo TINYINT(1) NOT NULL DEFAULT 1
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE config_comercial (
-  chave VARCHAR(60) PRIMARY KEY,
-  valor VARCHAR(255) DEFAULT NULL,
-  descricao VARCHAR(255) DEFAULT NULL,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE cupons (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  codigo VARCHAR(40) NOT NULL UNIQUE,
-  tipo_plano ENUM('turma','gremio','todos') NOT NULL DEFAULT 'todos',
-  percentual DECIMAL(5,2) DEFAULT NULL,   -- NULL = usa o percentual padrão da configuração
-  valido_ate DATE DEFAULT NULL,
-  usos_max INT DEFAULT NULL,
-  usos INT NOT NULL DEFAULT 0,
-  ativo TINYINT(1) NOT NULL DEFAULT 1,
-  criado_por INT DEFAULT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (criado_por) REFERENCES usuarios(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE assinaturas (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  turma_id INT NOT NULL,
-  plano_id INT NOT NULL,
-  status ENUM('aguardando','ativa','cancelada') NOT NULL DEFAULT 'aguardando',
-  inicio DATETIME DEFAULT NULL,           -- definido quando a 1ª parcela é paga
-  fim DATETIME DEFAULT NULL,              -- NULL com status ativa = sem vencimento
-  projetos_limite INT NOT NULL,
-  valor_lista DECIMAL(10,2) NOT NULL,
-  desconto_pct DECIMAL(5,2) NOT NULL DEFAULT 0,
-  valor_total DECIMAL(10,2) NOT NULL,
-  parcelas INT NOT NULL DEFAULT 1,
-  cupom_id INT DEFAULT NULL,
-  comprado_por INT DEFAULT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE CASCADE,
-  FOREIGN KEY (plano_id) REFERENCES planos(id),
-  FOREIGN KEY (cupom_id) REFERENCES cupons(id) ON DELETE SET NULL,
-  FOREIGN KEY (comprado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
-  INDEX idx_ass_turma (turma_id, status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE pagamentos (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  assinatura_id INT NOT NULL,
-  numero INT NOT NULL,                    -- nº da parcela (1..parcelas)
-  valor DECIMAL(10,2) NOT NULL,
-  vencimento DATE NOT NULL,
-  status ENUM('pendente','pago','cancelado') NOT NULL DEFAULT 'pendente',
-  metodo VARCHAR(20) NOT NULL DEFAULT 'pix_teste',
-  txid VARCHAR(40) DEFAULT NULL,
-  pago_em DATETIME DEFAULT NULL,
-  pago_por INT DEFAULT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uk_parcela (assinatura_id, numero),
-  FOREIGN KEY (assinatura_id) REFERENCES assinaturas(id) ON DELETE CASCADE,
-  FOREIGN KEY (pago_por) REFERENCES usuarios(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-INSERT INTO planos (codigo, tipo, nome, meses, projetos, pessoas_max, preco, piso, max_parcelas, tabela_parcelas, ordem) VALUES
-  ('trimestral', 'turma',  'Trimestral',  3,    2,  50,  99.90,  69.90,  1, NULL, 1),
-  ('semestral',  'turma',  'Semestral',   6,    4,  50, 167.90, 117.50,  2, 'A',  2),
-  ('anual',      'turma',  'Anual',       12,   8,  50, 279.90, 195.90,  4, 'A',  3),
-  ('completo',   'turma',  'Completo',    18,  12,  50, 359.90, 251.90,  6, 'A',  4),
-  ('estendido',  'turma',  'Estendido',   36,  24,  50, 529.90, 370.90, 12, 'B',  5),
-  ('vitalicio',  'turma',  'Vitalício',   NULL, 36, 50, 999.90, 699.90, 12, 'B',  6),
-  ('gremio20',   'gremio', 'Grêmio 20',   12,  10,  20, 234.90, 199.60,  4, 'A', 11),
-  ('gremio25',   'gremio', 'Grêmio 25',   12,  10,  25, 259.90, 220.90,  4, 'A', 12),
-  ('gremio30',   'gremio', 'Grêmio 30',   12,  10,  30, 284.90, 242.10,  4, 'A', 13),
-  ('gremio40',   'gremio', 'Grêmio 40',   12,  10,  40, 334.90, 284.60,  4, 'A', 14);
+-- Turmas e grêmios: mesmas durações; grêmio cerca de 30% mais barato. Os planos de grêmio por faixa de pessoas saíram de venda.
+INSERT INTO planos (codigo, tipo, nome, meses, projetos, pessoas_max, preco, piso, max_parcelas, tabela_parcelas, ordem, ativo) VALUES
+  ('trimestral',   'turma',  'Trimestral',         3,    2, 50,  99.90,  69.90,  1, NULL,  1, 1),
+  ('semestral',    'turma',  'Semestral',          6,    4, 50, 167.90, 117.50,  2, 'A',   2, 1),
+  ('anual',        'turma',  'Anual',             12,    8, 50, 279.90, 195.90,  4, 'A',   3, 1),
+  ('completo',     'turma',  'Completo',          18,   12, 50, 359.90, 251.90,  6, 'A',   4, 1),
+  ('estendido',    'turma',  'Estendido',         36,   24, 50, 529.90, 370.90, 12, 'B',   5, 1),
+  ('vitalicio',    'turma',  'Vitalício',       NULL,   36, 50, 999.90, 699.90, 12, 'B',   6, 1),
+  ('gremio20',     'gremio', 'Grêmio 20',         12,   10, 20, 234.90, 199.60,  4, 'A',  11, 0),
+  ('gremio25',     'gremio', 'Grêmio 25',         12,   10, 25, 259.90, 220.90,  4, 'A',  12, 0),
+  ('gremio30',     'gremio', 'Grêmio 30',         12,   10, 30, 284.90, 242.10,  4, 'A',  13, 0),
+  ('gremio40',     'gremio', 'Grêmio 40',         12,   10, 40, 334.90, 284.60,  4, 'A',  14, 0),
+  ('g_trimestral', 'gremio', 'Grêmio Trimestral',  3,    2, 50,  69.90,  48.90,  1, NULL, 21, 1),
+  ('g_semestral',  'gremio', 'Grêmio Semestral',   6,    4, 50, 117.90,  82.50,  2, 'A',  22, 1),
+  ('g_anual',      'gremio', 'Grêmio Anual',      12,    8, 50, 194.90, 136.40,  4, 'A',  23, 1),
+  ('g_completo',   'gremio', 'Grêmio Completo',   18,   12, 50, 249.90, 174.90,  6, 'A',  24, 1),
+  ('g_estendido',  'gremio', 'Grêmio Estendido',  36,   24, 50, 369.90, 258.90, 12, 'B',  25, 1),
+  ('g_vitalicio',  'gremio', 'Grêmio Vitalício', NULL,  36, 50, 699.90, 489.90, 12, 'B',  26, 1);
+-- Dia a dia vem incluso do Anual para cima; nos planos menores é um adicional (pensado para o Anual valer mais a pena)
+UPDATE planos SET inclui_dia_a_dia = 0, preco_dia_a_dia = 39.90 WHERE codigo = 'trimestral';
+UPDATE planos SET inclui_dia_a_dia = 0, preco_dia_a_dia = 59.90 WHERE codigo = 'semestral';
+UPDATE planos SET inclui_dia_a_dia = 0, preco_dia_a_dia = 27.90 WHERE codigo = 'g_trimestral';
+UPDATE planos SET inclui_dia_a_dia = 0, preco_dia_a_dia = 41.90 WHERE codigo = 'g_semestral';
 
 INSERT INTO config_comercial (chave, valor, descricao) VALUES
   ('cupom_turma_pct',  '30', 'Desconto padrão de cupom em planos de turma (%)'),
   ('cupom_gremio_pct', '15', 'Desconto padrão de cupom em planos de grêmio (%)'),
   ('indicacao_pct',    '10', 'Desconto da turma indicada na 1ª compra (%)'),
-  ('modo_pagamento',   'teste', 'teste = pagamento simulado; mercadopago = cobrança real (futuro)');
+  ('modo_pagamento',   'teste', 'teste = pagamento simulado; mercadopago = cobrança real (futuro)'),
+  ('exigir_plano', '1', '1 = turma sem plano ativo é bloqueada (exceto isentas); 0 = cobrança desligada'),
+  ('tolerancia_dias', '5', 'Dias de tolerância após vencimento ou parcela atrasada, antes do bloqueio'),
+  ('aviso_vencimento_dias', '7', 'Quantos dias antes do fim do plano o representante começa a ser avisado'),
+  ('indicacao_recompensa_pct', '10', 'Indicação: desconto (%) que a turma que indicou ganha nas próximas parcelas ou na próxima compra'),
+  ('desconto_cruzado_pct', '10', 'Quem já tem plano de turma ganha este desconto (%) no plano do grêmio, e vice-versa'),
+  ('teste_dia_dias', '14', 'Dias do teste grátis do Dia a dia (0 = sem teste)'),
+  ('renovacao_cupom_pct', '10', 'Cupom automático de renovação: desconto (%) enviado quando o plano está perto de vencer (0 = sem cupom)'),
+  ('escola_desc_5',  '10', 'Pacote para escolas: desconto (%) a partir de 5 turmas'),
+  ('escola_desc_10', '15', 'Pacote para escolas: desconto (%) a partir de 10 turmas'),
+  ('escola_desc_20', '20', 'Pacote para escolas: desconto (%) a partir de 20 turmas');
+-- Turmas do banco de exemplo não precisam de plano
+UPDATE turmas SET isenta_plano = 1;
+-- Projetos de exemplo seguem como antes: nota final dos representantes = média
+UPDATE projetos SET avaliacao_reps = 'media';
 
 SET FOREIGN_KEY_CHECKS = 1;
+SET SQL_SAFE_UPDATES = 1;
 
 -- =====================================================================
 -- VERIFICAÇÃO

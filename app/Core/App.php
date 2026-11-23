@@ -60,7 +60,15 @@ class App
 
     public static function getUrl()
     {
-        return self::get('APP_URL', 'http://localhost' . self::getBasePath());
+        $url  = rtrim((string) self::get('APP_URL', 'http://localhost' . self::getBasePath()), '/');
+        $base = rtrim((string) self::getBasePath(), '/');
+        // Servidor Linux diferencia maiúsculas: se o caminho do APP_URL só difere do APP_BASE_PATH na grafia
+        // (ex.: /projetos/prumo x /projetos/Prumo), vale a do APP_BASE_PATH — senão os links dos emails e do Google dão 404
+        $caminho = (string) parse_url($url, PHP_URL_PATH);
+        if ($base !== '' && $caminho !== $base && strcasecmp($caminho, $base) === 0) {
+            $url = substr($url, 0, strlen($url) - strlen($caminho)) . $base;
+        }
+        return $url;
     }
 
     public static function getSessionName()

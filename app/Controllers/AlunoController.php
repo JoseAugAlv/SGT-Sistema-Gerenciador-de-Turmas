@@ -137,6 +137,7 @@ class AlunoController
     {
         $u = $_SESSION['usuario'];
         $isMaster = $u['tipo'] === 'master';
+        if (!$isMaster) $this->redirect('/alunos/convidar'); // representante só convida por email
 
         if ($isMaster) {
             $minhasTurmas = $this->turma->listarTodas();
@@ -253,6 +254,7 @@ class AlunoController
     {
         $u = $_SESSION['usuario'];
         $isMaster = $u['tipo'] === 'master';
+        if (!$isMaster) $this->redirect('/alunos/convidar'); // representante só convida por email
 
         if ($isMaster) {
             $minhasTurmas = $this->turma->listarTodas();

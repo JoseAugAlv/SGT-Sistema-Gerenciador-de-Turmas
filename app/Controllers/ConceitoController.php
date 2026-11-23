@@ -1,5 +1,6 @@
 <?php
 // app/Controllers/ConceitoController.php
+require_once __DIR__ . '/../Helpers/EscalaNota.php';
 require_once __DIR__ . '/../Core/App.php';
 require_once __DIR__ . '/../Models/Projeto.php';
 require_once __DIR__ . '/../Models/ConfiguracaoConceito.php';
@@ -74,18 +75,13 @@ class ConceitoController
             $this->redirect('/projetos/' . $projetoId);
         }
 
-        $d = [
-            'limite_i_max'          => (int) ($_POST['limite_i_max']  ?? 0),
-            'limite_r_min'          => (int) ($_POST['limite_r_min']  ?? 0),
-            'limite_r_max'          => (int) ($_POST['limite_r_max']  ?? 0),
-            'limite_b_min'          => (int) ($_POST['limite_b_min']  ?? 0),
-            'limite_b_max'          => (int) ($_POST['limite_b_max']  ?? 0),
-            'limite_mb_min'         => (int) ($_POST['limite_mb_min'] ?? 0),
+        // Esquema (menção / 0–10 / 0–100) e faixas das menções vêm dos botões de _esquema_nota.php
+        [$d, $erros] = EscalaNota::lerDoPost($_POST);
+        $d += [
             'visibilidade_diretor'  => $_POST['visibilidade_diretor'] ?? 'grupo',
             'visibilidade_aluno'    => $_POST['visibilidade_aluno']   ?? 'proprio',
         ];
 
-        $erros = [];
         if ($d['limite_i_max'] < 0 || $d['limite_i_max'] > 100)  $erros[] = 'I máximo entre 0 e 100.';
         if ($d['limite_r_min'] < 0 || $d['limite_r_min'] > 100)  $erros[] = 'R mínimo entre 0 e 100.';
         if ($d['limite_r_max'] < $d['limite_r_min'])              $erros[] = 'R máximo < mínimo.';
@@ -104,6 +100,7 @@ class ConceitoController
 
         $antes = $this->cfg->garantir($projetoId);
         $this->cfg->atualizar($projetoId, $d);
+        if (isset($_POST['avaliacao_reps'])) $this->projeto->atualizarAvaliacaoReps($projetoId, (string) $_POST['avaliacao_reps']);
         $this->audit->registrar('conceito_atualizado', 'configuracoes_conceito', $projetoId, $antes, $d);
 
         $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Configuração de conceito salva.'];

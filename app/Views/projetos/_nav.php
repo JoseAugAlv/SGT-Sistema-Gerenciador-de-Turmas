@@ -15,6 +15,14 @@ require_once __DIR__ . '/../layouts/flashes.php';
 require_once __DIR__ . '/../../Config/database.php';
 require_once __DIR__ . '/../../Models/TurmaUsuario.php';
 
+require_once __DIR__ . '/../../Models/Turma.php';
+require_once __DIR__ . '/../../Helpers/PlanoGuard.php';
+$turmaDoPlano = (new Turma())->porId((int) ($projeto['turma_id'] ?? 0));
+if ($turmaDoPlano) {
+    PlanoGuard::exigir($turmaDoPlano, true);   // turma barrada pelo plano: mostra o bloqueio e para aqui
+    echo PlanoGuard::aviso($turmaDoPlano);      // vencendo / tolerância / atraso (só representante e master)
+}
+
 $pid   = (int) $projeto['id'];
 $uri   = $_SERVER['REQUEST_URI'] ?? '';
 $u     = $_SESSION['usuario'] ?? null;
@@ -43,7 +51,7 @@ if ($u && !$isMaster && $turmaId) {
 
 // Detecta a seção ativa
 $secaoAtual = 'etapas';
-foreach (['grupos', 'atas', 'criterios', 'avaliacoes', 'conceitos', 'relatorios', 'materiais'] as $s) {
+foreach (['grupos', 'atas', 'criterios', 'avaliacoes', 'conceitos', 'relatorios', 'materiais', 'orcamento'] as $s) {
     if (strpos($uri, '/' . $s) !== false) { $secaoAtual = $s; break; }
 }
 if (strpos($uri, '/etapas') !== false) $secaoAtual = 'etapas';
@@ -58,6 +66,7 @@ $todasAbas = [
     'conceitos'  => ['icon' => 'fas fa-sliders',          'label' => 'Conceitos',  'url' => "/projetos/{$pid}/conceitos",   'roles' => ['master','representante']],
     'relatorios' => ['icon' => 'fas fa-file-alt',         'label' => 'Relatórios', 'url' => "/projetos/{$pid}/relatorios",  'roles' => ['master','representante']],
     'materiais'  => ['icon' => 'fas fa-boxes',            'label' => 'Materiais',  'url' => "/projetos/{$pid}/materiais",   'roles' => ['master','representante','diretor', 'aluno']],
+    'orcamento'  => ['icon' => 'fas fa-coins',            'label' => 'Orçamento',  'url' => "/projetos/{$pid}/orcamento",   'roles' => ['master','aluno']],
 ];
 
 $abasVisiveis = [];

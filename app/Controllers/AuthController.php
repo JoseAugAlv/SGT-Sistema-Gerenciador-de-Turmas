@@ -11,6 +11,7 @@ require_once __DIR__ . '/../Helpers/RateLimiter.php';
 require_once __DIR__ . '/../Helpers/ViewHelper.php';
 require_once __DIR__ . '/../Middleware/CsrfMiddleware.php';
 require_once __DIR__ . '/../Core/Mail.php';
+require_once __DIR__ . '/../Services/GoogleAuthService.php';
 
 class AuthController
 {
@@ -67,21 +68,12 @@ class AuthController
         RateLimiter::reset($key);
         session_regenerate_id(true);
 
-        $_SESSION['usuario'] = [
-            'id'               => (int) $user['id'],
-            'nome'             => $user['nome'],
-            'email'            => $user['email'],
-            'tipo'             => $user['tipo'],
-            'role'             => $user['tipo'],   // alias usado pelo Router
-            'primeiro_login'   => (int) $user['primeiro_login'],
-            'email_confirmado' => (int) $user['email_confirmado'],
-            'lgpd_aceito'      => (int) $user['lgpd_aceito'],
-        ];
+        $this->montarSessao($user);
 
         $this->usuario->atualizarUltimoAcesso((int) $user['id']);
         SecurityHelper::logAuditoria('login', $user['id'], 'Login OK', 'info');
 
-        $this->redirect('/');
+        $this->redirect($this->destinoPosLogin());
     }
 
     public function logout()
@@ -155,13 +147,14 @@ class AuthController
             'email_confirmado'    => 0,
             'email_token'         => $token,
             'email_token_expira'  => $expira,
-            'primeiro_login'      => 1,
+            'primeiro_login'      => 0, // já escolheu a senha e aceitou a LGPD no cadastro
             'ativo'               => 1,
             'lgpd_aceito'         => 1,
             'lgpd_data'           => date('Y-m-d H:i:s'),
         ]);
 
         $this->prefs->criarPadrao($id);
+        $this->prefs->definirNivel($id, (string) ($_POST['nivel_email'] ?? 'importantes'));
         $this->mail->emailConfirmacao($email, $nome, $token);
 
         SecurityHelper::logAuditoria('cadastro', $id, "Auto-cadastro: {$email}", 'info');
@@ -367,6 +360,7 @@ class AuthController
         }
 
         $this->usuario->concluirPrimeiroAcesso((int) $user['id'], PasswordHelper::hash($senha));
+        $this->prefs->definirNivel((int) $user['id'], (string) ($_POST['nivel_email'] ?? 'importantes'));
 
         $_SESSION['usuario']['primeiro_login']   = 0;
         $_SESSION['usuario']['lgpd_aceito']      = 1;
@@ -378,12 +372,198 @@ class AuthController
         $this->redirect('/');
     }
 
+    // ============ LOGIN COM GOOGLE ============
+
+    public function googleIniciar()
+    {
+        if (!GoogleAuthService::configurado()) {
+            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'O login com Google ainda não foi configurado.'];
+            $this->redirect('/login');
+        }
+        $_SESSION['google_state'] = bin2hex(random_bytes(16));
+        header('Location: ' . GoogleAuthService::urlLogin($_SESSION['google_state']));
+        exit;
+    }
+
+    /**
+     * Volta do Google. Entra na conta ligada ao Google ou com o mesmo email; se não existir, cria.
+     * O Google já verificou o email: não pede confirmação. Conta nova (ou sem LGPD) completa nome e telefone.
+     * Vindo de um convite (sessão convite_token), entra na conta convidada.
+     */
+    public function googleCallback()
+    {
+        $state = $_SESSION['google_state'] ?? '';
+        unset($_SESSION['google_state']);
+        if (!empty($_GET['error'])) {
+            $_SESSION['flash'] = ['tipo' => 'aviso', 'mensagem' => 'Login com Google cancelado.'];
+            $this->redirect('/login');
+        }
+        if ($state === '' || !hash_equals($state, (string) ($_GET['state'] ?? ''))) {
+            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'A sessão do login com Google expirou. Tente de novo.'];
+            $this->redirect('/login');
+        }
+
+        try {
+            $perfil = GoogleAuthService::perfilPeloCodigo((string) ($_GET['code'] ?? ''));
+        } catch (Exception $e) {
+            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => $e->getMessage()];
+            $this->redirect('/login');
+        }
+        // Veio do perfil ("Conectar com Google"): só liga a conta Google à conta já logada
+        $vincular = (int) ($_SESSION['google_vincular'] ?? 0);
+        unset($_SESSION['google_vincular']);
+        if ($vincular && (int) ($_SESSION['usuario']['id'] ?? 0) === $vincular) {
+            $dono = $this->usuario->findByGoogleId($perfil['sub']);
+            if ($dono && (int) $dono['id'] !== $vincular) {
+                $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Esta conta Google já está conectada a outro usuário do ' . App::getName() . '.'];
+            } else {
+                $this->usuario->ligarGoogle($vincular, $perfil['sub']);
+                SecurityHelper::logAuditoria('google_conectado', $vincular, "Conta Google conectada: {$perfil['email']}", 'info');
+                $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => "Conta Google ({$perfil['email']}) conectada. Agora você também pode entrar com o Google."];
+            }
+            $this->redirect('/user');
+        }
+
+        $user = $this->usuarioDoGoogle($perfil);
+
+        if (!$user['ativo']) {
+            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Conta inativa. Contate o administrador.'];
+            $this->redirect('/login');
+        }
+        session_regenerate_id(true);
+        $this->montarSessao($user);
+        $this->usuario->atualizarUltimoAcesso((int) $user['id']);
+        SecurityHelper::logAuditoria('login', $user['id'], 'Login com Google', 'info');
+        $this->redirect($user['cadastro_pendente'] ? '/completar-cadastro' : $this->destinoPosLogin());
+    }
+
+    /** Acha (ou cria) o usuário do perfil do Google. Separado do callback para dar para testar. */
+    public function usuarioDoGoogle(array $perfil): array
+    {
+        $porGoogle = $this->usuario->findByGoogleId($perfil['sub']);
+
+        // Vindo de um convite: a conta é a convidada
+        $tokenConvite = $_SESSION['convite_token'] ?? null;
+        unset($_SESSION['convite_token']);
+        if ($tokenConvite) {
+            require_once __DIR__ . '/../Models/Convite.php';
+            $convites = new Convite();
+            $convite  = $convites->validoPorToken($tokenConvite);
+            if (!$convite) {
+                $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Convite inválido ou expirado. Peça um novo ao representante.'];
+                $this->redirect('/login');
+            }
+            if ($porGoogle && (int) $porGoogle['id'] !== (int) $convite['usuario_id']) {
+                $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => 'Esta conta Google já está ligada a outro usuário. Entre com ela e peça ao representante um convite para esse email.'];
+                $this->redirect('/convite/' . urlencode($tokenConvite));
+            }
+            $this->usuario->vincularGoogle((int) $convite['usuario_id'], $perfil['sub']);
+            $convites->aceitar((int) $convite['id']);
+            return $this->usuario->findById((int) $convite['usuario_id']);
+        }
+
+        $user = $porGoogle ?: $this->usuario->findByEmail($perfil['email']);
+        if ($user) {
+            if (empty($user['google_id'])) $this->usuario->vincularGoogle((int) $user['id'], $perfil['sub']);
+            return $this->usuario->findById((int) $user['id']);
+        }
+
+        $id = $this->usuario->criar([
+            'nome'              => $perfil['nome'] ?: strstr($perfil['email'], '@', true),
+            'email'             => $perfil['email'],
+            'senha'             => PasswordHelper::hash(bin2hex(random_bytes(24))), // entra pelo Google
+            'tipo'              => 'aluno',
+            'email_confirmado'  => 1,
+            'primeiro_login'    => 0,
+            'cadastro_pendente' => 1,
+            'google_id'         => $perfil['sub'],
+            'ativo'             => 1,
+            'lgpd_aceito'       => 0,
+        ]);
+        $this->prefs->criarPadrao($id);
+        SecurityHelper::logAuditoria('cadastro', $id, "Cadastro com Google: {$perfil['email']}", 'info');
+        return $this->usuario->findById($id);
+    }
+
+    // ============ COMPLETAR CADASTRO (GOOGLE / CONVITE) ============
+
+    public function completarCadastroForm()
+    {
+        if (empty($_SESSION['usuario'])) $this->redirect('/login');
+        $user = $this->usuario->findById((int) $_SESSION['usuario']['id']);
+        if (!$user || !$user['cadastro_pendente']) $this->redirect('/');
+        $this->render('auth/completar_cadastro', ['user' => $user, 'antigo' => $_SESSION['completar_form'] ?? []]);
+        unset($_SESSION['completar_form']);
+    }
+
+    public function completarCadastro()
+    {
+        CsrfMiddleware::validate();
+        if (empty($_SESSION['usuario'])) $this->redirect('/login');
+        $user = $this->usuario->findById((int) $_SESSION['usuario']['id']);
+        if (!$user || !$user['cadastro_pendente']) $this->redirect('/');
+
+        [$nome, $telefone, $erros] = self::lerNomeTelefone($_POST);
+        if (empty($_POST['lgpd'])) $erros[] = 'Você precisa aceitar a Política de Privacidade (LGPD).';
+        if ($erros) {
+            $_SESSION['completar_form'] = $_POST;
+            $_SESSION['flash'] = ['tipo' => 'erro', 'mensagem' => implode(' | ', $erros)];
+            $this->redirect('/completar-cadastro');
+        }
+
+        $this->usuario->completarCadastro((int) $user['id'], $nome, $telefone);
+        $this->prefs->definirNivel((int) $user['id'], (string) ($_POST['nivel_email'] ?? 'importantes'));
+        $this->montarSessao($this->usuario->findById((int) $user['id']));
+        SecurityHelper::logAuditoria('cadastro_completado', $user['id'], 'Nome e telefone informados', 'info');
+
+        $_SESSION['flash'] = ['tipo' => 'sucesso', 'mensagem' => 'Tudo pronto! Bem-vindo ao ' . App::getName() . '.'];
+        $this->redirect($this->destinoPosLogin());
+    }
+
+    /** Nome completo e telefone (BR, 10 ou 11 dígitos). Retorna [nome, telefone formatado, erros]. */
+    public static function lerNomeTelefone(array $post): array
+    {
+        $nome = preg_replace('/\s+/', ' ', trim((string) ($post['nome'] ?? '')));
+        $tel  = preg_replace('/\D/', '', (string) ($post['telefone'] ?? ''));
+        $erros = [];
+        if (mb_strlen($nome) < 5 || !str_contains($nome, ' ')) $erros[] = 'Informe o nome completo (nome e sobrenome).';
+        if (mb_strlen($nome) > 150) $nome = mb_substr($nome, 0, 150);
+        if (strlen($tel) < 10 || strlen($tel) > 11) $erros[] = 'Telefone inválido: use DDD + número.';
+        $fmt = strlen($tel) === 11 ? sprintf('(%s) %s-%s', substr($tel, 0, 2), substr($tel, 2, 5), substr($tel, 7))
+             : (strlen($tel) === 10 ? sprintf('(%s) %s-%s', substr($tel, 0, 2), substr($tel, 2, 4), substr($tel, 6)) : null);
+        return [$nome, $fmt, $erros];
+    }
+
     // ============ HELPERS ============
+
+    /** Dados do usuário na sessão (usados pelo Router e pelas telas). */
+    public function montarSessao(array $user): void
+    {
+        $_SESSION['usuario'] = [
+            'id'                => (int) $user['id'],
+            'nome'              => $user['nome'],
+            'email'             => $user['email'],
+            'tipo'              => $user['tipo'],
+            'role'              => $user['tipo'],   // alias usado pelo Router
+            'primeiro_login'    => (int) $user['primeiro_login'],
+            'email_confirmado'  => (int) $user['email_confirmado'],
+            'lgpd_aceito'       => (int) $user['lgpd_aceito'],
+            'cadastro_pendente' => (int) ($user['cadastro_pendente'] ?? 0),
+        ];
+    }
 
     private function render(string $view, array $dados = []): void
     {
         extract($dados);
         require __DIR__ . '/../Views/' . $view . '.php';
+    }
+
+    /** Página que a pessoa tentou abrir antes do login (guardada pelo Router), ou o início. Só caminhos internos. */
+    private function destinoPosLogin(): string
+    {
+        $d = $_SESSION['voltar_depois_login'] ?? '/';
+        unset($_SESSION['voltar_depois_login']);
+        return (is_string($d) && preg_match('#^/(?!/)[A-Za-z0-9/_\-]*$#', $d)) ? $d : '/';
     }
 
     private function redirect(string $path): void

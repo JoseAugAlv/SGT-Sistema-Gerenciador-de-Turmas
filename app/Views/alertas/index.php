@@ -1,45 +1,50 @@
 <?php
+// app/Views/alertas/index.php
+// Mural de avisos da turma/grêmio: aviso do dia, contagens e avisos comuns.
+$cssPagina = 'projetos.css';
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/nav.php';
 require_once __DIR__ . '/../layouts/flashes.php';
+$hoje = date('Y-m-d');
 ?>
 
-<h1>Alertas da Turma</h1>
-
-<?php if ($isRep || $isMaster): ?>
-    <p>
-        <a href="<?= $basePath ?>/turmas/<?= (int) $turmaId ?>/alertas/criar">
-            <i class="fas fa-plus"></i> Novo alerta
-        </a>
-    </p>
-<?php endif; ?>
+<section class="hero-section">
+    <div>
+        <div class="eyebrow"><span class="status-dot"></span> Avisos</div>
+        <h1>Avisos</h1>
+        <p class="hero-subtitle"><?= h($turma['nome'] ?? '') ?> · <?= count($alertas) ?> aviso(s) ativo(s)</p>
+    </div>
+    <div class="hero-actions">
+        <a class="button button-ghost" href="<?= $basePath ?>/turmas/<?= (int) $turmaId ?>"><i class="fas fa-arrow-left"></i> Voltar</a>
+        <?php if ($isRep || $isMaster): ?>
+            <a class="button button-primary" href="<?= $basePath ?>/turmas/<?= (int) $turmaId ?>/alertas/criar"><i class="fas fa-plus"></i> Novo aviso</a>
+        <?php endif; ?>
+    </div>
+</section>
 
 <?php if (empty($alertas)): ?>
-    <p>Nenhum alerta ativo.</p>
+    <div class="lista-vazia"><i class="fas fa-bullhorn"></i><span>Nenhum aviso ativo.</span></div>
 <?php else: ?>
-    <?php foreach ($alertas as $a): ?>
-        <div style="border:1px solid <?= $a['urgente'] ? '#b00' : '#ccc' ?>;padding:12px;margin:8px 0;border-radius:6px;">
-            <p>
-                <?php if ($a['urgente']): ?>
-                    <strong style="color:#b00;"><i class="fas fa-exclamation-triangle"></i> URGENTE</strong>
-                <?php endif; ?>
-                <strong><?= h($a['titulo']) ?></strong>
-                <br>
-                <small>
-                    Por <?= h($a['autor_nome'] ?? '—') ?>
-                    em <?= h($a['created_at']) ?>
-                    <?php if ($a['expira_em']): ?>
-                        — expira em <?= h($a['expira_em']) ?>
-                    <?php endif; ?>
-                </small>
-            </p>
-            <p><?= nl2br(h($a['mensagem'])) ?></p>
-        </div>
-    <?php endforeach; ?>
+    <div class="contagens">
+        <?php foreach ($alertas as $a):
+            $ehDia = ($a['do_dia'] ?? null) !== null;
+            $temContagem = !empty($a['contagem_ate']);
+        ?>
+            <article class="<?= $temContagem ? 'contagem' : ($ehDia ? 'aviso-dia' : 'mural') ?><?= $a['urgente'] ? ' urgente' : '' ?>">
+                <div class="contagem-texto">
+                    <span class="contagem-rotulo">
+                        <?php if ($a['urgente']): ?><i class="fas fa-triangle-exclamation"></i> Urgente ·<?php endif; ?>
+                        <?= $temContagem ? '<i class="fas fa-hourglass-half"></i> Contagem regressiva' : ($ehDia ? '<i class="fas fa-sun"></i> Aviso do dia ' . ($a['do_dia'] === $hoje ? '(hoje)' : ViewHelper::data($a['do_dia'])) : '<i class="fas fa-bullhorn"></i> Aviso') ?>
+                    </span>
+                    <strong><?= h($a['titulo']) ?></strong>
+                    <p class="mb-0"><?= nl2br(h($a['mensagem'])) ?></p>
+                    <small>Por <?= h($a['autor_nome'] ?? '—') ?> · <?= ViewHelper::data($a['created_at'], true) ?><?= $a['expira_em'] && !$ehDia ? ' · some em ' . ViewHelper::data($a['expira_em'], true) : '' ?></small>
+                </div>
+                <?php if ($temContagem) { $alvoMs = strtotime($a['contagem_ate']) * 1000; require __DIR__ . '/_relogio.php'; } ?>
+            </article>
+        <?php endforeach; ?>
+    </div>
+    <script src="<?= ViewHelper::asset('js/contagem.js') ?>"></script>
 <?php endif; ?>
-
-<p><a href="<?= $basePath ?>/turmas/<?= (int) $turmaId ?>">
-    <i class="fas fa-arrow-left"></i> Voltar à turma
-</a></p>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

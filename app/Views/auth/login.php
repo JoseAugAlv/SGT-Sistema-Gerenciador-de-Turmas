@@ -11,6 +11,8 @@ require_once __DIR__ . '/../layouts/auth_header.php';
     <p>Informe suas credenciais para acessar o sistema.</p>
 </div>
 
+<?php require __DIR__ . '/_google.php'; ?>
+
 <form method="POST" action="<?= $basePath ?>/login" class="auth-form" autocomplete="on">
     <?= ViewHelper::csrfField() ?>
 

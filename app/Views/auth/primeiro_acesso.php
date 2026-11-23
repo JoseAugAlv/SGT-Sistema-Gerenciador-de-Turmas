@@ -115,6 +115,8 @@ $etapa1   = $emailOk ? 'concluido' : 'pendente';
         </small>
     </div>
 
+    <?php require __DIR__ . '/../notificacoes/_nivel_email.php'; ?>
+
     <label class="auth-check">
         <input type="checkbox" name="lgpd" value="1"
                required <?= !$emailOk ? 'disabled' : '' ?>>

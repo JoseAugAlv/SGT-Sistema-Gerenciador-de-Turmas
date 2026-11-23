@@ -42,8 +42,9 @@ class Projeto extends Model
     public function criar(array $d): int
     {
         $stmt = $this->conn->prepare("
-            INSERT INTO projetos (turma_id, nome, descricao, prazo, modo_avaliacao)
-            VALUES (:turma_id, :nome, :descricao, :prazo, :modo_avaliacao)
+            INSERT INTO projetos (turma_id, nome, descricao, prazo, modo_avaliacao,
+                                  alunos_pedem_grupo, alunos_pedem_diretor, diretores_por_grupo, avaliacao_reps)
+            VALUES (:turma_id, :nome, :descricao, :prazo, :modo_avaliacao, :pede_grupo, :pede_diretor, :diretores, :aval_reps)
         ");
         $stmt->execute([
             ':turma_id'       => $d['turma_id'],
@@ -51,8 +52,27 @@ class Projeto extends Model
             ':descricao'      => $d['descricao'] ?? null,
             ':prazo'          => $d['prazo'] ?? null,
             ':modo_avaliacao' => $d['modo_avaliacao'] ?? 'cronograma',
+            ':pede_grupo'     => (int) ($d['alunos_pedem_grupo'] ?? 0),
+            ':pede_diretor'   => (int) ($d['alunos_pedem_diretor'] ?? 0),
+            ':diretores'      => (int) ($d['diretores_por_grupo'] ?? 1),
+            ':aval_reps'      => ($d['avaliacao_reps'] ?? 'compartilhada') === 'media' ? 'media' : 'compartilhada',
         ]);
         return (int) $this->conn->lastInsertId();
+    }
+
+    /** Como o representante e o vice avaliam: 'compartilhada' (mesma nota) ou 'media'. */
+    public function atualizarAvaliacaoReps(int $id, string $modo): bool
+    {
+        return $this->conn->prepare("UPDATE projetos SET avaliacao_reps = ? WHERE id = ?")
+                          ->execute([$modo === 'media' ? 'media' : 'compartilhada', $id]);
+    }
+
+    /** Regras dos grupos: alunos pedem para entrar / para ser diretor e quantos diretores por grupo. */
+    public function atualizarRegrasGrupos(int $id, array $d): bool
+    {
+        return $this->conn->prepare("
+            UPDATE projetos SET alunos_pedem_grupo = ?, alunos_pedem_diretor = ?, diretores_por_grupo = ? WHERE id = ?
+        ")->execute([(int) $d['alunos_pedem_grupo'], (int) $d['alunos_pedem_diretor'], (int) $d['diretores_por_grupo'], $id]);
     }
 
     public function atualizar(int $id, array $d): bool

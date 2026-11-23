@@ -11,6 +11,8 @@ require_once __DIR__ . '/../layouts/auth_header.php';
     <p>Preencha seus dados para começar a usar o sistema.</p>
 </div>
 
+<?php $textoGoogle = 'Criar conta com o Google'; require __DIR__ . '/_google.php'; ?>
+
 <form method="POST" action="<?= $basePath ?>/login/salvar" class="auth-form" autocomplete="on">
     <?= ViewHelper::csrfField() ?>
 
@@ -55,6 +57,8 @@ require_once __DIR__ . '/../layouts/auth_header.php';
         <label for="cad-nasc">Data de nascimento (opcional, mín. 12 anos)</label>
         <input type="date" id="cad-nasc" name="data_nascimento">
     </div>
+
+    <?php require __DIR__ . '/../notificacoes/_nivel_email.php'; ?>
 
     <label class="auth-check">
         <input type="checkbox" name="lgpd" value="1" required>
